@@ -1,3 +1,5 @@
 # Release Notes for Best Sellers
 
-## Unreleased
+## 1.0.0
+
+- Initial release

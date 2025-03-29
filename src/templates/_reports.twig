@@ -1,0 +1,397 @@
+{% extends '_layouts/cp' %}
+{% import "_includes/forms" as forms %}
+
+{% set title = "Commerce Reports"|t('best-sellers') %}
+
+{% set additionalButtons %}
+	<form id="filter-form" method="get" style="display: flex; align-items: flex-end; gap: 1rem;">
+		<div style="flex: 1;">
+			<select id="date-presets" class="text fullwidth">
+				<option value="">{{ "Select a preset"|t('best-sellers') }}</option>
+				<option value="today" {% if preset == 'today' %}selected{% endif %}>{{ "Today"|t('best-sellers') }}</option>
+				<option value="thisWeek" {% if preset == 'thisWeek' %}selected{% endif %}>{{ "This Week"|t('best-sellers') }}</option>
+				<option value="thisMonth" {% if preset == 'thisMonth' %}selected{% endif %}>{{ "This Month"|t('best-sellers') }}</option>
+				<option value="thisYear" {% if preset == 'thisYear' %}selected{% endif %}>{{ "This Year"|t('best-sellers') }}</option>
+				<option value="past7Days" {% if preset == 'past7Days' %}selected{% endif %}>{{ "Past 7 Days"|t('best-sellers') }}</option>
+				<option value="past30Days" {% if preset == 'past30Days' %}selected{% endif %}>{{ "Past 30 Days"|t('best-sellers') }}</option>
+				<option value="past90Days" {% if preset == 'past90Days' %}selected{% endif %}>{{ "Past 90 Days"|t('best-sellers') }}</option>
+				<option value="pastYear" {% if preset == 'pastYear' %}selected{% endif %}>{{ "Past Year"|t('best-sellers') }}</option>
+			</select>
+		</div>
+
+		<input type="hidden" id="preset" name="preset" value="{{ preset|default('') }}">
+
+		<div style="flex: 1;">
+			<input type="text" id="from" name="from" value="{{ from }}" placeholder="{{ 'From'|t('best-sellers') }}" class="text fullwidth">
+		</div>
+
+		<div style="flex: 1;">
+			<input type="text" id="to" name="to" value="{{ to }}" placeholder="{{ 'To'|t('best-sellers') }}" class="text fullwidth">
+		</div>
+
+		<div style="align-self: flex-end;">
+			{{ forms.submitButton({
+				label: "Update"|t('best-sellers')
+			}) }}
+		</div>
+	</form>
+{% endset %}
+
+{% set products = craft.commerce.products %}
+
+{% set content %}
+<div class="main reports-container" style="display: flex; flex-wrap: wrap; gap: 1rem;">
+	{# Metrics Section - display before the table #}
+	{% if totalOrders is defined %}
+		<div class="metrics-column" style="flex: 3; min-width: 250px; max-width: 100% !important">
+			<h2>{{ "Sales & Revenue This Period"|t('best-sellers') }}</h2>
+			<canvas id="dailyChart" style="max-width: 100% !important"></canvas>
+		</div>
+
+		<div class="metrics-column" style="flex: 2; min-width: 250px;">
+			<h2>{{ "Summaries This Period"|t('best-sellers') }}</h2>
+			<div class="metric-cards" style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2rem;">
+				<!-- Total Revenue -->
+				<div class="metric-card" style="flex: 1 1 150px; padding: 1rem; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+					<h3 style="margin-top: 0; font-size: 1rem;">{{ "Revenue"|t('best-sellers') }}</h3>
+					<p style="font-size: 1.5rem; margin: 0;">
+						{{ totalRevenue|commerceCurrency }}
+						{% set diff = totalRevenue > 0 and prevTotalRevenue > 0 ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 : null %}
+						{% if diff is not null %}
+							<span style="display:block; margin-top: 10px; font-size: 0.75rem">
+							{% if diff >= 0 %}
+								<span style="color: green">
+									&#8593; {{ diff|number_format(0) }}%
+								</span>
+							{% else %}
+								<span style="color: red">
+									 &#8595; {{ diff|abs|number_format(0) }}%
+								</span>
+							{% endif %}
+							</span>
+						{% else %}
+							<span style="font-size: 0.9rem; color: #777;">{{ "---"|t('best-sellers') }}</span>
+						{% endif %}
+					</p>
+				</div>
+
+				<!-- Total Orders -->
+				<div class="metric-card" style="flex: 1 1 150px; padding: 1rem; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+					<h3 style="margin-top: 0; font-size: 1rem;">{{ "Orders"|t('best-sellers') }}</h3>
+					<p style="font-size: 1.5rem; margin: 0;">
+						{{ totalOrders }}
+						{% set diff = prevTotalOrders > 0 ? ((totalOrders - prevTotalOrders) / prevTotalOrders) * 100 : null %}
+						{% if diff is not null %}
+							<span style="display:block; margin-top: 10px; font-size: 0.75rem">
+							{% if diff >= 0 %}
+								<span style="color: green">
+									&#8593; {{ diff|number_format(0) }}%
+								</span>
+							{% else %}
+								<span style="color: red">
+									 &#8595; {{ diff|abs|number_format(0) }}%
+								</span>
+							{% endif %}
+							</span>
+						{% else %}
+							<span style="font-size: 0.9rem; color: #777;">{{ "---"|t('best-sellers') }}</span>
+						{% endif %}
+					</p>
+				</div>
+
+				<!-- Average Order Value -->
+				<div class="metric-card" style="flex: 1 1 150px; padding: 1rem; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+					<h3 style="margin-top: 0; font-size: 1rem;">{{ "Avg. Order Value"|t('best-sellers') }}</h3>
+					<p style="font-size: 1.5rem; margin: 0;">
+						{{ averageOrderValue|commerceCurrency }}
+						{% set diff = averageOrderValue > 0 and prevAverageOrderValue > 0 ? ((averageOrderValue - prevAverageOrderValue) / prevAverageOrderValue) * 100 : null %}
+						{% if diff is not null %}
+							<span style="display:block; margin-top: 10px; font-size: 0.75rem">
+							{% if diff >= 0 %}
+								<span style="color: green">
+									&#8593; {{ diff|number_format(0) }}%
+								</span>
+							{% else %}
+								<span style="color: red">
+									 &#8595; {{ diff|abs|number_format(0) }}%
+								</span>
+							{% endif %}
+							</span>
+						{% else %}
+							<span style="font-size: 0.9rem; color: #777;">{{ "---"|t('best-sellers') }}</span>
+						{% endif %}
+					</p>
+				</div>
+
+				<!-- Total Customers -->
+				<div class="metric-card" style="flex: 1 1 150px; padding: 1rem; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+					<h3 style="margin-top: 0; font-size: 1rem;">{{ "Customers"|t('best-sellers') }}</h3>
+					<p style="font-size: 1.5rem; margin: 0;">
+						{{ totalCustomers }}
+						{% set diff = totalCustomers > 0 and prevTotalCustomers > 0 ? ((totalCustomers - prevTotalCustomers) / prevTotalCustomers) * 100 : null %}
+						{% if diff is not null %}
+							<span style="display:block; margin-top: 10px; font-size: 0.75rem">
+							{% if diff >= 0 %}
+								<span style="color: green">
+									&#8593; {{ diff|number_format(0) }}%
+								</span>
+							{% else %}
+								<span style="color: red">
+									 &#8595; {{ diff|abs|number_format(0) }}%
+								</span>
+							{% endif %}
+							</span>
+						{% else %}
+							<span style="font-size: 0.9rem; color: #777;">{{ "---"|t('best-sellers') }}</span>
+						{% endif %}
+					</p>
+				</div>
+
+				<!-- Total Items Sold -->
+				<div class="metric-card" style="flex: 1 1 150px; padding: 1rem; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+					<h3 style="margin-top: 0; font-size: 1rem;">{{ "Items Sold"|t('best-sellers') }}</h3>
+					<p style="font-size: 1.5rem; margin: 0;">
+						{{ totalItemsSold }}
+						{% set diff = totalItemsSold > 0 and prevTotalItemsSold > 0 ? ((totalItemsSold - prevTotalItemsSold) / prevTotalItemsSold) * 100 : null %}
+						{% if diff is not null %}
+							<span style="display:block; margin-top: 10px; font-size: 0.75rem">
+							{% if diff >= 0 %}
+								<span style="color: green">
+									&#8593; {{ diff|number_format(0) }}%
+								</span>
+							{% else %}
+								<span style="color: red">
+									 &#8595; {{ diff|abs|number_format(0) }}%
+								</span>
+							{% endif %}
+							</span>
+						{% else %}
+							<span style="font-size: 0.9rem; color: #777;">{{ "---"|t('best-sellers') }}</span>
+						{% endif %}
+					</p>
+				</div>
+
+				<!-- Average Items per Order -->
+				<div class="metric-card" style="flex: 1 1 150px; padding: 1rem; background: #fff; border: 1px solid #ddd; border-radius: 4px;">
+					<h3 style="margin-top: 0; font-size: 1rem;">{{ "Avg Items / Order"|t('best-sellers') }}</h3>
+					<p style="font-size: 1.5rem; margin: 0;">
+						{{ avgItemsPerOrder|number_format(2) }}
+						{% set diff = prevAvgItemsPerOrder is defined and prevAvgItemsPerOrder > 0 ? ((avgItemsPerOrder - prevAvgItemsPerOrder) / prevAvgItemsPerOrder) * 100 : null %}
+						{% if diff is not null %}
+							<span style="display:block; margin-top: 10px; font-size: 0.75rem">
+							{% if diff >= 0 %}
+								<span style="color: green">
+									&#8593; {{ diff|number_format(0) }}%
+								</span>
+							{% else %}
+								<span style="color: red">
+									 &#8595; {{ diff|abs|number_format(0) }}%
+								</span>
+							{% endif %}
+							</span>
+						{% else %}
+							<span style="font-size: 0.9rem; color: #777;">{{ "---"|t('best-sellers') }}</span>
+						{% endif %}
+					</p>
+				</div>
+			</div>
+		</div>
+		<style>
+			@media (max-width: 1200px) {
+				.reports-container {
+					flex-direction: column;
+				}
+				.reports-container > div {
+					width: 100%;
+					margin-bottom: 1rem;
+				}
+			}
+		</style>
+		{# Load Chart.js from CDN #}
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+	{% endif %}
+{% endset %}
+
+{% js %}
+	document.addEventListener('DOMContentLoaded', function () {
+
+		var labels = {{ dailyLabels|json_encode|raw }};
+		var ordersData = {{ dailyData|json_encode|raw }};
+		var revenueData = {{ dailyRevenueData|json_encode|raw }};
+
+		// Calculate max value for daily orders.
+		var maxOrders = ordersData.length ? Math.max.apply(null, ordersData) : 0;
+		if (maxOrders < 10) {
+			maxOrders = 10;
+		}
+
+		// Determine the date range and tick configuration.
+		var startDate = new Date(labels[0]);
+		var endDate = new Date(labels[labels.length - 1]);
+		var diffDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1; // Inclusive
+		var tickUnit = 'day';
+		var stepSize = 1;
+
+		if (diffDays > 90) {
+			tickUnit = 'month';
+			stepSize = 1;
+		} else if (diffDays > 30) {
+			tickUnit = 'day';
+			stepSize = 7; // one tick per week
+		}
+
+		var ctx = document.getElementById('dailyChart').getContext('2d');
+		var dailyChart = new Chart(ctx, {
+			type: 'line',
+			data: {
+				labels: labels,
+				datasets: [
+					{
+						label: 'Daily Orders',
+						data: ordersData,
+						fill: false,
+						borderColor: '#0073aa',
+						backgroundColor: '#0073aa',
+						tension: 0.3,
+						pointRadius: labels.length === 1 ? 6 : 3,
+						yAxisID: 'y'
+					},
+					{
+						label: 'Daily Revenue',
+						data: revenueData,
+						fill: false,
+						borderColor: '#a100ff',
+						backgroundColor: '#a100ff',
+						tension: 0.3,
+						pointRadius: labels.length === 1 ? 6 : 3,
+						yAxisID: 'y1'
+					}
+				]
+			},
+			options: {
+				responsive: true,
+				interaction: {
+					mode: 'index',
+					intersect: false
+				},
+				plugins: {
+					legend: {
+						position: 'bottom'
+					}
+				},
+				scales: {
+					x: {
+						offset: labels.length === 1,
+						type: 'time',
+						distribution: 'series',
+						time: {
+							unit: tickUnit,
+							stepSize: stepSize,
+							displayFormats: {
+								day: 'MMM d',
+								month: 'MMM yyyy'
+							}
+						},
+					},
+					y: {
+						title: {
+							display: false,
+							text: 'Daily Orders'
+						},
+						beginAtZero: true,
+						suggestedMax: maxOrders,
+						ticks: {
+							display: false
+						}
+					},
+					y1: {
+						type: 'linear',
+						position: 'right',
+						title: {
+							display: false,
+							text: 'Daily Revenue'
+						},
+						grid: {
+							drawOnChartArea: false
+						},
+						ticks: {
+							display: false
+						}
+					}
+				}
+			}
+		});
+	});
+
+	document.addEventListener('DOMContentLoaded', function () {
+		var presetSelector = document.getElementById('date-presets');
+		var fromInput = document.getElementById('from');
+		var toInput = document.getElementById('to');
+		var presetHidden = document.getElementById('preset');
+
+		presetSelector.addEventListener('change', function () {
+			var preset = this.value;
+			var now = new Date();
+			var fromVal = '';
+			var toVal = '';
+
+			switch (preset) {
+				case 'today':
+					fromVal = toVal = now.toISOString().split('T')[0];
+					break;
+				case 'thisWeek':
+					var day = now.getDay() || 7; // treat Sunday as 7
+					var monday = new Date(now);
+					monday.setDate(now.getDate() - day + 1);
+					var sunday = new Date(now);
+					sunday.setDate(now.getDate() + (7 - day));
+					fromVal = monday.toISOString().split('T')[0];
+					toVal = sunday.toISOString().split('T')[0];
+					break;
+				case 'thisMonth':
+					var firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+					var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+					fromVal = firstDay.toISOString().split('T')[0];
+					toVal = lastDay.toISOString().split('T')[0];
+					break;
+				case 'thisYear':
+					var firstDay = new Date(now.getFullYear(), 0, 1);
+					var lastDay = new Date(now.getFullYear(), 11, 31);
+					fromVal = firstDay.toISOString().split('T')[0];
+					toVal = lastDay.toISOString().split('T')[0];
+					break;
+				case 'past7Days':
+					var past = new Date(now);
+					past.setDate(now.getDate() - 7);
+					fromVal = past.toISOString().split('T')[0];
+					toVal = now.toISOString().split('T')[0];
+					break;
+				case 'past30Days':
+					var past = new Date(now);
+					past.setDate(now.getDate() - 30);
+					fromVal = past.toISOString().split('T')[0];
+					toVal = now.toISOString().split('T')[0];
+					break;
+				case 'past90Days':
+					var past = new Date(now);
+					past.setDate(now.getDate() - 90);
+					fromVal = past.toISOString().split('T')[0];
+					toVal = now.toISOString().split('T')[0];
+					break;
+				case 'pastYear':
+					var past = new Date(now);
+					past.setFullYear(now.getFullYear() - 1);
+					fromVal = past.toISOString().split('T')[0];
+					toVal = now.toISOString().split('T')[0];
+					break;
+				default:
+					fromVal = fromInput.value;
+					toVal = toInput.value;
+			}
+			fromInput.value = fromVal;
+			toInput.value = toVal;
+			presetHidden.value = preset;
+		});
+	});
+{% endjs %}

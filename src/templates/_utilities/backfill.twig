@@ -1,0 +1,19 @@
+{% import '_includes/forms' as forms %}
+
+<h2>Backfill Orders</h2>
+<p>
+	Use the fields below to limit which orders get backfilled.
+</p>
+<form method="POST">
+	{{ actionInput('best-sellers/backfill') }}
+	{{ csrfInput() }}
+	<div class="field">
+		<label for="startDate">Start Date</label>
+		<input type="date" name="startDate" id="startDate">
+	</div>
+	<div class="field">
+		<label for="endDate">End Date</label>
+		<input type="date" name="endDate" id="endDate">
+	</div>
+	<button type="submit" class="btn submit">Start Backfill</button>
+</form>

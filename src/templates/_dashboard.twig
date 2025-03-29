@@ -1,0 +1,210 @@
+{% extends '_layouts/cp' %}
+{% import "_includes/forms" as forms %}
+
+{% set title = "Best Sellers - " ~ title|t('best-sellers') %}
+
+{% set additionalButtons %}
+	<form id="filter-form" method="get" style="display: flex; flex-direction: row; column-gap: 1rem;">
+		<div style="flex: 1;">
+			{{ forms.selectField({
+				first: true,
+				id: 'products-or-variants',
+				name: 'productsOrVariants',
+				options: [
+					{ label: 'Products', value: 'products' },
+					{ label: 'Variants', value: 'variants' },
+				],
+				toggle: true,
+				value: productsOrVariants,
+			}) }}
+		</div>
+
+		{% set productTypes = [{
+			label: 'All product types',
+			value: 'all',
+		}]|merge(craft.commerce.productTypes.allProductTypes|map(type => {
+			label: type.name,
+			value: type.handle,
+		})) %}
+		<div style="flex: 1;">
+			{{ forms.selectField({
+				first: true,
+				id: 'product-type',
+				name: 'productType',
+				options: productTypes,
+				toggle: true,
+				value: productType,
+			}) }}
+		</div>
+
+		<div style="flex: 1;">
+			<select id="date-presets" class="text fullwidth">
+				<option value="">{{ "Select a preset"|t('best-sellers') }}</option>
+				<option value="today" {% if preset == 'today' %}selected{% endif %}>{{ "Today"|t('best-sellers') }}</option>
+				<option value="thisWeek" {% if preset == 'thisWeek' %}selected{% endif %}>{{ "This Week"|t('best-sellers') }}</option>
+				<option value="thisMonth" {% if preset == 'thisMonth' %}selected{% endif %}>{{ "This Month"|t('best-sellers') }}</option>
+				<option value="thisYear" {% if preset == 'thisYear' %}selected{% endif %}>{{ "This Year"|t('best-sellers') }}</option>
+				<option value="past7Days" {% if preset == 'past7Days' %}selected{% endif %}>{{ "Past 7 Days"|t('best-sellers') }}</option>
+				<option value="past30Days" {% if preset == 'past30Days' %}selected{% endif %}>{{ "Past 30 Days"|t('best-sellers') }}</option>
+				<option value="past90Days" {% if preset == 'past90Days' %}selected{% endif %}>{{ "Past 90 Days"|t('best-sellers') }}</option>
+				<option value="pastYear" {% if preset == 'pastYear' %}selected{% endif %}>{{ "Past Year"|t('best-sellers') }}</option>
+			</select>
+		</div>
+
+		<input type="hidden" id="preset" name="preset" value="{{ preset|default('') }}">
+
+		<div style="flex: 1;">
+			<input type="text" id="from" name="from" value="{{ from }}" placeholder="{{ 'From'|t('best-sellers') }}" class="text fullwidth">
+		</div>
+
+		<div style="flex: 1;">
+			<input type="text" id="to" name="to" value="{{ to }}" placeholder="{{ 'To'|t('best-sellers') }}" class="text fullwidth">
+		</div>
+
+		<div style="align-self: flex-end;">
+			{{ forms.submitButton({
+				label: "Update"|t('best-sellers')
+			}) }}
+		</div>
+	</form>
+{% endset %}
+
+{% set products = craft.commerce.products %}
+
+{% set content %}
+	<main class="main-content">
+	<h2>{{ "Best Sellers"|t("best-sellers") }}</h2>
+	<br>
+	{% if items is empty %}
+		<p>{{ "No best sellers yet."|t("best-sellers") }}</p>
+	{% else %}
+		<div class="main tablepane">
+			<table id="items" class="data fullwidth">
+				<thead>
+				{% if productsOrVariants == 'variants' %}
+					<th scope="col">{{ 'Variant'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'SKU'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'Total Sold'|t('best-sellers') }}</th>
+				{% else %}
+					<th scope="col">{{ 'Product'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'Default SKU'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'Type'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'Total Sold'|t('best-sellers') }}</th>
+				{% endif %}
+				</thead>
+				<tbody>
+				{% for item in items %}
+					<tr tabindex="0">
+						<td data-title="{{ "Title"|t("best-sellers") }}">
+							<span><a class="go" href="{{ item.url }}">{{ item.title }}</a></span>
+						</td>
+						<td data-title="{{ "Type"|t('best-sellers') }}">
+							{{ item.sku }}
+						</td>
+						{% if productsOrVariants == 'products' %}
+						<td data-title="{{ "Type"|t('best-sellers') }}">
+							{{ item.type }}
+						</td>
+						{% endif %}
+						<td data-title="{{ "Type"|t('best-sellers') }}">
+							{{ item.totalQtySold }}
+						</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+		</div>
+
+		<div id="footer" class="flex">
+			<div id="count-container" class="light flex-grow">
+				{% include '_includes/pagination' with {
+					'pageInfo' : pagination,
+					'itemLabel' : 'item'|t('best-sellers'),
+					'itemsLabel': 'items'|t('best-sellers')
+				} %}
+			</div>
+		</div>
+	{% endif %}
+	</main>
+{% endset %}
+
+{% js %}
+	document.getElementById('product-type').addEventListener('change', function() {
+	document.getElementById('filter-form').submit();
+	});
+
+	document.getElementById('products-or-variants').addEventListener('change', function() {
+	document.getElementById('filter-form').submit();
+	});
+
+	document.addEventListener('DOMContentLoaded', function() {
+	var presetSelector = document.getElementById('date-presets');
+	var fromInput = document.getElementById('from');
+	var toInput = document.getElementById('to');
+	var presetHidden = document.getElementById('preset');
+
+	presetSelector.addEventListener('change', function() {
+	var preset = this.value;
+	var now = new Date();
+	var fromVal = '';
+	var toVal = '';
+
+	switch(preset) {
+	case 'today':
+	fromVal = toVal = now.toISOString().split('T')[0];
+	break;
+	case 'thisWeek':
+	var day = now.getDay() || 7; // treat Sunday as 7
+	var monday = new Date(now);
+	monday.setDate(now.getDate() - day + 1);
+	var sunday = new Date(now);
+	sunday.setDate(now.getDate() + (7 - day));
+	fromVal = monday.toISOString().split('T')[0];
+	toVal = sunday.toISOString().split('T')[0];
+	break;
+	case 'thisMonth':
+	var firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+	var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+	fromVal = firstDay.toISOString().split('T')[0];
+	toVal = lastDay.toISOString().split('T')[0];
+	break;
+	case 'thisYear':
+	var firstDay = new Date(now.getFullYear(), 0, 1);
+	var lastDay = new Date(now.getFullYear(), 11, 31);
+	fromVal = firstDay.toISOString().split('T')[0];
+	toVal = lastDay.toISOString().split('T')[0];
+	break;
+	case 'past7Days':
+	var past = new Date(now);
+	past.setDate(now.getDate() - 7);
+	fromVal = past.toISOString().split('T')[0];
+	toVal = now.toISOString().split('T')[0];
+	break;
+	case 'past30Days':
+	var past = new Date(now);
+	past.setDate(now.getDate() - 30);
+	fromVal = past.toISOString().split('T')[0];
+	toVal = now.toISOString().split('T')[0];
+	break;
+	case 'past90Days':
+	var past = new Date(now);
+	past.setDate(now.getDate() - 90);
+	fromVal = past.toISOString().split('T')[0];
+	toVal = now.toISOString().split('T')[0];
+	break;
+	case 'pastYear':
+	var past = new Date(now);
+	past.setFullYear(now.getFullYear() - 1);
+	fromVal = past.toISOString().split('T')[0];
+	toVal = now.toISOString().split('T')[0];
+	break;
+	default:
+	fromVal = fromInput.value;
+	toVal = toInput.value;
+	}
+	fromInput.value = fromVal;
+	toInput.value = toVal;
+	presetHidden.value = preset;
+	});
+	});
+{% endjs %}

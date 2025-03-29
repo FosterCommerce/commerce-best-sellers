@@ -1,5 +1,7 @@
-# Best Sellers
+![Screenshot](resources/images/header.png)
 
+# Best Sellers
+Essential sales insights and top performing product data
 
 ## Requirements
 
@@ -30,6 +32,10 @@ composer require fostercommerce/commerce-best-sellers
 
 
 ## Usage
+#### Console command to process existing orders
+```
+php craft best-sellers/backfill
+```
 
 #### Twig
 ```
@@ -59,9 +65,4 @@ $productSales = $bestSellers->productTotalSales($product->id, '2 months ago');
 $variantSales = $bestSellers->variantTotalSales($product->defaultVariant->id);
 // variant's total sales (specific date range)
 $variantSales = $bestSellers->variantTotalSales($product->defaultVariant->id, '2023-01-01', '2023-03-01');
-```
-
-#### Console Command to process existing orders
-```
-php craft best-sellers/backfill
 ```

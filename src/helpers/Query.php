@@ -7,6 +7,7 @@ use craft\db\Query as DbQuery;
 use craft\elements\db\ElementQuery;
 use craft\helpers\Db;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
+use fostercommerce\bestsellers\records\VariantSale;
 
 class Query
 {
@@ -22,7 +23,7 @@ class Query
 				$id,
 				'totalQtySold' => 'SUM(qty)',
 			])
-			->from('best_sellers_variant_sales')
+			->from(VariantSale::tableName())
 			->groupBy($id);
 
 		// Behavior types aren't inferred

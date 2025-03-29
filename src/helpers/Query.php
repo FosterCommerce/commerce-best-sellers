@@ -29,11 +29,11 @@ class Query
 		// Behavior types aren't inferred
 		/** @var SaleQueryBehavior<TKey, TElement> $query */
 		if ($query->bestSellersFrom !== null) {
-			$withQuery->andWhere(['>=', 'dateCreated', Db::prepareDateForDb($query->bestSellersFrom)]);
+			$withQuery->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersFrom)]);
 		}
 
 		if ($query->bestSellersTo !== null) {
-			$withQuery->andWhere(['<=', 'dateCreated', Db::prepareDateForDb($query->bestSellersTo)]);
+			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersTo)]);
 		}
 
 		// We need to reset the type here

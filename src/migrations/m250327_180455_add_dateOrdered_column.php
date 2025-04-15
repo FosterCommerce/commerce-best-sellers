@@ -10,15 +10,12 @@ use fostercommerce\bestsellers\records\VariantSale;
  */
 class m250327_180455_add_dateOrdered_column extends Migration
 {
-    /**
-     * @inheritdoc
-     */
-    public function safeUp(): bool
-    {
+	public function safeUp(): bool
+	{
 		$table = VariantSale::tableName();
 
 		// Add the dateOrdered column if it doesn't exist.
-		if (!$this->db->columnExists($table, 'dateOrdered')) {
+		if (! $this->db->columnExists($table, 'dateOrdered')) {
 			$this->addColumn($table, 'dateOrdered', $this->dateTime()->null()->after('orderId'));
 
 			// Get all orders from commerce_orders with their dateOrdered values.
@@ -31,24 +28,26 @@ class m250327_180455_add_dateOrdered_column extends Migration
 			foreach ($orders as $order) {
 				$this->update(
 					$table,
-					['dateOrdered' => $order['dateOrdered']],
-					['orderId' => $order['id']]
+					[
+						'dateOrdered' => $order['dateOrdered'],
+					],
+					[
+						'orderId' => $order['id'],
+					]
 				);
 			}
 		}
 
-        return true;
-    }
+		return true;
+	}
 
-    /**
-     * @inheritdoc
-     */
-    public function safeDown(): bool
-    {
+	public function safeDown(): bool
+	{
 		$table = '{{%best_sellers_variant_sales}}';
 		if ($this->db->columnExists($table, 'dateOrdered')) {
 			$this->dropColumn($table, 'dateOrdered');
 		}
-        return false;
-    }
+
+		return false;
+	}
 }

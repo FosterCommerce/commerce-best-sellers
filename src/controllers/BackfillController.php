@@ -1,24 +1,32 @@
 <?php
+
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
-use craft\web\Controller;
 use craft\commerce\elements\Order;
+use craft\web\Controller;
+use craft\web\Request;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\records\VariantSale;
+use yii\web\Response;
 
 class BackfillController extends Controller
 {
+	/**
+	 * @var int
+	 */
+	public const BATCH_SIZE = 25;
+
 	protected array|int|bool $allowAnonymous = false;
 
-	public function actionIndex()
+	public function actionIndex(): Response
 	{
-		$batchSize = 25;
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
 		// Get date range from form POST data.
 		$startDate = $request->getBodyParam('startDate'); // YYYY-MM-DD
-		$endDate   = $request->getBodyParam('endDate');   // YYYY-MM-DD
+		$endDate = $request->getBodyParam('endDate');   // YYYY-MM-DD
 
 		// Get processed order IDs.
 		$processedOrderIds = VariantSale::find()
@@ -41,12 +49,12 @@ class BackfillController extends Controller
 		$totalOrders = $query->count();
 
 		// Queue jobs in batches, passing the date range.
-		for ($offset = 0; $offset < $totalOrders; $offset += $batchSize) {
+		for ($offset = 0; $offset < $totalOrders; $offset += self::BATCH_SIZE) {
 			Craft::$app->queue->push(new BackfillOrdersJob([
-				'offset'    => $offset,
-				'limit'     => $batchSize,
+				'offset' => $offset,
+				'limit' => self::BATCH_SIZE,
 				'startDate' => $startDate,
-				'endDate'   => $endDate,
+				'endDate' => $endDate,
 			]));
 		}
 

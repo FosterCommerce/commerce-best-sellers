@@ -1,8 +1,8 @@
 <?php
+
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
-use craft\commerce\records\Order as OrderRecord;
 use craft\commerce\elements\Order;
 use craft\web\Controller;
 use craft\web\Request;
@@ -22,21 +22,25 @@ class ReportsController extends Controller
 		$request = Craft::$app->getRequest();
 
 		$defaultFromDT = new \DateTime('-1 month');
-		$defaultToDT   = new \DateTime('now');
+		$defaultToDT = new \DateTime('now');
 
-		$preset    = $request->getQueryParam('preset', '');
+		$preset = $request->getQueryParam('preset', '');
+		/** @var string $fromInput */
 		$fromInput = $request->getQueryParam('from', $defaultFromDT->format('Y-m-d'));
-		$toInput   = $request->getQueryParam('to', $defaultToDT->format('Y-m-d'));
+		/** @var string $toInput */
+		$toInput = $request->getQueryParam('to', $defaultToDT->format('Y-m-d'));
 
-		$from = is_array($fromInput) ? trim(reset($fromInput)) : trim($fromInput);
-		$to   = is_array($toInput) ? trim(reset($toInput)) : trim($toInput);
+		$from = trim($fromInput);
+		$to = trim($toInput);
 
 		// Convert to valid datetime strings.
 		$fromDTObj = new \DateTime($from);
 		$fromDTObj->setTime(00, 00, 00);
+
 		$fromDT = $fromDTObj->format('Y-m-d H:i:s');
 		$toDTObj = new \DateTime($to);
 		$toDTObj->setTime(23, 59, 59);
+
 		$toDT = $toDTObj->format('Y-m-d H:i:s');
 
 		// ---------- Additional Dashboard Stats Using Orders ----------
@@ -55,7 +59,7 @@ class ReportsController extends Controller
 				$totalItemsSold += $lineItem->qty;
 				// Use the purchasable's id as the unique key.
 				$purchasable = $lineItem->getPurchasable();
-				if ($purchasable && !isset($uniqueItemIds[$purchasable->id])) {
+				if ($purchasable && ! isset($uniqueItemIds[$purchasable->id])) {
 					$uniqueItemIds[$purchasable->id] = true;
 					$totalUniqueItemsSold++;
 				}
@@ -64,9 +68,8 @@ class ReportsController extends Controller
 
 		$avgItemsPerOrder = $totalOrders > 0 ? $totalItemsSold / $totalOrders : 0;
 
-		$totalRevenue = array_reduce($orders, function($carry, $order) {
-			return $carry + $order->totalPrice;
-		}, 0);
+		// TODO: This needs to use moneyphp
+		$totalRevenue = array_reduce($orders, fn ($carry, $order): float => $carry + $order->totalPrice, 0.0);
 
 		$averageOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0;
 
@@ -78,20 +81,23 @@ class ReportsController extends Controller
 				$customerIds[] = $order->customerId;
 			}
 		}
+
 		$totalCustomers = count(array_unique($customerIds));
 
 		// ---------- Build Daily Chart Data from Orders ----------
 		$dailyOrders = [];
 		$dailyRevenue = [];
 		foreach ($orders as $order) {
-			$day = $order->dateOrdered->format('Y-m-d');
-			if (!isset($dailyOrders[$day])) {
+			$day = $order->dateOrdered?->format('Y-m-d');
+			if (! isset($dailyOrders[$day])) {
 				$dailyOrders[$day] = 0;
 				$dailyRevenue[$day] = 0;
 			}
+
 			$dailyOrders[$day]++;
 			$dailyRevenue[$day] += $order->totalPrice;
 		}
+
 		ksort($dailyOrders);
 		ksort($dailyRevenue);
 		$dailyLabels = array_keys($dailyOrders);
@@ -106,8 +112,10 @@ class ReportsController extends Controller
 		// Set previous period: immediately preceding current period.
 		$previousToDTObj = clone $currentFrom;
 		$previousToDTObj->modify('-1 second');
+
 		$previousFromDTObj = clone $previousToDTObj;
 		$previousFromDTObj->sub($interval);
+
 		$prevFromDT = $previousFromDTObj->format('Y-m-d H:i:s');
 		$prevToDT = $previousToDTObj->format('Y-m-d H:i:s');
 
@@ -123,42 +131,42 @@ class ReportsController extends Controller
 				$prevTotalItemsSold += $lineItem->qty;
 			}
 		}
+
 		$prevAvgItemsPerOrder = $prevTotalOrders > 0 ? $prevTotalItemsSold / $prevTotalOrders : 0;
-		$prevTotalRevenue = array_reduce($prevOrders, function($carry, $order) {
-			return $carry + $order->totalPrice;
-		}, 0);
+		$prevTotalRevenue = array_reduce($prevOrders, fn ($carry, $order): float => $carry + $order->totalPrice, 0.0);
 		$prevAverageOrderValue = $prevTotalOrders > 0 ? round($prevTotalRevenue / $prevTotalOrders, 2) : 0;
 		$prevCustomerIds = [];
-		foreach ($prevOrders as $order) {
-			if ($order->customerId) {
-				$prevCustomerIds[] = $order->customerId;
+		foreach ($prevOrders as $prevOrder) {
+			if ($prevOrder->customerId) {
+				$prevCustomerIds[] = $prevOrder->customerId;
 			}
 		}
+
 		$prevTotalCustomers = count(array_unique($prevCustomerIds));
 
 		return $this->renderTemplate('best-sellers/_reports', [
 			// Chart data
-			'dailyLabels'      => $dailyLabels,
-			'dailyData'        => $dailyData,
+			'dailyLabels' => $dailyLabels,
+			'dailyData' => $dailyData,
 			'dailyRevenueData' => $dailyRevenueData,
 			// Current period metrics
-			'totalOrders'      => $totalOrders,
-			'totalItemsSold'    => $totalItemsSold,
+			'totalOrders' => $totalOrders,
+			'totalItemsSold' => $totalItemsSold,
 			'avgItemsPerOrder' => $avgItemsPerOrder,
-			'totalRevenue'     => $totalRevenue,
-			'averageOrderValue'=> $averageOrderValue,
-			'totalCustomers'   => $totalCustomers,
+			'totalRevenue' => $totalRevenue,
+			'averageOrderValue' => $averageOrderValue,
+			'totalCustomers' => $totalCustomers,
 			// Previous period metrics for comparison
-			'prevTotalOrders'      => $prevTotalOrders,
-			'prevTotalItemsSold'    => $prevTotalItemsSold,
+			'prevTotalOrders' => $prevTotalOrders,
+			'prevTotalItemsSold' => $prevTotalItemsSold,
 			'prevAvgItemsPerOrder' => $prevAvgItemsPerOrder,
-			'prevTotalRevenue'     => $prevTotalRevenue,
-			'prevAverageOrderValue'=> $prevAverageOrderValue,
-			'prevTotalCustomers'   => $prevTotalCustomers,
+			'prevTotalRevenue' => $prevTotalRevenue,
+			'prevAverageOrderValue' => $prevAverageOrderValue,
+			'prevTotalCustomers' => $prevTotalCustomers,
 			// Date range & preset
-			'from'             => $from,
-			'to'               => $to,
-			'preset'           => $preset,
+			'from' => $from,
+			'to' => $to,
+			'preset' => $preset,
 		]);
 	}
 }

@@ -1,7 +1,10 @@
 <?php
+
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\commerce\elements\db\ProductQuery;
+use craft\commerce\elements\db\VariantQuery;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
 use craft\commerce\Plugin as CommercePlugin;
@@ -9,6 +12,7 @@ use craft\web\Controller;
 use craft\web\Request;
 use craft\web\twig\variables\Paginate;
 use DateTime;
+use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use Illuminate\Support\Collection;
 use yii\base\InvalidConfigException;
 use yii\web\Response;
@@ -25,9 +29,6 @@ class DashboardController extends Controller
 	 */
 	final public const ITEMS_PER_PAGE = 20;
 
-	/**
-	 * @var array|bool|int
-	 */
 	protected array|bool|int $allowAnonymous = false;
 
 	/**
@@ -35,7 +36,6 @@ class DashboardController extends Controller
 	 *
 	 * Retrieves query parameters, prepares date filters, and fetches best selling products or variants.
 	 *
-	 * @return Response
 	 * @throws InvalidConfigException
 	 */
 	public function actionIndex(): Response
@@ -45,7 +45,7 @@ class DashboardController extends Controller
 
 		// Set default date range: from one month ago to now.
 		$defaultFromDT = new DateTime('-1 month');
-		$defaultToDT   = new DateTime('now');
+		$defaultToDT = new DateTime('now');
 
 		/** @var string $preset */
 		$preset = $request->getQueryParam('preset', '');
@@ -54,15 +54,17 @@ class DashboardController extends Controller
 		/** @var string $toInput */
 		$toInput = $request->getQueryParam('to', $defaultToDT->format('Y-m-d'));
 
-		$from = is_array($fromInput) ? trim(reset($fromInput)) : trim($fromInput);
-		$to   = is_array($toInput) ? trim(reset($toInput)) : trim($toInput);
+		$from = trim($fromInput);
+		$to = trim($toInput);
 
 		// Convert to valid datetime strings.
 		$fromDTObj = new DateTime($from);
 		$fromDTObj->setTime(0, 0, 0);
+
 		$fromDT = $fromDTObj->format('Y-m-d H:i:s');
 		$toDTObj = new DateTime($to);
 		$toDTObj->setTime(23, 59, 59);
+
 		$toDT = $toDTObj->format('Y-m-d H:i:s');
 
 		/** @var string $productsOrVariants */
@@ -89,13 +91,19 @@ class DashboardController extends Controller
 		}
 
 		// Apply best sellers criteria.
+		/** @var SaleQueryBehavior<array-key, Product|Variant> $query */
 		$query->bestSellers($fromDT, $toDT);
 
+		// Reset the query type.
+		/** @var VariantQuery|ProductQuery $query */
+
 		// New: Apply order status filter if provided.
-		/** @var array $selectedStatuses */
-		$selectedStatuses = (array)$request->getQueryParam('orderStatuses', []);
-		if (!empty($selectedStatuses)) {
-			$query->andWhere(['orderStatus' => $selectedStatuses]);
+		/** @var array<array-key, string> $selectedStatuses */
+		$selectedStatuses = (array) $request->getQueryParam('orderStatuses', []);
+		if (! empty($selectedStatuses)) {
+			$query->andWhere([
+				'orderStatus' => $selectedStatuses,
+			]);
 		}
 
 		$query->andWhere([
@@ -122,28 +130,28 @@ class DashboardController extends Controller
 				/** @var Variant $element */
 				/** @var ?Product $product */
 				$product = $element->getOwner();
-				$totalQtySold = (int)($product->totalQtySold ?? 0);
+				$totalQtySold = (int) ($product->totalQtySold ?? 0);
 				return [
-					'url'         => $product?->getCpEditUrl(),
-					'title'       => $product?->title . ': ' . $element->title,
-					'sku'         => $element->sku,
-					'totalQtySold'=> $totalQtySold,
-					'type'        => $product?->getType()->name,
+					'url' => $product?->getCpEditUrl(),
+					'title' => $product?->title . ': ' . $element->title,
+					'sku' => $element->sku,
+					'totalQtySold' => $totalQtySold,
+					'type' => $product?->getType()->name,
 				];
 			}
 
 			/** @var Product $element */
-			$totalQtySold = (int)($element->totalQtySold ?? 0);
+			$totalQtySold = (int) ($element->totalQtySold ?? 0);
 			return [
-				'url'         => $element->getCpEditUrl(),
-				'title'       => $element->title,
-				'sku'         => $element->defaultSku,
-				'totalQtySold'=> $totalQtySold,
-				'type'        => $element->getType()->name,
+				'url' => $element->getCpEditUrl(),
+				'title' => $element->title,
+				'sku' => $element->defaultSku,
+				'totalQtySold' => $totalQtySold,
+				'type' => $element->getType()->name,
 			];
 		};
 
-		/** @var Collection<int, array> $page */
+		/** @var Collection<int, array<array-key, Product|Variant>> $page */
 		$page = collect(
 			$query
 				->limit(self::ITEMS_PER_PAGE)
@@ -152,27 +160,27 @@ class DashboardController extends Controller
 		)->map($map);
 
 		$pagination = Craft::createObject([
-			'class'       => Paginate::class,
-			'first'       => $offset + 1,
-			'last'        => min($offset + self::ITEMS_PER_PAGE, $total),
-			'total'       => $total,
+			'class' => Paginate::class,
+			'first' => $offset + 1,
+			'last' => min($offset + self::ITEMS_PER_PAGE, $total),
+			'total' => $total,
 			'currentPage' => $pageNum,
-			'totalPages'  => ceil($total / self::ITEMS_PER_PAGE),
+			'totalPages' => ceil($total / self::ITEMS_PER_PAGE),
 		]);
 
 		// Prepare title text with translation in mind.
 		$titleText = $productsOrVariants === 'variants' ? 'Variants' : 'Products';
 
 		return $this->renderTemplate('best-sellers/_dashboard', [
-			'items'               => $page,
-			'title'               => $titleText,
-			'from'                => $from,
-			'to'                  => $to,
-			'preset'              => $preset,
-			'productType'         => $productType,
-			'productsOrVariants'  => $productsOrVariants,
-			'pagination'          => $pagination,
-			'selectedStatuses'    => $selectedStatuses,
+			'items' => $page,
+			'title' => $titleText,
+			'from' => $from,
+			'to' => $to,
+			'preset' => $preset,
+			'productType' => $productType,
+			'productsOrVariants' => $productsOrVariants,
+			'pagination' => $pagination,
+			'selectedStatuses' => $selectedStatuses,
 		]);
 	}
 }

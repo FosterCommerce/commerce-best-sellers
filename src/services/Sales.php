@@ -21,7 +21,9 @@ class Sales extends Component
 	{
 		// Check if the order has already been processed.
 		$alreadyProcessed = VariantSale::find()
-			->where(['orderId' => $order->id])
+			->where([
+				'orderId' => $order->id,
+			])
 			->exists();
 
 		if ($alreadyProcessed) {
@@ -39,15 +41,15 @@ class Sales extends Component
 				$product = $purchasable->getOwner();
 
 				return [
-					'productId'     => $product->id,
-					'productTitle'  => $product->title,
-					'variantId'     => $purchasable->id,
-					'variantTitle'  => $purchasable->title,
-					'variantSku'    => $purchasable->sku,
-					'qty'           => $lineItem->qty,
-					'orderId'       => $order->id,
-					'dateOrdered'   => Db::prepareDateForDb($order->dateOrdered),
-					'dateCreated'   => Db::prepareDateForDb(new \DateTime()),
+					'productId' => $product->id,
+					'productTitle' => $product->title,
+					'variantId' => $purchasable->id,
+					'variantTitle' => $purchasable->title,
+					'variantSku' => $purchasable->sku,
+					'qty' => $lineItem->qty,
+					'orderId' => $order->id,
+					'dateOrdered' => Db::prepareDateForDb($order->dateOrdered),
+					'dateCreated' => Db::prepareDateForDb(new \DateTime()),
 				];
 			})
 			->toArray();
@@ -73,5 +75,4 @@ class Sales extends Component
 				->execute();
 		}
 	}
-
 }

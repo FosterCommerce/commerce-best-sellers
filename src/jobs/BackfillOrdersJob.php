@@ -1,7 +1,7 @@
 <?php
+
 namespace fostercommerce\bestsellers\jobs;
 
-use Craft;
 use craft\commerce\elements\Order;
 use craft\queue\BaseJob;
 use fostercommerce\bestsellers\Plugin;
@@ -10,10 +10,12 @@ use fostercommerce\bestsellers\records\VariantSale;
 class BackfillOrdersJob extends BaseJob
 {
 	public int $offset = 0;
+
 	public int $limit = 25;
 
 	// Optional date range properties, as strings (e.g. '2023-01-01')
 	public ?string $startDate = null;
+
 	public ?string $endDate = null;
 
 	public function execute($queue): void
@@ -39,7 +41,7 @@ class BackfillOrdersJob extends BaseJob
 		$orders = $ordersQuery->all();
 
 		foreach ($orders as $order) {
-			Plugin::$plugin->sales->logOrderSales($order);
+			Plugin::getInstance()->sales->logOrderSales($order);
 		}
 
 		$this->setProgress($queue, 1);

@@ -13,8 +13,8 @@ use craft\commerce\elements\Variant;
 use craft\elements\db\ElementQuery;
 use craft\events\CancelableEvent;
 use craft\events\DefineBehaviorsEvent;
-use craft\events\RegisterUrlRulesEvent;
 use craft\events\RegisterComponentTypesEvent;
+use craft\events\RegisterUrlRulesEvent;
 use craft\services\Utilities;
 use craft\web\twig\variables\CraftVariable;
 use craft\web\UrlManager;
@@ -40,8 +40,6 @@ use yii\base\Event;
  */
 class Plugin extends BasePlugin
 {
-	public static ?Plugin $plugin = null;
-
 	public string $schemaVersion = '1.0.0';
 
 	public bool $hasCpSettings = false;
@@ -63,7 +61,6 @@ class Plugin extends BasePlugin
 	public function init(): void
 	{
 		parent::init();
-		self::$plugin = $this;
 
 		$this->attachEventHandlers();
 
@@ -77,7 +74,7 @@ class Plugin extends BasePlugin
 		Event::on(
 			Utilities::class,
 			Utilities::EVENT_REGISTER_UTILITIES,
-			function(RegisterComponentTypesEvent $event) {
+			function (RegisterComponentTypesEvent $event): void {
 				$event->types[] = BackfillUtility::class;
 			}
 		);
@@ -91,11 +88,34 @@ class Plugin extends BasePlugin
 		Event::on(
 			CraftVariable::class,
 			CraftVariable::EVENT_INIT,
-			static function(Event $event): void {
+			static function (Event $event): void {
+				/** @var CraftVariable $variable */
 				$variable = $event->sender;
 				$variable->set('bestsellers', BestSellersVariable::class);
 			}
 		);
+	}
+
+	/**
+	 * @return ?array<non-empty-string, mixed>
+	 */
+	public function getCpNavItem(): ?array
+	{
+		$navItem = parent::getCpNavItem();
+		$navItem['label'] = 'Best Sellers';
+		$navItem['url'] = 'best-sellers';
+		$navItem['subnav'] = [
+			'dashboard' => [
+				'label' => 'Best Sellers',
+				'url' => 'best-sellers/',
+			],
+			'reports' => [
+				'label' => 'Reports',
+				'url' => 'best-sellers/reports',
+			],
+			// Add more submenu pages as needed.
+		];
+		return $navItem;
 	}
 
 	protected function createSettingsModel(): ?Model
@@ -113,7 +133,7 @@ class Plugin extends BasePlugin
 
 	private function attachEventHandlers(): void
 	{
-		if (!Craft::$app->getRequest()->getIsConsoleRequest() && Craft::$app->getRequest()->getIsCpRequest()) {
+		if (! Craft::$app->getRequest()->getIsConsoleRequest() && Craft::$app->getRequest()->getIsCpRequest()) {
 			$this->registerCpRoutes();
 		}
 
@@ -172,10 +192,10 @@ class Plugin extends BasePlugin
 		Event::on(
 			Order::class,
 			Order::EVENT_AFTER_COMPLETE_ORDER,
-			static function (Event $event): void {
+			function (Event $event): void {
 				/** @var Order $order */
 				$order = $event->sender;
-				self::$plugin->sales->logOrderSales($order);
+				$this->sales->logOrderSales($order);
 			}
 		);
 	}
@@ -191,24 +211,4 @@ class Plugin extends BasePlugin
 			}
 		);
 	}
-
-	public function getCpNavItem(): array
-	{
-		$navItem = parent::getCpNavItem();
-		$navItem['label'] = 'Best Sellers';
-		$navItem['url'] = 'best-sellers';
-		$navItem['subnav'] = [
-			'dashboard' => [
-				'label' => 'Best Sellers',
-				'url'   => 'best-sellers/'
-			],
-			'reports' => [
-				'label' => 'Reports',
-				'url'   => 'best-sellers/reports'
-			],
-			// Add more submenu pages as needed.
-		];
-		return $navItem;
-	}
-
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace fostercommerce\bestsellers\utilities;
 
 use Craft;
@@ -18,7 +19,7 @@ class BackfillUtility extends Utility
 
 	public static function contentHtml(): string
 	{
-		return Craft::$app->view->renderTemplate('best-sellers/_utilities/backfill',[
+		return Craft::$app->view->renderTemplate('best-sellers/_utilities/backfill', [
 			'title' => 'Backfill Orders',
 		]);
 	}

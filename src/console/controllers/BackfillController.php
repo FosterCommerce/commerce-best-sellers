@@ -1,11 +1,12 @@
 <?php
+
 namespace fostercommerce\bestsellers\console\controllers;
 
 use Craft;
-use yii\console\Controller;
 use craft\commerce\elements\Order;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\records\VariantSale;
+use yii\console\Controller;
 
 class BackfillController extends Controller
 {

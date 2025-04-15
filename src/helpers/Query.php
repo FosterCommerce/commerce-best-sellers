@@ -18,6 +18,11 @@ class Query
 	 */
 	public static function attachQuery(ElementQuery $query, string $id, string $joinCondition): void
 	{
+		$behaviorExists = $query->getBehavior('bestSellers') !== null;
+		if (! $behaviorExists) {
+			return;
+		}
+
 		$withQuery = (new DbQuery())
 			->select([
 				$id,

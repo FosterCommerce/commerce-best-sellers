@@ -28,13 +28,6 @@ use fostercommerce\bestsellers\variables\BestSellersVariable;
 use yii\base\Event;
 
 /**
- * Best Sellers plugin
- *
- * @method static Plugin getInstance()
- * @method Settings getSettings()
- * @author Foster Commerce <support@fostercommerce.com>
- * @copyright Foster Commerce
- * @license https://craftcms.github.io/license/ Craft License
  * @property-read Settings $settings
  * @property-read Sales $sales
  */
@@ -113,7 +106,6 @@ class Plugin extends BasePlugin
 				'label' => 'Reports',
 				'url' => 'best-sellers/reports',
 			],
-			// Add more submenu pages as needed.
 		];
 		return $navItem;
 	}
@@ -139,7 +131,7 @@ class Plugin extends BasePlugin
 
 		Event::on(
 			Variant::class,
-			Variant::EVENT_DEFINE_BEHAVIORS,
+			Model::EVENT_DEFINE_BEHAVIORS,
 			static function (DefineBehaviorsEvent $event): void {
 				$event->behaviors['bestSellers'] = SalesBehavior::class;
 			}
@@ -147,7 +139,7 @@ class Plugin extends BasePlugin
 
 		Event::on(
 			Product::class,
-			Product::EVENT_DEFINE_BEHAVIORS,
+			Model::EVENT_DEFINE_BEHAVIORS,
 			static function (DefineBehaviorsEvent $event): void {
 				$event->behaviors['bestSellers'] = SalesBehavior::class;
 			}
@@ -155,7 +147,7 @@ class Plugin extends BasePlugin
 
 		Event::on(
 			VariantQuery::class,
-			VariantQuery::EVENT_DEFINE_BEHAVIORS,
+			Model::EVENT_DEFINE_BEHAVIORS,
 			static function (DefineBehaviorsEvent $event): void {
 				$event->behaviors['bestSellers'] = SaleQueryBehavior::class;
 			}
@@ -163,7 +155,7 @@ class Plugin extends BasePlugin
 
 		Event::on(
 			ProductQuery::class,
-			ProductQuery::EVENT_DEFINE_BEHAVIORS,
+			Model::EVENT_DEFINE_BEHAVIORS,
 			static function (DefineBehaviorsEvent $event): void {
 				$event->behaviors['bestSellers'] = SaleQueryBehavior::class;
 			}

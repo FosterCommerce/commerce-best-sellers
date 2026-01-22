@@ -12,15 +12,24 @@ use yii\base\Behavior;
  */
 class SaleQueryBehavior extends Behavior
 {
-	public ?\DateTime $bestSellersFrom = null;
+	private bool $includeBestSellersData = false;
 
+	public ?\DateTime $bestSellersFrom = null;
+t s
 	public ?\DateTime $bestSellersTo = null;
+
+	public function getIncludeBestSellersData(): bool
+	{
+		return $this->includeBestSellersData;
+	}
 
 	/**
 	 * @return ElementQuery<TKey, TElement>
 	 */
 	public function bestSellers(null|string|\DateTime $from, null|string|\DateTime $to = null): mixed
 	{
+		$this->includeBestSellersData = true;
+
 		if (is_string($from)) {
 			$this->bestSellersFrom = new \DateTime($from);
 		}

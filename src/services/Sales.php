@@ -10,6 +10,7 @@ use craft\commerce\enums\LineItemType;
 use craft\commerce\models\LineItem;
 use craft\helpers\Db;
 use fostercommerce\bestsellers\records\VariantSale;
+use modules\site\utilities\LineItemHelper;
 use yii\base\Component;
 
 /**
@@ -33,10 +34,14 @@ class Sales extends Component
 		$lineItems = $order->getLineItems();
 
 		$rows = collect($lineItems)
-			->filter(static fn (LineItem $lineItem): bool => $lineItem->type !== LineItemType::Custom)
-			->map(function (LineItem $lineItem) use ($order): array {
-				/** @var Variant $purchasable */
-				$purchasable = $lineItem->getPurchasable();
+			->map(function (LineItem $lineItem) use ($order): ?array {
+				/** @var ?Variant $purchasable */
+				$purchasable = LineItemHelper::getPurchasable($lineItem);
+
+				if (! $purchasable instanceof Variant) {
+					return null;
+				}
+
 				/** @var Product $product */
 				$product = $purchasable->getOwner();
 
@@ -52,6 +57,7 @@ class Sales extends Component
 					'dateCreated' => Db::prepareDateForDb(new \DateTime()),
 				];
 			})
+			->filter()
 			->toArray();
 
 		if ($rows !== []) {

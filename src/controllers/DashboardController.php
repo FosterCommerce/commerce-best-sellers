@@ -13,6 +13,7 @@ use craft\web\Request;
 use craft\web\twig\variables\Paginate;
 use DateTime;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
+use fostercommerce\bestsellers\behaviors\SalesBehavior;
 use Illuminate\Support\Collection;
 use yii\base\InvalidConfigException;
 use yii\web\Response;
@@ -89,13 +90,10 @@ class DashboardController extends Controller
 				$query->type($productType);
 			}
 		}
+		/** @var (VariantQuery|ProductQuery & SaleQueryBehavior<array-key, Product|Variant>) $query */
 
 		// Apply best sellers criteria.
-		/** @var SaleQueryBehavior<array-key, Product|Variant> $query */
 		$query->bestSellers($fromDT, $toDT);
-
-		// Reset the query type.
-		/** @var VariantQuery|ProductQuery $query */
 
 		// New: Apply order status filter if provided.
 		/** @var array<array-key, string> $selectedStatuses */
@@ -127,10 +125,10 @@ class DashboardController extends Controller
 		 */
 		$map = static function (Product|Variant $element) use ($fetchVariants): array {
 			if ($fetchVariants) {
-				/** @var Variant $element */
+				/** @var (Variant & SalesBehavior) $element */
 				/** @var ?Product $product */
 				$product = $element->getOwner();
-				$totalQtySold = (int) ($product->totalQtySold ?? 0);
+				$totalQtySold = (int) ($element->totalQtySold ?? 0);
 				return [
 					'url' => $product?->getCpEditUrl(),
 					'title' => $product?->title . ': ' . $element->title,
@@ -150,6 +148,12 @@ class DashboardController extends Controller
 				'type' => $element->getType()->name,
 			];
 		};
+
+		$query->andWhere([
+			'not', [
+				'totalQtySoldd' => null,
+			],
+		]);
 
 		/** @var Collection<int, array<array-key, Product|Variant>> $page */
 		$page = collect(

@@ -11,11 +11,11 @@ This plugin requires Craft CMS 5.0.0 or later, and PHP 8.2 or later.
 
 You can install this plugin from the Plugin Store or with Composer.
 
-#### From the Plugin Store
+### From the Plugin Store
 
 Go to the Plugin Store in your project’s Control Panel and search for “Best Sellers”. Then press “Install”.
 
-#### With Composer
+### With Composer
 
 Open your terminal and run the following commands:
 
@@ -30,14 +30,15 @@ composer require fostercommerce/commerce-best-sellers
 ./craft plugin/install best-sellers
 ```
 
-
 ## Usage
-#### Console command to process existing orders
+### Console command to process existing orders
+
 ```
 php craft best-sellers/backfill
 ```
 
-#### Twig
+### Twig
+
 ```
 # product's total sales (all time)
 {{ craft.bestsellers.productTotalSales(product.id) }}
@@ -53,7 +54,8 @@ php craft best-sellers/backfill
 
 ```
 
-#### PHP
+### PHP
+
 ```php
 use fostercommerce\bestsellers\variables\BestSellersVariable;
 $bestSellers = new BestSellersVariable();

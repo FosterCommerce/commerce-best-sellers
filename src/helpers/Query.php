@@ -23,6 +23,13 @@ class Query
 			return;
 		}
 
+		/** @var (ElementQuery<TKey, TElement> & SaleQueryBehavior<TKey, TElement>) $query */
+
+		// Behavior types aren't inferred
+		if (! $query->getIncludeBestSellersData()) {
+			return;
+		}
+
 		$withQuery = (new DbQuery())
 			->select([
 				$id,
@@ -31,8 +38,6 @@ class Query
 			->from(VariantSale::tableName())
 			->groupBy($id);
 
-		// Behavior types aren't inferred
-		/** @var SaleQueryBehavior<TKey, TElement> $query */
 		if ($query->bestSellersFrom !== null) {
 			$withQuery->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersFrom)]);
 		}
@@ -41,8 +46,6 @@ class Query
 			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersTo)]);
 		}
 
-		// We need to reset the type here
-		/** @var ElementQuery<TKey, TElement> $query */
 		$query
 			->query
 			?->addSelect(['variant_sales_cte.totalQtySold'])

@@ -93,7 +93,7 @@ class BestSellersVariable
 
 		// get all previous orders for that customer
 		$ordersService = Commerce::getInstance()?->getOrders();
-		if (!$ordersService) {
+		if (! $ordersService) {
 			return false;
 		}
 		/** @var \craft\commerce\elements\Order[] $orders */
@@ -124,7 +124,7 @@ class BestSellersVariable
 		}
 
 		// reorder by most recent purchase
-		usort($lineItems, fn($a, $b): int => strtotime((string) $b['purchaseDate']) - strtotime((string) $a['purchaseDate']));
+		usort($lineItems, fn ($a, $b): int => strtotime((string) $b['purchaseDate']) - strtotime((string) $a['purchaseDate']));
 
 		// return the most recent purchase
 		return $lineItems[0];

@@ -76,7 +76,7 @@ class BestSellersVariable
 	 * Returns the most recent purchase info for the current logged-in user
 	 * for a given purchasable ID.
 	 *
-	 * @return array<string>|false
+	 * @return array<mixed>|false
 	 */
 	public function previousPurchaseByCurrentUser(int $purchasableId): array|false
 	{
@@ -92,7 +92,16 @@ class BestSellersVariable
 		}
 
 		// get all previous orders for that customer
-		$orders = Commerce::getInstance()->getOrders()->getOrdersByCustomer($user->id);
+		$ordersService = Commerce::getInstance()?->getOrders();
+		if (!$ordersService) {
+			return false;
+		}
+		/** @var \craft\commerce\elements\Order[] $orders */
+		$orders = $ordersService->getOrdersByCustomer($user->id);
+
+		if (empty($orders)) {
+			return false;
+		}
 
 		// loop through orders and get line items
 		$lineItems = [];
@@ -100,7 +109,7 @@ class BestSellersVariable
 			foreach ($order->getLineItems() as $lineItem) {
 				if ($lineItem->purchasableId === $purchasableId) {
 					$lineItems[] = [
-						'purchaseDate' => $order->dateOrdered->format('U'),
+						'purchaseDate' => $order->dateOrdered?->format('U'),
 						'orderId' => $order->id,
 						'reference' => $order->reference,
 						'number' => $order->number,

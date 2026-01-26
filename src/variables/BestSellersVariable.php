@@ -96,6 +96,7 @@ class BestSellersVariable
 		if (! $ordersService) {
 			return false;
 		}
+
 		/** @var \craft\commerce\elements\Order[] $orders */
 		$orders = $ordersService->getOrdersByCustomer($user->id);
 

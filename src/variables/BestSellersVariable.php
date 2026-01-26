@@ -3,7 +3,7 @@
 namespace fostercommerce\bestsellers\variables;
 
 use Craft;
-use Craft\commerce\Plugin as Commerce;
+use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use fostercommerce\bestsellers\records\VariantSale;
 

@@ -110,14 +110,12 @@ class BestSellersVariable
 		}
 
 		// if no previous purchases, return false
-		if (empty($lineItems)) {
+		if ($lineItems === []) {
 			return false;
 		}
 
 		// reorder by most recent purchase
-		usort($lineItems, function ($a, $b) {
-			return strtotime($b['purchaseDate']) - strtotime($a['purchaseDate']);
-		});
+		usort($lineItems, fn($a, $b): int => strtotime((string) $b['purchaseDate']) - strtotime((string) $a['purchaseDate']));
 
 		// return the most recent purchase
 		return $lineItems[0];

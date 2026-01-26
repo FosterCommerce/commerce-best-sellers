@@ -2,6 +2,8 @@
 
 namespace fostercommerce\bestsellers\variables;
 
+use Craft;
+use Craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use fostercommerce\bestsellers\records\VariantSale;
 
@@ -68,5 +70,56 @@ class BestSellersVariable
 		$sum = $query->sum('qty');
 
 		return $sum;
+	}
+
+	/**
+	 * Returns the most recent purchase info for the current logged-in user
+	 * for a given purchasable ID.
+	 *
+	 * @return array<string>|false
+	 */
+	public function previousPurchaseByCurrentUser(int $purchasableId): array|false
+	{
+		// check that commerce is installed
+		if (! Craft::$app->getPlugins()->isPluginInstalled('commerce')) {
+			return false;
+		}
+
+		// get current user
+		$user = Craft::$app->getUser()->getIdentity();
+		if (! $user) {
+			return false;
+		}
+
+		// get all previous orders for that customer
+		$orders = Commerce::getInstance()->getOrders()->getOrdersByCustomer($user->id);
+
+		// loop through orders and get line items
+		$lineItems = [];
+		foreach ($orders as $order) {
+			foreach ($order->getLineItems() as $lineItem) {
+				if ($lineItem->purchasableId === $purchasableId) {
+					$lineItems[] = [
+						'purchaseDate' => $order->dateOrdered->format('U'),
+						'orderId' => $order->id,
+						'reference' => $order->reference,
+						'number' => $order->number,
+					];
+				}
+			}
+		}
+
+		// if no previous purchases, return false
+		if (empty($lineItems)) {
+			return false;
+		}
+
+		// reorder by most recent purchase
+		usort($lineItems, function ($a, $b) {
+			return strtotime($b['purchaseDate']) - strtotime($a['purchaseDate']);
+		});
+
+		// return the most recent purchase
+		return $lineItems[0];
 	}
 }

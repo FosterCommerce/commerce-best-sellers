@@ -101,7 +101,7 @@ class BestSellersVariable
 				'lineitems.purchasableId' => $purchasableId,
 			])
 			->orderBy([
-			'dateOrdered' => SORT_DESC,
+				'dateOrdered' => SORT_DESC,
 			])
 			->limit(1);
 

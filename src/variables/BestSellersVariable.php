@@ -103,8 +103,7 @@ class BestSellersVariable
 			->orderBy([
 			'dateOrdered' => SORT_DESC,
 			])
-			->limit(1)
-			->asArray();
+			->limit(1);
 
 		$order = $query->one();
 

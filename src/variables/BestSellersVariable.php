@@ -108,6 +108,8 @@ class BestSellersVariable
 
 		$order = $query->one();
 
+		dd($order);
+
 		if (empty($order)) {
 			return null;
 		}

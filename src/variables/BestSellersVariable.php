@@ -76,8 +76,6 @@ class BestSellersVariable
 	/**
 	 * Returns the most recent purchase info for the current logged-in user
 	 * for a given purchasable ID.
-	 *
-	 * @return array<mixed>|false
 	 */
 	public function previousPurchaseByCurrentUser(int $purchasableId): ?Order
 	{
@@ -105,6 +103,7 @@ class BestSellersVariable
 			])
 			->limit(1);
 
+		/** @var ?Order */
 		$order = $query->one();
 
 		if (empty($order)) {

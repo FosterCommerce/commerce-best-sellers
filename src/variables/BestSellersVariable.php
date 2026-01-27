@@ -79,44 +79,39 @@ class BestSellersVariable
 	 *
 	 * @return array<mixed>|false
 	 */
-	public function previousPurchaseByCurrentUser(int $purchasableId): array|false
+	public function previousPurchaseByCurrentUser(int $purchasableId): ?Order
 	{
 		// check that commerce is installed
 		if (! Craft::$app->getPlugins()->isPluginInstalled('commerce')) {
-			return false;
+			return null;
 		}
 
 		// get current user
 		$user = Craft::$app->getUser()->getIdentity();
 		if (! $user) {
-			return false;
+			return null;
 		}
 
 		// query for most recent completed order with this purchasable
-		$query = Order::find();
-		$query->customer($user);
-		$query->isCompleted();
-		$query->innerJoin('{{%commerce_lineitems}} lineitems', '[[commerce_orders.id]] = [[lineitems.orderId]]');
-		$query->andWhere([
-			'lineitems.purchasableId' => $purchasableId,
-		]);
-		$query->orderBy([
+		$query = Order::find()
+			->customer($user)
+			->isCompleted()
+			->innerJoin('{{%commerce_lineitems}} lineitems', '[[commerce_orders.id]] = [[lineitems.orderId]]')
+			->andWhere([
+				'lineitems.purchasableId' => $purchasableId,
+			])
+			->orderBy([
 			'dateOrdered' => SORT_DESC,
-		]);
-		$query->limit(1);
-		$query->asArray();
+			])
+			->limit(1)
+			->asArray();
 
-		$purchaseData = $query->one();
+		$order = $query->one();
 
-		if (empty($purchaseData)) {
-			return false;
+		if (empty($order)) {
+			return null;
 		}
 
-		return [
-			'purchaseDate' => strtotime((string) $purchaseData['dateOrdered']),
-			'orderId' => $purchaseData['id'],
-			'reference' => $purchaseData['reference'],
-			'number' => $purchaseData['number'],
-		];
+		return $order;
 	}
 }

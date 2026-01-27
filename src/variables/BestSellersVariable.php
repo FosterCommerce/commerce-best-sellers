@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\variables;
 
 use Craft;
+use craft\commerce\elements\Order;
 use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use fostercommerce\bestsellers\records\VariantSale;
@@ -91,42 +92,31 @@ class BestSellersVariable
 			return false;
 		}
 
-		// get all previous orders for that customer
-		$ordersService = Commerce::getInstance()?->getOrders();
-		if (! $ordersService) {
+		// query for most recent completed order with this purchasable
+		$query = Order::find();
+		$query->customer($user);
+		$query->isCompleted();
+		$query->innerJoin('{{%commerce_lineitems}} lineitems', '[[commerce_orders.id]] = [[lineitems.orderId]]');
+		$query->andWhere([
+			'lineitems.purchasableId' => $purchasableId,
+		]);
+		$query->orderBy([
+			'dateOrdered' => SORT_DESC,
+		]);
+		$query->limit(1);
+		$query->asArray();
+
+		$purchaseData = $query->one();
+
+		if (empty($purchaseData)) {
 			return false;
 		}
 
-		$orders = $ordersService->getOrdersByCustomer($user);
-
-		if (empty($orders)) {
-			return false;
-		}
-
-		// loop through orders and get line items
-		$lineItems = [];
-		foreach ($orders as $order) {
-			foreach ($order->getLineItems() as $lineItem) {
-				if ($lineItem->purchasableId === $purchasableId) {
-					$lineItems[] = [
-						'purchaseDate' => $order->dateOrdered?->format('U'),
-						'orderId' => $order->id,
-						'reference' => $order->reference,
-						'number' => $order->number,
-					];
-				}
-			}
-		}
-
-		// if no previous purchases, return false
-		if ($lineItems === []) {
-			return false;
-		}
-
-		// reorder by most recent purchase
-		usort($lineItems, fn ($a, $b): int => strtotime((string) $b['purchaseDate']) - strtotime((string) $a['purchaseDate']));
-
-		// return the most recent purchase
-		return $lineItems[0];
+		return [
+			'purchaseDate' => strtotime((string) $purchaseData['dateOrdered']),
+			'orderId' => $purchaseData['id'],
+			'reference' => $purchaseData['reference'],
+			'number' => $purchaseData['number'],
+		];
 	}
 }

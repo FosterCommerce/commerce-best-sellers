@@ -77,15 +77,8 @@ class BestSellersVariable
 	 * Returns the most recent purchase info for the user
 	 * for a given purchasable ID.
 	 */
-	public function previousPurchaseByUser(int $purchasableId, ?User $user = null): ?Order
+	public function previousPurchaseByUser(int $purchasableId, User $user): ?Order
 	{
-		// if no user provided, use the current logged-in user
-		$user ??= Craft::$app->getUser()->getIdentity();
-
-		// just in case there is still no user
-		if ($user === null) {
-			return null;
-		}
 
 		// query for most recent completed order with this purchasable
 		$query = Order::find()

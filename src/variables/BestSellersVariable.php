@@ -2,7 +2,6 @@
 
 namespace fostercommerce\bestsellers\variables;
 
-use Craft;
 use craft\commerce\elements\Order;
 use craft\db\Query;
 use craft\elements\User;
@@ -79,7 +78,6 @@ class BestSellersVariable
 	 */
 	public function previousPurchaseByUser(int $purchasableId, User $user): ?Order
 	{
-
 		// query for most recent completed order with this purchasable
 		$query = Order::find()
 			->customer($user)

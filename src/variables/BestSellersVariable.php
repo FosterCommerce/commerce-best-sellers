@@ -4,7 +4,7 @@ namespace fostercommerce\bestsellers\variables;
 
 use Craft;
 use craft\commerce\elements\Order;
-use craft\console\User;
+use craft\elements\User;
 use craft\db\Query;
 use fostercommerce\bestsellers\records\VariantSale;
 
@@ -77,7 +77,7 @@ class BestSellersVariable
 	 * Returns the most recent purchase info for the user
 	 * for a given purchasable ID.
 	 */
-	public function previousPurchaseByUser(int $purchasableId, ?\craft\elements\User $user = null): ?Order
+	public function previousPurchaseByUser(int $purchasableId, ?User $user = null): ?Order
 	{
 		// if no user provided, use the current logged-in user
 		$user ??= Craft::$app->getUser()->getIdentity();

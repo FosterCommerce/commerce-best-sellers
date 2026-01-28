@@ -4,8 +4,8 @@ namespace fostercommerce\bestsellers\variables;
 
 use Craft;
 use craft\commerce\elements\Order;
-use craft\elements\User;
 use craft\db\Query;
+use craft\elements\User;
 use fostercommerce\bestsellers\records\VariantSale;
 
 class BestSellersVariable

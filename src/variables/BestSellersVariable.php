@@ -2,7 +2,9 @@
 
 namespace fostercommerce\bestsellers\variables;
 
+use craft\commerce\elements\Order;
 use craft\db\Query;
+use craft\elements\User;
 use fostercommerce\bestsellers\records\VariantSale;
 
 class BestSellersVariable
@@ -68,5 +70,34 @@ class BestSellersVariable
 		$sum = $query->sum('qty');
 
 		return $sum;
+	}
+
+	/**
+	 * Returns the most recent purchase info for the user
+	 * for a given purchasable ID.
+	 */
+	public function previousPurchaseByUser(int $purchasableId, User $user): ?Order
+	{
+		// query for most recent completed order with this purchasable
+		$query = Order::find()
+			->customer($user)
+			->isCompleted()
+			->innerJoin('{{%commerce_lineitems}} lineitems', '[[commerce_orders.id]] = [[lineitems.orderId]]')
+			->andWhere([
+				'lineitems.purchasableId' => $purchasableId,
+			])
+			->orderBy([
+				'dateOrdered' => SORT_DESC,
+			])
+			->limit(1);
+
+		/** @var ?Order */
+		$order = $query->one();
+
+		if (empty($order)) {
+			return null;
+		}
+
+		return $order;
 	}
 }

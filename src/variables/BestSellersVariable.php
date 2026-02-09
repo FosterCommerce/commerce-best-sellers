@@ -3,6 +3,8 @@
 namespace fostercommerce\bestsellers\variables;
 
 use craft\commerce\elements\Order;
+use craft\commerce\elements\VariantCollection;
+use craft\commerce\elements\Variant;
 use craft\db\Query;
 use craft\elements\User;
 use fostercommerce\bestsellers\records\VariantSale;
@@ -99,5 +101,33 @@ class BestSellersVariable
 		}
 
 		return $order;
+	}
+
+	public function previouslyPurchasedProducts(User $user): ?VariantCollection
+	{
+		$previousPurchases = null;
+
+		$purchasableIds = (new Query())
+			->select('l.purchasableId')
+			->from('{{%commerce_orders}} o')
+			->leftJoin('{{%commerce_lineitems}} l', '[[o.id]] = [[l.orderId]]')
+			->where(['[[o.isCompleted]]' => true])
+			->andWhere(['[[o.customerId]]' => $user->id])
+			->orderBy('o.dateOrdered desc')
+			->all();
+
+		if($purchasableIds === null){
+			return null;
+		}
+
+		$purchasables = array_map(fn($row) => $row['purchasableId'], $purchasableIds);
+		$purchasables = array_filter($purchasables, fn($id) => $id !== null);
+
+		$previousPurchases = Variant::find()
+			->id($purchasables)
+			->fixedOrder()
+			->collect();
+
+		return $previousPurchases;
 	}
 }

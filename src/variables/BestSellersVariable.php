@@ -4,7 +4,7 @@ namespace fostercommerce\bestsellers\variables;
 
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Variant;
-use craft\commerce\elements\VariantCollection;
+use craft\commerce\elements\db\VariantQuery;
 use craft\db\Query;
 use craft\elements\User;
 use fostercommerce\bestsellers\records\VariantSale;
@@ -103,7 +103,7 @@ class BestSellersVariable
 		return $order;
 	}
 
-	public function previouslyPurchasedProducts(User $user): ?VariantCollection
+	public function previouslyPurchasedProducts(User $user): ?VariantQuery
 	{
 		$purchasableIds = (new Query())
 			->select('l.purchasableId')
@@ -131,7 +131,6 @@ class BestSellersVariable
 
 		return Variant::find()
 			->id($purchasables)
-			->fixedOrder()
-			->collect();
+			->fixedOrder();
 	}
 }

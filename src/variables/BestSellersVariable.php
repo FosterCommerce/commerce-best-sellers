@@ -104,8 +104,8 @@ class BestSellersVariable
 	}
 
 	/**
-	* @return VariantQuery <array-key,Variant>|null
-	*/
+	 * @return VariantQuery <array-key,Variant>|null
+	 */
 	public function previouslyPurchasedProducts(User $user): ?VariantQuery
 	{
 		$purchasableIds = (new Query())

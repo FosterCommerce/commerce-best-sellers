@@ -103,6 +103,9 @@ class BestSellersVariable
 		return $order;
 	}
 
+	/**
+	* @return VariantQuery <array-key,Variant>|null
+	*/
 	public function previouslyPurchasedProducts(User $user): ?VariantQuery
 	{
 		$purchasableIds = (new Query())
@@ -122,6 +125,7 @@ class BestSellersVariable
 			return null;
 		}
 
+		/** @var array<array-key,array<array-key,int>> $purchasableIds */
 		$purchasables = array_map(fn ($row): mixed => $row['purchasableId'], $purchasableIds);
 		$purchasables = array_filter($purchasables, fn ($id): bool => $id !== null);
 

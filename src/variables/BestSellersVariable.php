@@ -2,9 +2,9 @@
 
 namespace fostercommerce\bestsellers\variables;
 
+use craft\commerce\elements\db\VariantQuery;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Variant;
-use craft\commerce\elements\db\VariantQuery;
 use craft\db\Query;
 use craft\elements\User;
 use fostercommerce\bestsellers\records\VariantSale;

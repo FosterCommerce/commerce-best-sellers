@@ -118,6 +118,12 @@ class BestSellersVariable
 			->andWhere([
 				'[[o.customerId]]' => $user->id,
 			])
+			->andWhere([
+				'not',
+				[
+					'l.purchasableId' => null,
+				],
+			])
 			->orderBy('o.dateOrdered desc')
 			->all();
 
@@ -125,13 +131,8 @@ class BestSellersVariable
 			return null;
 		}
 
-		/** @var array<array-key,array<array-key,int>> $purchasableIds */
+		/** @var array<int,array{purchasableId: ?int}> $purchasableIds */
 		$purchasables = array_map(fn ($row): mixed => $row['purchasableId'], $purchasableIds);
-		$purchasables = array_filter($purchasables, fn ($id): bool => $id !== null);
-
-		if ($purchasables === []) {
-			return null;
-		}
 
 		return Variant::find()
 			->id($purchasables)

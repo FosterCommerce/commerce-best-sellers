@@ -4,5 +4,4 @@
 *Thumbs.db
 .env
 /node_modules
-composer.lock
 /vendor

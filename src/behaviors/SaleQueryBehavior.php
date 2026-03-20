@@ -15,7 +15,7 @@ class SaleQueryBehavior extends Behavior
 	private bool $includeBestSellersData = false;
 
 	public ?\DateTime $bestSellersFrom = null;
-t s
+
 	public ?\DateTime $bestSellersTo = null;
 
 	public function getIncludeBestSellersData(): bool

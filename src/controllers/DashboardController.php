@@ -151,7 +151,7 @@ class DashboardController extends Controller
 
 		$query->andWhere([
 			'not', [
-				'totalQtySoldd' => null,
+				'totalQtySold' => null,
 			],
 		]);
 

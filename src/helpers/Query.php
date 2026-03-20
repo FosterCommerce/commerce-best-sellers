@@ -46,15 +46,8 @@ class Query
 			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersTo)]);
 		}
 
-		$query
-			->query
-			?->addSelect(['variant_sales_cte.totalQtySold'])
-			->withQuery($withQuery, 'variant_sales_cte')
-			->leftJoin(
-				'variant_sales_cte',
-				$joinCondition,
-			);
-
+		// Attach CTE only to subQuery (handles filtering/sorting).
+		// The outer query selects totalQtySold from the subquery results.
 		$query
 			->subQuery
 			?->addSelect(['variant_sales_cte.totalQtySold'])
@@ -63,5 +56,9 @@ class Query
 				'variant_sales_cte',
 				$joinCondition,
 			);
+
+		$query
+			->query
+			?->addSelect(['subquery.totalQtySold']);
 	}
 }

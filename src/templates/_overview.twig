@@ -1,0 +1,259 @@
+{% extends 'best-sellers/_layouts/reports' %}
+{% import 'best-sellers/_includes/kpi-card' as kpi %}
+
+{% set title = "Overview"|t('best-sellers') %}
+{% set selectedSubnavItem = 'overview' %}
+
+{% block reportContent %}
+	{# Grouped KPI Cards #}
+	{% for group in cardGroups %}
+		<div class="bs-section">
+			<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
+				<h3 class="bs-section__title" style="margin: 0;">{{ group.label|t('best-sellers') }}</h3>
+				<a href="{{ cpUrl(group.link) }}" class="go" style="font-size: 0.85rem;">{{ group.linkLabel|t('best-sellers') }}</a>
+			</div>
+			<div class="bs-kpi-grid bs-kpi-grid--{{ group.cards|length }}">
+				{% for card in group.cards %}
+					{{ kpi.card(card) }}
+				{% endfor %}
+			</div>
+
+			{% if group.label == 'Orders' %}
+				{# Revenue / Orders / AOV Toggle Chart #}
+				<div class="bs-chart-container" style="margin-top: 1.5rem;">
+					<div class="bs-chart-toggle">
+						<button type="button" class="bs-chart-toggle__btn bs-chart-toggle__btn--active" data-chart="revenue">{{ "Revenue"|t('best-sellers') }}</button>
+						<button type="button" class="bs-chart-toggle__btn" data-chart="orders">{{ "Orders"|t('best-sellers') }}</button>
+						<button type="button" class="bs-chart-toggle__btn" data-chart="aov">{{ "AOV"|t('best-sellers') }}</button>
+					</div>
+					<div style="position: relative; height: 350px;">
+						<canvas id="overviewChart"></canvas>
+					</div>
+				</div>
+			{% endif %}
+
+			{% if group.label == 'Products' and bestSellers|length > 0 %}
+				{# Best Sellers Top 10 #}
+				{% set maxUnits = bestSellers|first.unitsSold %}
+				<div class="bs-chart-container" style="margin-top: 1.5rem;">
+					<h3 class="bs-chart-container__title">{{ "Best Sellers"|t('best-sellers') }}</h3>
+					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+						{% for item in bestSellers %}
+							{% set pct = maxUnits > 0 ? (item.unitsSold / maxUnits * 100) : 0 %}
+							<tr>
+								<td style="padding: 0.4rem 0; color: #999; width: 2rem;">{{ loop.index }}.</td>
+								<td style="padding: 0.4rem 0.5rem; position: relative;">
+									<span style="position: absolute; top: 2px; left: 0; bottom: 2px; width: {{ pct }}%; background: rgba(0, 115, 170, 0.08); border-radius: 3px;"></span>
+									<span style="position: relative;">{{ item.productTitle }}</span>
+								</td>
+								<td style="padding: 0.4rem 0.5rem; text-align: right; white-space: nowrap;">{{ item.unitsSold }} {{ "units"|t('best-sellers') }}</td>
+								<td style="padding: 0.4rem 0; text-align: right; white-space: nowrap;">{{ item.revenue|commerceCurrency }}</td>
+							</tr>
+						{% endfor %}
+					</table>
+				</div>
+			{% endif %}
+
+			{% if group.label == 'Customers' %}
+				{# Customer Charts #}
+				<div class="bs-columns" style="margin-top: 1.5rem;">
+					<div class="bs-chart-container">
+						<h3 class="bs-chart-container__title">{{ "New vs Returning Customers"|t('best-sellers') }}</h3>
+						{% if newVsReturning.labels|length > 0 %}
+							<div style="position: relative; height: 300px;">
+								<canvas id="newVsReturningChart"></canvas>
+							</div>
+						{% else %}
+							<p>{{ "No data available"|t('best-sellers') }}</p>
+						{% endif %}
+					</div>
+					<div class="bs-chart-container">
+						<h3 class="bs-chart-container__title">{{ "Customer Spend Distribution"|t('best-sellers') }}</h3>
+						{% if ltvDistribution.counts|length > 0 %}
+							<div style="position: relative; height: 300px;">
+								<canvas id="ltvChart"></canvas>
+							</div>
+						{% else %}
+							<p>{{ "No data available"|t('best-sellers') }}</p>
+						{% endif %}
+					</div>
+				</div>
+			{% endif %}
+		</div>
+	{% endfor %}
+{% endblock %}
+
+{% js %}
+document.addEventListener('DOMContentLoaded', function () {
+	var labels = {{ dailyLabels|json_encode|raw }};
+	var ordersData = {{ dailyOrders|json_encode|raw }};
+	var revenueData = {{ dailyRevenue|json_encode|raw }};
+
+	// Sparklines
+	var sparklineMap = {{ sparklines|json_encode|raw }};
+	Object.keys(sparklineMap).forEach(function (id) {
+		BestSellersReports.createSparkline(id, sparklineMap[id]);
+	});
+
+	// New vs Returning chart
+	{% if newVsReturning.labels|length > 0 %}
+	var nvrLabels = {{ newVsReturning.labels|json_encode|raw }};
+	var nvrTimeScale = BestSellersReports.getTimeScale(nvrLabels);
+
+	new Chart(document.getElementById('newVsReturningChart').getContext('2d'), {
+		type: 'line',
+		data: {
+			labels: nvrLabels,
+			datasets: [
+				{
+					label: '{{ "New"|t("best-sellers") }}',
+					data: {{ newVsReturning.new|json_encode|raw }},
+					borderColor: '#27ae60',
+					backgroundColor: 'rgba(39, 174, 96, 0.1)',
+					fill: true,
+					cubicInterpolationMode: 'monotone',
+					pointRadius: nvrLabels.length === 1 ? 6 : 1,
+					borderWidth: 1.5
+				},
+				{
+					label: '{{ "Returning"|t("best-sellers") }}',
+					data: {{ newVsReturning.returning|json_encode|raw }},
+					borderColor: '#0073aa',
+					backgroundColor: 'rgba(0, 115, 170, 0.1)',
+					fill: true,
+					cubicInterpolationMode: 'monotone',
+					pointRadius: nvrLabels.length === 1 ? 6 : 1,
+					borderWidth: 1.5
+				}
+			]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			interaction: { mode: 'index', intersect: false },
+			plugins: { legend: { position: 'bottom' } },
+			scales: {
+				x: {
+					type: 'time',
+					time: { unit: nvrTimeScale.unit, stepSize: nvrTimeScale.stepSize, displayFormats: { day: 'MMM d', month: 'MMM yyyy' } }
+				},
+				y: { beginAtZero: true, stacked: true }
+			}
+		}
+	});
+	{% endif %}
+
+	// LTV Distribution
+	{% if ltvDistribution.counts|length > 0 %}
+	new Chart(document.getElementById('ltvChart').getContext('2d'), {
+		type: 'bar',
+		data: {
+			labels: {{ ltvDistribution.labels|json_encode|raw }},
+			datasets: [{
+				label: '{{ "Customers"|t("best-sellers") }}',
+				data: {{ ltvDistribution.counts|json_encode|raw }},
+				backgroundColor: 'rgba(0, 115, 170, 0.6)',
+				borderColor: '#0073aa',
+				borderWidth: 1
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: { legend: { display: false } },
+			scales: { y: { beginAtZero: true } }
+		}
+	});
+	{% endif %}
+
+	// Toggle chart
+	var datasets = {
+		revenue: {
+			current: revenueData,
+			prev: {{ prevDailyRevenue|json_encode|raw }},
+			label: '{{ "Revenue"|t("best-sellers") }}',
+			prevLabel: '{{ "Previous Period"|t("best-sellers") }}'
+		},
+		orders: {
+			current: ordersData,
+			prev: {{ prevDailyOrders|json_encode|raw }},
+			label: '{{ "Orders"|t("best-sellers") }}',
+			prevLabel: '{{ "Previous Period"|t("best-sellers") }}'
+		},
+		aov: {
+			current: {{ dailyAov|json_encode|raw }},
+			prev: {{ prevDailyAov|json_encode|raw }},
+			label: '{{ "AOV"|t("best-sellers") }}',
+			prevLabel: '{{ "Previous Period"|t("best-sellers") }}'
+		}
+	};
+
+	if (labels.length > 0) {
+		var timeScale = BestSellersReports.getTimeScale(labels);
+		var ctx = document.getElementById('overviewChart').getContext('2d');
+
+		var overviewChart = new Chart(ctx, {
+			type: 'line',
+			data: {
+				labels: labels,
+				datasets: [
+					{
+						label: datasets.revenue.label,
+						data: datasets.revenue.current,
+						borderColor: '#0073aa',
+						backgroundColor: 'transparent',
+						fill: false,
+						cubicInterpolationMode: 'monotone',
+						pointRadius: labels.length === 1 ? 6 : 1,
+						borderWidth: 1.5
+					},
+					{
+						label: datasets.revenue.prevLabel,
+						data: datasets.revenue.prev,
+						borderColor: '#ccc',
+						backgroundColor: 'transparent',
+						borderDash: [5, 5],
+						cubicInterpolationMode: 'monotone',
+						pointRadius: 0,
+						borderWidth: 1.5
+					}
+				]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				interaction: { mode: 'index', intersect: false },
+				plugins: { legend: { position: 'bottom' } },
+				scales: {
+					x: {
+						type: 'time',
+						time: {
+							unit: timeScale.unit,
+							stepSize: timeScale.stepSize,
+							displayFormats: { day: 'MMM d', month: 'MMM yyyy' }
+						}
+					},
+					y: { beginAtZero: true }
+				}
+			}
+		});
+
+		document.querySelectorAll('.bs-chart-toggle__btn').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				document.querySelectorAll('.bs-chart-toggle__btn').forEach(function (b) {
+					b.classList.remove('bs-chart-toggle__btn--active');
+				});
+				this.classList.add('bs-chart-toggle__btn--active');
+
+				var key = this.getAttribute('data-chart');
+				var ds = datasets[key];
+				overviewChart.data.datasets[0].data = ds.current;
+				overviewChart.data.datasets[0].label = ds.label;
+				overviewChart.data.datasets[1].data = ds.prev;
+				overviewChart.data.datasets[1].label = ds.prevLabel;
+				overviewChart.update();
+			});
+		});
+	}
+});
+{% endjs %}

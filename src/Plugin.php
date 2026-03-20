@@ -22,6 +22,11 @@ use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\behaviors\SalesBehavior;
 use fostercommerce\bestsellers\helpers\Query;
 use fostercommerce\bestsellers\models\Settings;
+use fostercommerce\bestsellers\services\CustomerStats;
+use fostercommerce\bestsellers\services\DailyStats;
+use fostercommerce\bestsellers\services\DateRange;
+use fostercommerce\bestsellers\services\OperationsStats;
+use fostercommerce\bestsellers\services\ProductStats;
 use fostercommerce\bestsellers\services\Sales;
 use fostercommerce\bestsellers\utilities\BackfillUtility;
 use fostercommerce\bestsellers\variables\BestSellersVariable;
@@ -30,10 +35,15 @@ use yii\base\Event;
 /**
  * @property-read Settings $settings
  * @property-read Sales $sales
+ * @property-read DailyStats $dailyStats
+ * @property-read DateRange $dateRange
+ * @property-read ProductStats $productStats
+ * @property-read CustomerStats $customerStats
+ * @property-read OperationsStats $operationsStats
  */
 class Plugin extends BasePlugin
 {
-	public string $schemaVersion = '1.0.0';
+	public string $schemaVersion = '1.1.0';
 
 	public bool $hasCpSettings = false;
 
@@ -47,6 +57,11 @@ class Plugin extends BasePlugin
 		return [
 			'components' => [
 				'sales' => Sales::class,
+				'dailyStats' => DailyStats::class,
+				'dateRange' => DateRange::class,
+				'productStats' => ProductStats::class,
+				'customerStats' => CustomerStats::class,
+				'operationsStats' => OperationsStats::class,
 			],
 		];
 	}
@@ -75,6 +90,11 @@ class Plugin extends BasePlugin
 		// Register services if not already done
 		$this->setComponents([
 			'sales' => Sales::class,
+			'dailyStats' => DailyStats::class,
+			'dateRange' => DateRange::class,
+			'productStats' => ProductStats::class,
+			'customerStats' => CustomerStats::class,
+			'operationsStats' => OperationsStats::class,
 		]);
 
 		// Register the variable so it becomes available as craft.bestsellers
@@ -98,13 +118,25 @@ class Plugin extends BasePlugin
 		$navItem['label'] = 'Best Sellers';
 		$navItem['url'] = 'best-sellers';
 		$navItem['subnav'] = [
-			'dashboard' => [
-				'label' => 'Best Sellers',
+			'overview' => [
+				'label' => 'Overview',
 				'url' => 'best-sellers/',
 			],
-			'reports' => [
-				'label' => 'Reports',
-				'url' => 'best-sellers/reports',
+			'orders' => [
+				'label' => 'Orders',
+				'url' => 'best-sellers/sales',
+			],
+			'products' => [
+				'label' => 'Products',
+				'url' => 'best-sellers/products',
+			],
+			'customers' => [
+				'label' => 'Customers',
+				'url' => 'best-sellers/customers',
+			],
+			'operations' => [
+				'label' => 'Operations',
+				'url' => 'best-sellers/operations',
 			],
 		];
 		return $navItem;
@@ -188,6 +220,11 @@ class Plugin extends BasePlugin
 				/** @var Order $order */
 				$order = $event->sender;
 				$this->sales->logOrderSales($order);
+
+				// Aggregate daily stats for the order's date
+				if ($order->dateOrdered) {
+					$this->dailyStats->aggregateDay($order->dateOrdered->format('Y-m-d'));
+				}
 			}
 		);
 	}
@@ -198,8 +235,16 @@ class Plugin extends BasePlugin
 			UrlManager::class,
 			UrlManager::EVENT_REGISTER_CP_URL_RULES,
 			static function (RegisterUrlRulesEvent $registerUrlRulesEvent): void {
-				$registerUrlRulesEvent->rules['best-sellers'] = 'best-sellers/dashboard';
-				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/reports';
+				$registerUrlRulesEvent->rules['best-sellers'] = 'best-sellers/overview';
+				$registerUrlRulesEvent->rules['best-sellers/sales'] = 'best-sellers/sales';
+				$registerUrlRulesEvent->rules['best-sellers/products'] = 'best-sellers/products';
+				$registerUrlRulesEvent->rules['best-sellers/products/orders'] = 'best-sellers/products/orders';
+				$registerUrlRulesEvent->rules['best-sellers/customers'] = 'best-sellers/customers';
+				$registerUrlRulesEvent->rules['best-sellers/operations'] = 'best-sellers/operations';
+
+				// Backward compatibility redirects
+				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/sales';
+				$registerUrlRulesEvent->rules['best-sellers/dashboard'] = 'best-sellers/products';
 			}
 		);
 	}

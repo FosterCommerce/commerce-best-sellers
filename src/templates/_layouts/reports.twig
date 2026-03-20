@@ -1,0 +1,17 @@
+{% extends '_layouts/cp' %}
+
+{% set selectedSubnavItem = selectedSubnavItem ?? 'overview' %}
+
+{% set additionalButtons %}
+	{% include 'best-sellers/_includes/date-picker' with {
+		from: from,
+		to: to,
+		preset: preset,
+	} only %}
+{% endset %}
+
+{% set content %}
+	<div class="bs-reports-container">
+		{% block reportContent %}{% endblock %}
+	</div>
+{% endset %}

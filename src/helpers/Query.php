@@ -34,6 +34,7 @@ class Query
 			->select([
 				$id,
 				'totalQtySold' => 'SUM(qty)',
+				'totalRevenue' => 'COALESCE(SUM(lineItemTotal), 0)',
 			])
 			->from(VariantSale::tableName())
 			->groupBy($id);
@@ -50,7 +51,10 @@ class Query
 		// The outer query selects totalQtySold from the subquery results.
 		$query
 			->subQuery
-			?->addSelect(['variant_sales_cte.totalQtySold'])
+			?->addSelect([
+				'variant_sales_cte.totalQtySold',
+				'variant_sales_cte.totalRevenue',
+			])
 			->withQuery($withQuery, 'variant_sales_cte')
 			->leftJoin(
 				'variant_sales_cte',
@@ -59,6 +63,9 @@ class Query
 
 		$query
 			->query
-			?->addSelect(['subquery.totalQtySold']);
+			?->addSelect([
+				'subquery.totalQtySold',
+				'subquery.totalRevenue',
+			]);
 	}
 }

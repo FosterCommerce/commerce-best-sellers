@@ -22,21 +22,28 @@ class BestSellersVariable
 				'variantId' => $variantId,
 			]);
 
-		if ($startDate !== null) {
-			// Parse the date into a proper format
-			$start = (new \DateTime($startDate))->format('Y-m-d H:i:s');
-			$query->andWhere(['>=', 'dateOrdered', $start]);
-		}
-
-		if ($endDate !== null) {
-			$end = (new \DateTime($endDate))->format('Y-m-d H:i:s');
-			$query->andWhere(['<=', 'dateOrdered', $end]);
-		}
+		$this->applyDateFilter($query, $startDate, $endDate);
 
 		/** @var int $sum */
 		$sum = $query->sum('qty');
 
 		return $sum;
+	}
+
+	/**
+	 * Returns the total revenue (sum of lineItemTotal) for a given variant ID.
+	 */
+	public function variantTotalRevenue(int $variantId, ?string $startDate = null, ?string $endDate = null): float
+	{
+		$query = (new Query())
+			->from(VariantSale::tableName())
+			->where([
+				'variantId' => $variantId,
+			]);
+
+		$this->applyDateFilter($query, $startDate, $endDate);
+
+		return (float) $query->sum('lineItemTotal');
 	}
 
 	/**
@@ -54,6 +61,32 @@ class BestSellersVariable
 				'productId' => $productId,
 			]);
 
+		$this->applyDateFilter($query, $startDate, $endDate);
+
+		/** @var int $sum */
+		$sum = $query->sum('qty');
+
+		return $sum;
+	}
+
+	/**
+	 * Returns the total revenue (sum of lineItemTotal) for a given product ID.
+	 */
+	public function productTotalRevenue(int $productId, ?string $startDate = null, ?string $endDate = null): float
+	{
+		$query = (new Query())
+			->from(VariantSale::tableName())
+			->where([
+				'productId' => $productId,
+			]);
+
+		$this->applyDateFilter($query, $startDate, $endDate);
+
+		return (float) $query->sum('lineItemTotal');
+	}
+
+	private function applyDateFilter(Query $query, ?string $startDate, ?string $endDate): void
+	{
 		if ($startDate !== null) {
 			$start = (new \DateTime($startDate))->format('Y-m-d H:i:s');
 			$query->andWhere(['>=', 'dateOrdered', $start]);
@@ -63,10 +96,5 @@ class BestSellersVariable
 			$end = (new \DateTime($endDate))->format('Y-m-d H:i:s');
 			$query->andWhere(['<=', 'dateOrdered', $end]);
 		}
-
-		/** @var int $sum */
-		$sum = $query->sum('qty');
-
-		return $sum;
 	}
 }

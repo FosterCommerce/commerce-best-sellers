@@ -1,0 +1,44 @@
+{% extends 'best-sellers/_layouts/reports' %}
+
+{% set title = itemTitle ~ " — Orders"|t('best-sellers') %}
+{% set selectedSubnavItem = 'products' %}
+
+{% block reportContent %}
+	<p style="margin-bottom: 1.5rem;">
+		<a href="#" onclick="history.back(); return false;">
+			&larr; {{ "Back to Products"|t('best-sellers') }}
+		</a>
+	</p>
+
+	{% if orders|length > 0 %}
+		<table class="bs-data-table">
+			<thead>
+				<tr>
+					<th>{{ "Order"|t('best-sellers') }}</th>
+					<th>{{ "Date"|t('best-sellers') }}</th>
+					<th>{{ "Customer"|t('best-sellers') }}</th>
+					<th class="bs-data-table--right">{{ "Qty"|t('best-sellers') }}</th>
+					<th class="bs-data-table--right">{{ "Line Revenue"|t('best-sellers') }}</th>
+					<th class="bs-data-table--right">{{ "Order Total"|t('best-sellers') }}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for row in orders %}
+					{% set order = row.order %}
+					<tr>
+						<td>
+							<a href="{{ order.cpEditUrl }}" class="go">{{ order.reference }}</a>
+						</td>
+						<td>{{ order.dateOrdered|date('Y-m-d') }}</td>
+						<td>{{ order.email }}</td>
+						<td class="bs-data-table--right">{{ row.qty }}</td>
+						<td class="bs-data-table--right">{{ row.revenue|commerceCurrency }}</td>
+						<td class="bs-data-table--right">{{ order.totalPrice|commerceCurrency }}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	{% else %}
+		<p>{{ "No orders found for this period."|t('best-sellers') }}</p>
+	{% endif %}
+{% endblock %}

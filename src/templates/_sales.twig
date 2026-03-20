@@ -1,0 +1,129 @@
+{% extends 'best-sellers/_layouts/reports' %}
+
+{% set title = "Orders"|t('best-sellers') %}
+{% set selectedSubnavItem = 'orders' %}
+
+{% block reportContent %}
+	{# Written Summary #}
+	<div class="bs-chart-container" style="margin-bottom: 2rem;">
+		<p style="font-size: 1.1rem; margin: 0;">
+			{{ "Revenue is"|t('best-sellers') }}
+			{% if revenueChange is not null %}
+				{% if revenueChange >= 0 %}
+					<strong style="color: #27ae60;">{{ "up"|t('best-sellers') }} {{ revenueChange|abs|number_format(2) }}%</strong>
+				{% else %}
+					<strong style="color: #e74c3c;">{{ "down"|t('best-sellers') }} {{ revenueChange|abs|number_format(2) }}%</strong>
+				{% endif %}
+			{% else %}
+				<strong>---</strong>
+			{% endif %}
+			{{ "for the selected date range compared to the previous period."|t('best-sellers') }}
+			{{ "You also have"|t('best-sellers') }}
+			<strong{% if ordersChange is not null and ordersChange < 0 %} style="color: #e74c3c;"{% elseif ordersChange is not null and ordersChange >= 0 %} style="color: #27ae60;"{% endif %}>{{ stats.totalOrders }} {{ "orders"|t('best-sellers') }}
+			{% if ordersChange is not null %}
+				({{ ordersChange >= 0 ? 'up'|t('best-sellers') : 'down'|t('best-sellers') }} {{ "by"|t('best-sellers') }} {{ ordersChange|abs|number_format(2) }}%)
+			{% endif %}</strong>.
+		</p>
+	</div>
+
+	{# Orders Table #}
+	{% if orders|length > 0 %}
+		{% set orderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
+		<div class="bs-section">
+			<div class="bs-filter-bar" style="margin-bottom: 1rem;">
+				<div>
+					<select id="order-status-filter" class="text">
+						<option value="">{{ "All Order Statuses"|t('best-sellers') }}</option>
+						{% for status in orderStatuses %}
+							<option value="{{ status.handle }}">{{ status.name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div>
+					<select id="payment-status-filter" class="text">
+						<option value="">{{ "All Payment Statuses"|t('best-sellers') }}</option>
+						<option value="paid">{{ "Paid"|t('best-sellers') }}</option>
+						<option value="partial">{{ "Partial"|t('best-sellers') }}</option>
+						<option value="unpaid">{{ "Unpaid"|t('best-sellers') }}</option>
+					</select>
+				</div>
+				<div class="bs-filter-bar__item">
+					<input type="text" id="orders-search" class="text fullwidth" placeholder="{{ 'Search orders...'|t('best-sellers') }}" autocomplete="off">
+				</div>
+			</div>
+
+			<div style="overflow-x: auto;">
+			<table class="bs-data-table" id="orders-table">
+				<thead>
+					<tr>
+						<th style="white-space: nowrap;">{{ "Order #"|t('best-sellers') }}</th>
+						<th style="white-space: nowrap;">{{ "Date Ordered"|t('best-sellers') }}</th>
+						<th style="white-space: nowrap;">{{ "Status"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "Merchandise Total"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "Tax"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "Discount"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "Shipping"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "Total Paid"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "Items Sold"|t('best-sellers') }}</th>
+						<th style="white-space: nowrap;">{{ "Payment"|t('best-sellers') }}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for order in orders %}
+						{% set statusColor = order.orderStatus ? order.orderStatus.color : 'grey' %}
+						<tr data-order-status="{{ order.orderStatus ? order.orderStatus.handle : '' }}" data-payment-status="{{ order.paidStatus }}">
+							<td style="white-space: nowrap;">
+								<a href="{{ order.cpEditUrl }}" class="go">{{ order.reference }}</a>
+								<span hidden>{{ order.email }} {{ order.billingAddress ? order.billingAddress.fullName : '' }} {{ order.shippingAddress ? order.shippingAddress.fullName : '' }}</span>
+							</td>
+							<td style="white-space: nowrap;">{{ order.dateOrdered|date('m/d/Y g:ia') }}</td>
+							<td style="white-space: nowrap;">
+								<span class="status {{ statusColor }}"></span>
+								{{ order.orderStatus ? order.orderStatus.name : '—' }}
+							</td>
+							<td class="bs-data-table--right" style="white-space: nowrap;">{{ order.itemSubtotal|commerceCurrency }}</td>
+							<td class="bs-data-table--right" style="white-space: nowrap;">{{ order.totalTax|commerceCurrency }}</td>
+							<td class="bs-data-table--right" style="white-space: nowrap;">{{ order.totalDiscount|commerceCurrency }}</td>
+							<td class="bs-data-table--right" style="white-space: nowrap;">{{ order.totalShippingCost|commerceCurrency }}</td>
+							<td class="bs-data-table--right" style="white-space: nowrap;">{{ order.totalPaid|commerceCurrency }}</td>
+							<td class="bs-data-table--right" style="white-space: nowrap;">{{ orderItemCounts[order.id] ?? 0 }}</td>
+							<td style="white-space: nowrap;">{{ order.paidStatusHtml|raw }}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+			</div>
+		</div>
+	{% endif %}
+{% endblock %}
+
+{% js %}
+document.addEventListener('DOMContentLoaded', function () {
+	// Orders filtering
+	var searchInput = document.getElementById('orders-search');
+	var orderStatusFilter = document.getElementById('order-status-filter');
+	var paymentStatusFilter = document.getElementById('payment-status-filter');
+	var table = document.getElementById('orders-table');
+
+	if (table) {
+		var rows = Array.from(table.querySelector('tbody').querySelectorAll('tr'));
+
+		function filterOrders() {
+			var query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+			var orderStatus = orderStatusFilter ? orderStatusFilter.value : '';
+			var paymentStatus = paymentStatusFilter ? paymentStatusFilter.value : '';
+
+			rows.forEach(function (row) {
+				var textMatch = !query || row.textContent.toLowerCase().indexOf(query) !== -1;
+				var statusMatch = !orderStatus || row.getAttribute('data-order-status') === orderStatus;
+				var paymentMatch = !paymentStatus || row.getAttribute('data-payment-status') === paymentStatus;
+				row.style.display = (textMatch && statusMatch && paymentMatch) ? '' : 'none';
+			});
+		}
+
+		if (searchInput) searchInput.addEventListener('input', filterOrders);
+		if (orderStatusFilter) orderStatusFilter.addEventListener('change', filterOrders);
+		if (paymentStatusFilter) paymentStatusFilter.addEventListener('change', filterOrders);
+	}
+});
+{% endjs %}

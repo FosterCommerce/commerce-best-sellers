@@ -4,9 +4,11 @@ namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
 use craft\commerce\elements\Order;
+use craft\db\Query;
 use craft\web\Controller;
 use craft\web\Request;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
+use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
 use yii\web\Response;
 
@@ -59,6 +61,37 @@ class BackfillController extends Controller
 		}
 
 		Craft::$app->session->setNotice('Backfill queued for ' . $totalOrders . ' orders.');
+		return $this->redirectToPostedUrl();
+	}
+
+	public function actionRebuildDailyStats(): Response
+	{
+		$dailyStats = Plugin::getInstance()?->dailyStats;
+		if (! $dailyStats) {
+			Craft::$app->session->setError('DailyStats service not available.');
+			return $this->redirectToPostedUrl();
+		}
+
+		$row = (new Query())
+			->select([
+				'minDate' => 'MIN([[dateOrdered]])',
+				'maxDate' => 'MAX([[dateOrdered]])',
+			])
+			->from('{{%commerce_orders}}')
+			->where(['=', 'isCompleted', true])
+			->one();
+
+		if (! $row || ! $row['minDate']) {
+			Craft::$app->session->setNotice('No completed orders found.');
+			return $this->redirectToPostedUrl();
+		}
+
+		$startDate = (new \DateTime($row['minDate']))->format('Y-m-d');
+		$endDate = (new \DateTime($row['maxDate']))->format('Y-m-d');
+
+		$count = $dailyStats->rebuildRange($startDate, $endDate);
+
+		Craft::$app->session->setNotice("Rebuilt {$count} daily stat records.");
 		return $this->redirectToPostedUrl();
 	}
 }

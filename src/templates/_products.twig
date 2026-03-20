@@ -1,0 +1,245 @@
+{% extends 'best-sellers/_layouts/reports' %}
+
+{% set title = "Products"|t('best-sellers') %}
+{% set selectedSubnavItem = 'products' %}
+
+{% block reportContent %}
+	{# Written Summary #}
+	<div class="bs-chart-container" style="margin-bottom: 2rem;">
+		<p style="font-size: 1.1rem; margin: 0;">
+			<strong style="color: #0073aa;">{{ uniqueProductCount }}</strong>
+			{{ (productsOrVariants == 'variants' ? "variants" : "products")|t('best-sellers') }}
+			{{ "sold a total of"|t('best-sellers') }}
+			<strong style="color: #0073aa;">{{ totalUnitsSold|number_format }}</strong>
+			{{ "units for"|t('best-sellers') }}
+			<strong style="color: #0073aa;">{{ totalRevenue|commerceCurrency }}</strong>
+			{{ "in revenue during this period."|t('best-sellers') }}
+			{% if items|length > 0 %}
+				{% set top = items|first %}
+				{{ "The best selling"|t('best-sellers') }}
+				{{ (productsOrVariants == 'variants' ? "variant" : "product")|t('best-sellers') }}
+				{{ "is"|t('best-sellers') }}
+				<strong>{% if productsOrVariants == 'variants' %}{{ top.productTitle }}: {{ top.variantTitle }}{% else %}{{ top.productTitle }}{% endif %}</strong>.
+			{% endif %}
+		</p>
+	</div>
+
+	{# Filters #}
+	<div class="bs-filter-bar" style="margin-bottom: 1rem;">
+		<div class="bs-filter-bar__item">
+			<select id="products-or-variants" onchange="updateProductFilters()" class="text fullwidth">
+				<option value="products" {% if productsOrVariants == 'products' %}selected{% endif %}>{{ "Products"|t('best-sellers') }}</option>
+				<option value="variants" {% if productsOrVariants == 'variants' %}selected{% endif %}>{{ "Variants"|t('best-sellers') }}</option>
+			</select>
+		</div>
+		<div class="bs-filter-bar__item">
+			<select id="sort-by" onchange="updateProductFilters()" class="text fullwidth">
+				<option value="revenue" {% if sortBy == 'revenue' %}selected{% endif %}>{{ "Sort by Revenue"|t('best-sellers') }}</option>
+				<option value="units" {% if sortBy == 'units' %}selected{% endif %}>{{ "Sort by Units Sold"|t('best-sellers') }}</option>
+			</select>
+		</div>
+		{% set allProductTypes = craft.commerce.productTypes.allProductTypes %}
+		{% if allProductTypes|length > 1 %}
+			<div class="bs-filter-bar__item">
+				{% set productTypes = [{
+					label: 'All product types',
+					value: 'all',
+				}]|merge(allProductTypes|map(type => {
+					label: type.name,
+					value: type.handle,
+				})) %}
+				<select id="product-type-filter" onchange="updateProductFilters()" class="text fullwidth">
+					{% for pt in productTypes %}
+						<option value="{{ pt.value }}" {% if productType == pt.value %}selected{% endif %}>{{ pt.label }}</option>
+					{% endfor %}
+				</select>
+			</div>
+		{% endif %}
+		<div class="bs-filter-bar__item">
+			<input type="text" id="product-search" class="text fullwidth" placeholder="{{ 'Search...'|t('best-sellers') }}" autocomplete="off">
+		</div>
+		<div style="position: relative;">
+			<button type="button" id="col-toggle-btn" class="btn" title="{{ 'Columns'|t('best-sellers') }}">
+				<svg width="16" height="16" viewBox="0 0 16 16" style="vertical-align: middle;"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" fill="currentColor"/></svg>
+			</button>
+			<div id="col-toggle-menu" class="bs-col-menu" style="display: none;">
+				<label><input type="checkbox" data-col="col-product" checked disabled> {{ "Product"|t('best-sellers') }}</label>
+				<label><input type="checkbox" data-col="col-sku" checked> {{ "Default SKU"|t('best-sellers') }}</label>
+				<label><input type="checkbox" data-col="col-type" checked> {{ "Type"|t('best-sellers') }}</label>
+				<label><input type="checkbox" data-col="col-units" checked> {{ "Units Sold"|t('best-sellers') }}</label>
+				<label><input type="checkbox" data-col="col-revenue" checked> {{ "Revenue"|t('best-sellers') }}</label>
+				<label><input type="checkbox" data-col="col-avgprice" checked> {{ "Avg Price"|t('best-sellers') }}</label>
+				<label><input type="checkbox" data-col="col-link" checked> {{ "Link"|t('best-sellers') }}</label>
+			</div>
+		</div>
+	</div>
+
+	{# Products Table #}
+	{% if items|length > 0 %}
+		<div class="bs-section">
+			<table class="bs-data-table" id="products-table">
+				<thead>
+					<tr>
+						<th class="col-product">{{ "Product"|t('best-sellers') }}</th>
+						<th class="col-sku">{{ "Default SKU"|t('best-sellers') }}</th>
+						<th class="col-type">{{ "Type"|t('best-sellers') }}</th>
+						<th class="col-units bs-data-table--right">{{ "Units Sold"|t('best-sellers') }}</th>
+						<th class="col-revenue bs-data-table--right">{{ "Revenue"|t('best-sellers') }}</th>
+						<th class="col-avgprice bs-data-table--right">{{ "Avg Price"|t('best-sellers') }}</th>
+						<th class="col-link" style="width: 32px; text-align: center;"><span data-icon="world" aria-label="{{ 'Link'|t('best-sellers') }}"></span></th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for item in items %}
+						{% set product = productElements[item.productId] ?? null %}
+						<tr>
+							<td class="col-product">
+								{% set displayTitle = productsOrVariants == 'variants'
+									? item.productTitle ~ ': ' ~ item.variantTitle
+									: item.productTitle %}
+								{% if product %}
+									<a href="{{ product.cpEditUrl }}" class="go">{{ displayTitle }}</a>
+								{% else %}
+									{{ displayTitle }}
+								{% endif %}
+							</td>
+							<td class="col-sku">{{ productsOrVariants == 'variants' ? item.variantSku : (product ? product.defaultSku : '') }}</td>
+							<td class="col-type">{{ item.productType }}</td>
+							<td class="col-units bs-data-table--right">
+								{{ item.unitsSold }}
+								{% set ordersUrl = cpUrl('best-sellers/products/orders', {
+									(productsOrVariants == 'variants' ? 'variantId' : 'productId'): productsOrVariants == 'variants' ? item.variantId : item.productId,
+									from: from,
+									to: to,
+									preset: preset,
+								}) %}
+								<a href="{{ ordersUrl }}" class="light" style="white-space: nowrap; text-decoration: underline;">{{ "in %d orders"|t('best-sellers')|format(item.orderCount) }}</a>
+							</td>
+							<td class="col-revenue bs-data-table--right">{{ item.revenue|commerceCurrency }}</td>
+							<td class="col-avgprice bs-data-table--right">{{ item.avgPrice|commerceCurrency }}</td>
+							<td class="col-link" style="text-align: center;">
+								{% if product and product.url %}
+									<a href="{{ product.url }}" target="_blank" rel="noopener" class="bs-external-link" title="{{ 'View on site'|t('best-sellers') }}"><span data-icon="world"></span></a>
+								{% endif %}
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	{% else %}
+		<p>{{ "No product sales data for this period."|t('best-sellers') }}</p>
+	{% endif %}
+{% endblock %}
+
+{% js %}
+function updateProductFilters() {
+	var url = new URL(window.location.href);
+	url.searchParams.set('productsOrVariants', document.getElementById('products-or-variants').value);
+	url.searchParams.set('sortBy', document.getElementById('sort-by').value);
+	var typeFilter = document.getElementById('product-type-filter');
+	if (typeFilter) {
+		url.searchParams.set('productType', typeFilter.value);
+	}
+	window.location.href = url.toString();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+	// --- Search ---
+	var searchInput = document.getElementById('product-search');
+	var table = document.getElementById('products-table');
+	if (searchInput && table) {
+		var tbody = table.querySelector('tbody');
+		var rows = Array.from(tbody.querySelectorAll('tr'));
+
+		function filterRows(query) {
+			rows.forEach(function (row) {
+				var text = row.textContent.toLowerCase();
+				row.style.display = (!query || text.indexOf(query) !== -1) ? '' : 'none';
+			});
+		}
+
+		// Restore search from URL
+		var urlParams = new URLSearchParams(window.location.search);
+		var savedSearch = urlParams.get('q') || '';
+		if (savedSearch) {
+			searchInput.value = savedSearch;
+			filterRows(savedSearch.toLowerCase().trim());
+		}
+
+		searchInput.addEventListener('input', function () {
+			var query = this.value.toLowerCase().trim();
+			filterRows(query);
+
+			// Persist to URL without reload
+			var url = new URL(window.location.href);
+			if (this.value.trim()) {
+				url.searchParams.set('q', this.value.trim());
+			} else {
+				url.searchParams.delete('q');
+			}
+			history.replaceState(null, '', url.toString());
+		});
+	}
+
+	// --- Column toggle ---
+	var STORAGE_KEY = 'bestSellers.products.columns';
+	var toggleBtn = document.getElementById('col-toggle-btn');
+	var toggleMenu = document.getElementById('col-toggle-menu');
+	var checkboxes = toggleMenu ? toggleMenu.querySelectorAll('input[type="checkbox"]') : [];
+
+	// Load saved state
+	var saved = {};
+	try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(e) {}
+
+	function applyColumnVisibility() {
+		checkboxes.forEach(function (cb) {
+			var col = cb.getAttribute('data-col');
+			if (cb.disabled) return; // product column always visible
+			var visible = cb.checked;
+			var cells = document.querySelectorAll('.' + col);
+			cells.forEach(function (cell) {
+				cell.style.display = visible ? '' : 'none';
+			});
+		});
+	}
+
+	// Restore saved preferences
+	checkboxes.forEach(function (cb) {
+		var col = cb.getAttribute('data-col');
+		if (cb.disabled) return;
+		if (saved[col] !== undefined) {
+			cb.checked = saved[col];
+		}
+	});
+	applyColumnVisibility();
+
+	// Toggle menu
+	if (toggleBtn && toggleMenu) {
+		toggleBtn.addEventListener('click', function (e) {
+			e.stopPropagation();
+			toggleMenu.style.display = toggleMenu.style.display === 'none' ? 'block' : 'none';
+		});
+
+		document.addEventListener('click', function (e) {
+			if (!toggleMenu.contains(e.target) && e.target !== toggleBtn) {
+				toggleMenu.style.display = 'none';
+			}
+		});
+	}
+
+	// Checkbox changes
+	checkboxes.forEach(function (cb) {
+		cb.addEventListener('change', function () {
+			var state = {};
+			checkboxes.forEach(function (c) {
+				if (!c.disabled) {
+					state[c.getAttribute('data-col')] = c.checked;
+				}
+			});
+			try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+			applyColumnVisibility();
+		});
+	});
+});
+{% endjs %}

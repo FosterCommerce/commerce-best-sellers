@@ -1,0 +1,102 @@
+{% extends 'best-sellers/_layouts/reports' %}
+
+{% set title = "Customers"|t('best-sellers') %}
+{% set selectedSubnavItem = 'customers' %}
+
+{% block reportContent %}
+	{# Written Summary #}
+	<div class="bs-chart-container" style="margin-bottom: 2rem;">
+		<p style="font-size: 1.1rem; margin: 0;">
+			{{ "You've had"|t('best-sellers') }}
+			<strong style="color: #0073aa;">{{ kpis.new }}</strong>
+			{{ "new customers,"|t('best-sellers') }}
+			{% if newCustomersChange is not null %}
+				{% if newCustomersChange >= 0 %}
+					<strong style="color: #27ae60;">{{ "up by"|t('best-sellers') }} {{ newCustomersChange|abs|number_format(2) }}%</strong>
+				{% else %}
+					<strong style="color: #e74c3c;">{{ "down by"|t('best-sellers') }} {{ newCustomersChange|abs|number_format(2) }}%</strong>
+				{% endif %}
+			{% else %}
+				<strong>---</strong>
+			{% endif %}
+			{{ "since the previous period."|t('best-sellers') }}
+		</p>
+	</div>
+
+	{# Top Customers Table #}
+	{% if topCustomers|length > 0 %}
+		<div class="bs-section">
+			<div class="bs-filter-bar" style="margin-bottom: 1rem;">
+				<div>
+					<select id="customer-type-filter" class="text">
+						<option value="">{{ "All Customers"|t('best-sellers') }}</option>
+						<option value="guest">{{ "Guests"|t('best-sellers') }}</option>
+						<option value="registered">{{ "Registered"|t('best-sellers') }}</option>
+					</select>
+				</div>
+				<div class="bs-filter-bar__item">
+					<input type="text" id="customer-search" class="text fullwidth" placeholder="{{ 'Search customers...'|t('best-sellers') }}" autocomplete="off">
+				</div>
+			</div>
+
+			<div style="overflow-x: auto;">
+			<table class="bs-data-table" id="customers-table">
+				<thead>
+					<tr>
+						<th>{{ "Email"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "# Orders"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "Total Spent"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "AOV"|t('best-sellers') }}</th>
+						<th style="white-space: nowrap;">{{ "Last Purchase"|t('best-sellers') }}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for customer in topCustomers %}
+						<tr data-customer-type="{{ customer.isGuest ? 'guest' : 'registered' }}">
+							<td style="white-space: nowrap;">
+								{% if customer.customerId %}
+									<a href="{{ cpUrl('users/' ~ customer.customerId) }}" class="go">{{ customer.email }}</a>
+								{% else %}
+									{{ customer.email }}
+									<span class="light">({{ "Guest"|t('best-sellers') }})</span>
+								{% endif %}
+							</td>
+							<td class="bs-data-table--right">{{ customer.orderCount }}</td>
+							<td class="bs-data-table--right" style="white-space: nowrap;">{{ customer.totalSpent|commerceCurrency }}</td>
+							<td class="bs-data-table--right" style="white-space: nowrap;">{{ customer.aov|commerceCurrency }}</td>
+							<td style="white-space: nowrap;">{{ customer.lastOrder|date('Y-m-d') }}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+			</div>
+		</div>
+	{% endif %}
+{% endblock %}
+
+{% js %}
+document.addEventListener('DOMContentLoaded', function () {
+	// Customer filtering
+	var searchInput = document.getElementById('customer-search');
+	var typeFilter = document.getElementById('customer-type-filter');
+	var table = document.getElementById('customers-table');
+
+	if (table) {
+		var rows = Array.from(table.querySelector('tbody').querySelectorAll('tr'));
+
+		function filterCustomers() {
+			var query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+			var type = typeFilter ? typeFilter.value : '';
+
+			rows.forEach(function (row) {
+				var textMatch = !query || row.textContent.toLowerCase().indexOf(query) !== -1;
+				var typeMatch = !type || row.getAttribute('data-customer-type') === type;
+				row.style.display = (textMatch && typeMatch) ? '' : 'none';
+			});
+		}
+
+		if (searchInput) searchInput.addEventListener('input', filterCustomers);
+		if (typeFilter) typeFilter.addEventListener('change', filterCustomers);
+	}
+});
+{% endjs %}

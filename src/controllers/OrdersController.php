@@ -8,7 +8,6 @@ use craft\db\Query;
 use craft\helpers\MoneyHelper;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\Plugin;
-use Money\Currency;
 use Money\Money;
 use yii\web\Response;
 
@@ -75,8 +74,7 @@ class OrdersController extends BaseReportController
 
 		$rows = $this->buildOrderRows($orders);
 
-		$currencyCode = $this->getStoreCurrency();
-		$currency = new Currency($currencyCode);
+		$currency = $this->getStoreCurrency();
 		$totalItemSubtotal = new Money(0, $currency);
 		$totalTax = new Money(0, $currency);
 		$totalDiscount = new Money(0, $currency);
@@ -85,11 +83,11 @@ class OrdersController extends BaseReportController
 		$totalItemsSold = 0;
 
 		foreach ($orders as $order) {
-			$totalItemSubtotal = $totalItemSubtotal->add($this->toMoney($order->itemSubtotal, $currency));
-			$totalTax = $totalTax->add($this->toMoney($order->totalTax, $currency));
-			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount, $currency));
-			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost, $currency));
-			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid, $currency));
+			$totalItemSubtotal = $totalItemSubtotal->add($this->toMoney($order->itemSubtotal));
+			$totalTax = $totalTax->add($this->toMoney($order->totalTax));
+			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount));
+			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost));
+			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid));
 		}
 
 		foreach ($rows as $row) {
@@ -97,11 +95,11 @@ class OrdersController extends BaseReportController
 		}
 
 		$totals = [
-			'itemSubtotal' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalItemSubtotal), $currencyCode),
-			'totalTax' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalTax), $currencyCode),
-			'totalDiscount' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalDiscount), $currencyCode),
-			'totalShippingCost' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalShipping), $currencyCode),
-			'totalPaid' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalPaid), $currencyCode),
+			'itemSubtotal' => $this->formatMoney($totalItemSubtotal),
+			'totalTax' => $this->formatMoney($totalTax),
+			'totalDiscount' => $this->formatMoney($totalDiscount),
+			'totalShippingCost' => $this->formatMoney($totalShipping),
+			'totalPaid' => $this->formatMoney($totalPaid),
 			'itemsSold' => number_format($totalItemsSold),
 		];
 
@@ -127,7 +125,7 @@ class OrdersController extends BaseReportController
 		$rows = $this->buildOrderRows($orders);
 
 		$csvRows = [];
-		$currency = new Currency($this->getStoreCurrency());
+		$currency = $this->getStoreCurrency();
 		$totalMerchandise = new Money(0, $currency);
 		$totalTax = new Money(0, $currency);
 		$totalDiscount = new Money(0, $currency);
@@ -136,11 +134,11 @@ class OrdersController extends BaseReportController
 		$totalItemsSold = 0;
 
 		foreach ($orders as $index => $order) {
-			$totalMerchandise = $totalMerchandise->add($this->toMoney($order->itemSubtotal, $currency));
-			$totalTax = $totalTax->add($this->toMoney($order->totalTax, $currency));
-			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount, $currency));
-			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost, $currency));
-			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid, $currency));
+			$totalMerchandise = $totalMerchandise->add($this->toMoney($order->itemSubtotal));
+			$totalTax = $totalTax->add($this->toMoney($order->totalTax));
+			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount));
+			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost));
+			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid));
 			$itemsSold = $rows[$index]['itemsSold'] ?? 0;
 			$totalItemsSold += $itemsSold;
 
@@ -309,17 +307,6 @@ class OrdersController extends BaseReportController
 		}
 
 		return $rows;
-	}
-
-	private function toMoney(float $amount, Currency $currency): Money
-	{
-		/** @var Money $money */
-		$money = MoneyHelper::toMoney([
-			'value' => (string) $amount,
-			'currency' => $currency->getCode(),
-		]);
-
-		return $money;
 	}
 
 	/**

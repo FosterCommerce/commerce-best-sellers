@@ -22,6 +22,7 @@ use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\behaviors\SalesBehavior;
 use fostercommerce\bestsellers\helpers\Query;
 use fostercommerce\bestsellers\models\Settings;
+use fostercommerce\bestsellers\services\CartAbandonment;
 use fostercommerce\bestsellers\services\CustomerStats;
 use fostercommerce\bestsellers\services\DailyStats;
 use fostercommerce\bestsellers\services\DateRange;
@@ -40,6 +41,7 @@ use yii\base\Event;
  * @property-read ProductStats $productStats
  * @property-read CustomerStats $customerStats
  * @property-read OperationsStats $operationsStats
+ * @property-read CartAbandonment $cartAbandonment
  */
 class Plugin extends BasePlugin
 {
@@ -88,6 +90,7 @@ class Plugin extends BasePlugin
 			'productStats' => ProductStats::class,
 			'customerStats' => CustomerStats::class,
 			'operationsStats' => OperationsStats::class,
+			'cartAbandonment' => CartAbandonment::class,
 		]);
 
 		Event::on(

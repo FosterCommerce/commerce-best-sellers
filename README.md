@@ -45,9 +45,12 @@ The overview gives you a high-level snapshot of your store's performance for any
 - **Revenue, orders, and AOV charts** with previous period comparison
 - **New vs returning customer** trends
 - **Credentialed vs guest** customer breakdown with average LTV and order frequency
+- **Cart abandonment** widget with age breakdown and anonymous cart tracking
 - **Top 10 best sellers** with links to product edit pages
 
-<!-- 📸 Screenshot: Overview page showing KPI cards and charts (full page, ~1200px wide) -->
+![Overview KPI cards and revenue chart](resources/images/overview-kpis.png)
+
+![Customer KPIs with new vs returning and credentialed vs guest](resources/images/overview-customers.png)
 
 ### Orders
 
@@ -57,7 +60,6 @@ Browse and search every completed order with filtering by order status, payment 
 - Page totals for all currency columns
 - **CSV export** with all applied filters
 
-<!-- 📸 Screenshot: Orders page showing the table with filters open (~1200px wide) -->
 
 ### Products
 
@@ -70,7 +72,6 @@ See which products (or variants) drive the most revenue, with breakdowns by prod
 - Sortable by units sold, order count, revenue, or average price
 - **CSV export**
 
-<!-- 📸 Screenshot: Products page showing variant view with product type filter (~1200px wide) -->
 
 ### Customers
 
@@ -82,7 +83,6 @@ Understand who your customers are, how much they spend, and how often they come 
 - Links to customer profiles in the control panel
 - **CSV export**
 
-<!-- 📸 Screenshot: Customers page showing the table (~1200px wide) -->
 
 ### Operations
 
@@ -93,7 +93,7 @@ Operational metrics to help you understand order patterns, shipping, and discoun
 - **Discount trend** over time
 - **Coupon usage** with usage counts and total discount per code
 
-<!-- 📸 Screenshot: Operations page showing charts and coupon table (~1200px wide) -->
+![Coupon usage table](resources/images/operations-coupons.png)
 
 ### Date Range
 

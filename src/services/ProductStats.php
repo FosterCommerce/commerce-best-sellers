@@ -378,7 +378,7 @@ class ProductStats extends Component
 
 		return [
 			'uniqueProducts' => $uniqueProducts,
-			'bestSeller' => $topProduct ? $topProduct['title'] : '—',
+			'bestSeller' => $topProduct ? $topProduct['title'] : '-',
 			'bestSellerUnits' => $topProduct ? (int) $topProduct['unitsSold'] : 0,
 			'totalProductRevenue' => $totalProductRevenue,
 		];

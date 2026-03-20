@@ -12,7 +12,7 @@
 			{{ "sold for"|t('best-sellers') }}
 			<strong style="color: #0073aa;">{{ summaryStats.totalProductRevenue|commerceCurrency }}</strong>
 			{{ "in revenue during this period."|t('best-sellers') }}
-			{% if summaryStats.bestSeller != '—' %}
+			{% if summaryStats.bestSeller != '-' %}
 				{{ "The best selling product is"|t('best-sellers') }}
 				<strong>{{ summaryStats.bestSeller }}</strong>.
 			{% endif %}

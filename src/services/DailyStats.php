@@ -45,7 +45,7 @@ class DailyStats extends Component
 		$totalTax = (float) ($orderStats['totalTax'] ?? 0);
 		$uniqueCustomers = (int) ($orderStats['uniqueCustomers'] ?? 0);
 
-		// Items sold (JOIN query — must qualify columns)
+		// Items sold (JOIN query, must qualify columns)
 		$totalItemsSold = (int) (new Query())
 			->select(['COALESCE(SUM([[lineItems.qty]]), 0)'])
 			->from([

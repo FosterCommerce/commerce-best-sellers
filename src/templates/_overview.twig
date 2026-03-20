@@ -110,6 +110,40 @@
 					</div>
 				</div>
 			{% endif %}
+
+			{% if group.label == 'Customers' %}
+				{# Cart Abandonment #}
+				<div class="bs-chart-container" style="margin-top: 1.5rem;">
+					<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+						<h3 class="bs-chart-container__title" style="margin: 0;">{{ "Cart Abandonment"|t('best-sellers') }}</h3>
+						<label style="font-size: 0.8rem; color: #6c757d; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+							<input type="checkbox" id="include-anonymous-carts" style="-webkit-appearance: checkbox; appearance: checkbox; width: 14px; height: 14px;">
+							{{ "Include anonymous carts"|t('best-sellers') }}
+						</label>
+					</div>
+
+					<div class="bs-chart-toggle" style="margin-bottom: 1rem;">
+						<button type="button" class="bs-chart-toggle__btn bs-chart-toggle__btn--active" data-abandonment-tab="overview">{{ "Overview"|t('best-sellers') }}</button>
+						<button type="button" class="bs-chart-toggle__btn" data-abandonment-tab="4-24h">{{ "4-24 hours"|t('best-sellers') }}</button>
+						<button type="button" class="bs-chart-toggle__btn" data-abandonment-tab="1-7d">{{ "1-7 days"|t('best-sellers') }}</button>
+						<button type="button" class="bs-chart-toggle__btn" data-abandonment-tab="7d+">{{ "7+ days"|t('best-sellers') }}</button>
+					</div>
+
+					<div id="cart-abandonment-content"></div>
+
+					<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f0f0f0; font-size: 0.8rem; color: #999;">
+						<strong style="color: #6c757d;">{{ "Store cart settings"|t('best-sellers') }}:</strong>
+						{{ "Active cart duration:"|t('best-sellers') }} <strong>{{ activeCartDuration }}</strong>.
+						{% if purgeEnabled %}
+							{{ "Carts are purged after"|t('best-sellers') }} <strong>{{ purgeDuration }}</strong>.
+						{% else %}
+							{{ "Cart purging is disabled."|t('best-sellers') }}
+						{% endif %}
+						<br>
+						<span style="color: #b0b0b0;">{{ "Recommended: Keep carts active for at least 30 days, purge after 90 days."|t('best-sellers') }}</span>
+					</div>
+				</div>
+			{% endif %}
 		</div>
 	{% endfor %}
 {% endblock %}
@@ -274,5 +308,122 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 		});
 	}
+	// Cart abandonment widget
+	var abandonmentData = {{ cartAbandonment|json_encode|raw }};
+	var abandonmentContainer = document.getElementById('cart-abandonment-content');
+	var anonymousToggle = document.getElementById('include-anonymous-carts');
+	var currentAbandonmentTab = 'overview';
+
+	function formatAbandonmentNumber(number) {
+		return Number(number).toLocaleString();
+	}
+
+	function formatAbandonmentCurrency(number) {
+		return BestSellersReports.formatCurrency(number);
+	}
+
+	function renderAbandonment() {
+		if (!abandonmentContainer || !abandonmentData) return;
+
+		var includeAnonymous = anonymousToggle && anonymousToggle.checked;
+		var data = abandonmentData;
+
+		// Calculate filtered totals
+		var totalAbandoned = includeAnonymous ? data.totalAbandoned : data.withCustomer;
+		var abandonedValue = includeAnonymous ? data.abandonedValue : data.abandonedValueWithEmail;
+		var totalCarts = totalAbandoned + data.totalCompleted;
+		var rate = totalCarts > 0 ? Math.round((totalAbandoned / totalCarts) * 1000) / 10 : 0;
+
+		var html = '';
+
+		var tabDescriptions = {
+			'overview': 'All carts with line items that haven\'t been updated for at least 4 hours. These numbers may differ from external analytics services which track intent differently.',
+			'4-24h': 'Carts abandoned between 4 and 24 hours ago.',
+			'1-7d': 'Carts abandoned between 1 and 7 days ago.',
+			'7d+': 'Carts abandoned more than 7 days ago.'
+		};
+
+		html += '<p style="font-size:0.85rem;color:#6c757d;margin:0 0 1rem;">' + tabDescriptions[currentAbandonmentTab] + '</p>';
+
+		if (currentAbandonmentTab === 'overview') {
+			html += '<div class="bs-kpi-grid" style="grid-template-columns: 1fr 1fr;">';
+			html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandonment Rate</p></div>';
+			html += '<p class="bs-kpi-card__value">' + rate + '%</p>';
+			html += '<p style="margin:0.5rem 0 0;font-size:0.8rem;color:#999;">' + formatAbandonmentNumber(totalAbandoned) + ' out of ' + formatAbandonmentNumber(totalCarts) + ' carts</p></div>';
+
+			html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandoned Value</p></div>';
+			html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(abandonedValue) + '</p></div>';
+			html += '</div>';
+
+			// Age breakdown
+			if (totalAbandoned > 0) {
+				html += '<div style="margin-top:1.5rem;">';
+				html += '<p class="bs-kpi-card__label" style="margin-bottom:0.5rem;">By age</p>';
+				html += '<div style="display:flex;height:24px;border-radius:4px;overflow:hidden;">';
+				var barColors = {'4-24h': 'rgba(0,115,170,0.4)', '1-7d': 'rgba(0,115,170,0.6)', '7d+': 'rgba(0,115,170,0.8)'};
+				var ageLabels = ['4-24h', '1-7d', '7d+'];
+				for (var ageIndex = 0; ageIndex < ageLabels.length; ageIndex++) {
+					var ageLabel = ageLabels[ageIndex];
+					var ageData = data.byAge[ageLabel];
+					var ageCount = includeAnonymous ? ageData.count : ageData.withCustomer;
+					var agePercent = totalAbandoned > 0 ? (ageCount / totalAbandoned * 100) : 0;
+					if (agePercent > 0) {
+						html += '<div style="width:' + agePercent + '%;background:' + barColors[ageLabel] + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.7rem;font-weight:600;" title="' + ageLabel + ': ' + ageCount + ' carts">';
+						if (agePercent > 8) html += ageLabel;
+						html += '</div>';
+					}
+				}
+				html += '</div>';
+				html += '<div style="display:flex;margin-top:0.4rem;font-size:0.8rem;color:#999;">';
+				for (var ageIndex2 = 0; ageIndex2 < ageLabels.length; ageIndex2++) {
+					var ageLabel2 = ageLabels[ageIndex2];
+					var ageData2 = data.byAge[ageLabel2];
+					var ageCount2 = includeAnonymous ? ageData2.count : ageData2.withCustomer;
+					var labelPercent = totalAbandoned > 0 ? (ageCount2 / totalAbandoned * 100) : 0;
+					html += '<span style="width:' + labelPercent + '%;text-align:center;">' + formatAbandonmentNumber(ageCount2) + '</span>';
+				}
+				html += '</div></div>';
+			}
+		} else {
+			// Specific age tab
+			var selectedAge = data.byAge[currentAbandonmentTab];
+			if (selectedAge) {
+				var tabCount = includeAnonymous ? selectedAge.count : selectedAge.withCustomer;
+				var tabValue = includeAnonymous ? selectedAge.value : selectedAge.valueWithEmail;
+
+				html += '<div class="bs-kpi-grid bs-kpi-grid--3">';
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandoned Carts</p></div>';
+				html += '<p class="bs-kpi-card__value">' + formatAbandonmentNumber(tabCount) + '</p></div>';
+
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandoned Value</p></div>';
+				html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(tabValue || 0) + '</p></div>';
+
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Avg Cart Value</p></div>';
+				html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(tabCount > 0 ? (tabValue || 0) / tabCount : 0) + '</p></div>';
+				html += '</div>';
+			}
+		}
+
+		abandonmentContainer.innerHTML = html;
+	}
+
+	// Tab switching
+	document.querySelectorAll('[data-abandonment-tab]').forEach(function (tabButton) {
+		tabButton.addEventListener('click', function () {
+			currentAbandonmentTab = this.getAttribute('data-abandonment-tab');
+			document.querySelectorAll('[data-abandonment-tab]').forEach(function (button) {
+				button.classList.remove('bs-chart-toggle__btn--active');
+			});
+			this.classList.add('bs-chart-toggle__btn--active');
+			renderAbandonment();
+		});
+	});
+
+	// Anonymous toggle
+	if (anonymousToggle) {
+		anonymousToggle.addEventListener('change', renderAbandonment);
+	}
+
+	renderAbandonment();
 });
 {% endjs %}

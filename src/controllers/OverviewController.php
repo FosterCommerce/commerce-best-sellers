@@ -4,6 +4,7 @@ namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
 use craft\commerce\elements\Product;
+use craft\commerce\Plugin as CommercePlugin;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\helpers\KpiCards;
 use fostercommerce\bestsellers\Plugin;
@@ -99,6 +100,15 @@ class OverviewController extends BaseReportController
 		$newVsReturning = $customerStats->getNewVsReturningByDay($dateRange['fromDT'], $dateRange['toDT']);
 		$ltvComparison = $customerStats->getLtvComparison($dateRange['fromDT'], $dateRange['toDT']);
 
+		// Cart abandonment
+		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($dateRange['fromDT'], $dateRange['toDT']);
+
+		// Commerce cart settings
+		$commerceSettings = CommercePlugin::getInstance()?->getSettings();
+		$activeCartDuration = $commerceSettings ? \craft\helpers\DateTimeHelper::humanDuration($commerceSettings->activeCartDuration) : '1 hour';
+		$purgeEnabled = $commerceSettings ? $commerceSettings->purgeInactiveCarts : true;
+		$purgeDuration = ($commerceSettings && $purgeEnabled) ? \craft\helpers\DateTimeHelper::humanDuration($commerceSettings->purgeInactiveCartsDuration) : null;
+
 		// Daily chart data
 		$dailyRows = $dailyStats->getDailyRows($dateRange['from'], $dateRange['to']);
 		$dailyLabels = array_column($dailyRows, 'date');
@@ -143,6 +153,10 @@ class OverviewController extends BaseReportController
 			'bestSellerElements' => $bestSellerElements,
 			'newVsReturning' => $newVsReturning,
 			'ltvComparison' => $ltvComparison,
+			'cartAbandonment' => $cartAbandonment,
+			'activeCartDuration' => $activeCartDuration,
+			'purgeEnabled' => $purgeEnabled,
+			'purgeDuration' => $purgeDuration,
 		]);
 	}
 }

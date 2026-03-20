@@ -25,20 +25,17 @@ class ProductsController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$productsOrVariantsParam = $request->getQueryParam('productsOrVariants', 'products');
-		$productsOrVariants = is_string($productsOrVariantsParam) ? $productsOrVariantsParam : 'products';
-
-		$sortByParam = $request->getQueryParam('sortBy', 'revenue');
-		$sortBy = is_string($sortByParam) ? $sortByParam : 'revenue';
-
-		$productTypeParam = $request->getQueryParam('productType', 'all');
-		$productType = is_string($productTypeParam) ? $productTypeParam : 'all';
+		/** @var string $productsOrVariants */
+		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
+		/** @var string $sortBy */
+		$sortBy = $request->getQueryParam('sortBy', 'revenue');
+		/** @var string $productType */
+		$productType = $request->getQueryParam('productType', 'all');
 
 		$plugin = Plugin::getInstance();
 		assert($plugin !== null);
 		$productStats = $plugin->productStats;
 
-		// Summary stats for the written summary
 		$summaryStats = $productStats->getSummaryStats($dateRange['fromDT'], $dateRange['toDT']);
 
 		return $this->renderTemplate('best-sellers/_products', [
@@ -65,72 +62,61 @@ class ProductsController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$pageParam = $request->getQueryParam('page', '1');
-		$page = max(1, is_numeric($pageParam) ? (int) $pageParam : 1);
+		/** @var int|string $page */
+		$page = $request->getQueryParam('page', 1);
+		$page = max(1, (int) $page);
 
-		$productsOrVariantsParam = $request->getQueryParam('productsOrVariants', 'products');
-		$productsOrVariants = is_string($productsOrVariantsParam) ? $productsOrVariantsParam : 'products';
-
-		$sortByParam = $request->getQueryParam('sortBy', 'revenue');
-		$sortBy = is_string($sortByParam) ? $sortByParam : 'revenue';
-
-		$productTypeParam = $request->getQueryParam('productType', 'all');
-		$productType = is_string($productTypeParam) ? $productTypeParam : 'all';
-
-		$searchParam = $request->getQueryParam('search', '');
-		$search = trim(is_string($searchParam) ? $searchParam : '');
-
-		$sortParam = $request->getQueryParam('sort', '');
-		$sort = trim(is_string($sortParam) ? $sortParam : '');
-
-		$sortDirParam = $request->getQueryParam('sortDir', 'desc');
-		$sortDir = trim(is_string($sortDirParam) ? $sortDirParam : 'desc');
+		/** @var string $productsOrVariants */
+		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
+		/** @var string $sortBy */
+		$sortBy = $request->getQueryParam('sortBy', 'revenue');
+		/** @var string $productType */
+		$productType = $request->getQueryParam('productType', 'all');
+		/** @var string $rawSearch */
+		$rawSearch = $request->getQueryParam('search', '');
+		$search = trim($rawSearch);
+		/** @var string $rawSort */
+		$rawSort = $request->getQueryParam('sort', '');
+		$sort = trim($rawSort);
+		/** @var string $rawSortDir */
+		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
+		$sortDir = trim($rawSortDir);
 
 		$plugin = Plugin::getInstance();
 		assert($plugin !== null);
 		$productStats = $plugin->productStats;
 
-		// Get all matching items
 		if ($productsOrVariants === 'variants') {
 			$allItems = $productStats->getTopVariants($dateRange['fromDT'], $dateRange['toDT'], $sortBy, 10000, $productType);
 		} else {
 			$allItems = $productStats->getTopProducts($dateRange['fromDT'], $dateRange['toDT'], $sortBy, 10000, $productType);
 		}
 
-		/** @var array<int, array<string, mixed>> $allItems */
+		/** @var array<int, array{productId: int, variantId?: int, productTitle: string, variantTitle?: string, variantSku?: string, productType: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string}> $allItems */
 
-		// Map sort keys to raw data column names
 		$sortKeyMap = [
 			'sku' => $productsOrVariants === 'variants' ? 'variantSku' : 'productTitle',
 		];
 		$effectiveSort = $sortKeyMap[$sort] ?? $sort;
 
-		// Server-side column sort override
-		if ($effectiveSort !== '' && ! empty($allItems) && isset($allItems[0][$effectiveSort])) {
-			usort($allItems, function ($itemA, $itemB) use ($effectiveSort, $sortDir): int {
+		if ($effectiveSort !== '' && $allItems !== [] && isset($allItems[0][$effectiveSort])) {
+			usort($allItems, function (array $itemA, array $itemB) use ($effectiveSort, $sortDir): int {
 				$valueA = $itemA[$effectiveSort] ?? 0;
 				$valueB = $itemB[$effectiveSort] ?? 0;
 				if (is_numeric($valueA) && is_numeric($valueB)) {
 					$comparison = (float) $valueA <=> (float) $valueB;
 				} else {
-					$strA = is_scalar($valueA) ? (string) $valueA : '';
-					$strB = is_scalar($valueB) ? (string) $valueB : '';
-					$comparison = strcasecmp($strA, $strB);
+					$comparison = strcasecmp((string) $valueA, (string) $valueB);
 				}
 
 				return $sortDir === 'asc' ? $comparison : -$comparison;
 			});
 		}
 
-		// Server-side search filter
 		if ($search !== '') {
 			$searchLower = strtolower($search);
-			$allItems = array_values(array_filter($allItems, function ($item) use ($searchLower): bool {
-				$productTitle = is_string($item['productTitle'] ?? null) ? $item['productTitle'] : '';
-				$variantTitle = is_string($item['variantTitle'] ?? null) ? $item['variantTitle'] : '';
-				$variantSku = is_string($item['variantSku'] ?? null) ? $item['variantSku'] : '';
-				$productType = is_string($item['productType'] ?? null) ? $item['productType'] : '';
-				$searchable = strtolower($productTitle . ' ' . $variantTitle . ' ' . $variantSku . ' ' . $productType);
+			$allItems = array_values(array_filter($allItems, function (array $item) use ($searchLower): bool {
+				$searchable = strtolower($item['productTitle'] . ' ' . ($item['variantTitle'] ?? '') . ' ' . ($item['variantSku'] ?? '') . ' ' . ($item['productType']));
 				return str_contains($searchable, $searchLower);
 			}));
 		}
@@ -140,7 +126,6 @@ class ProductsController extends BaseReportController
 		$offset = ($page - 1) * self::PER_PAGE;
 		$pageItems = array_slice($allItems, $offset, self::PER_PAGE);
 
-		// Batch-load product elements for URLs
 		$productIds = array_unique(array_column($pageItems, 'productId'));
 		$productElements = [];
 		if ($productIds !== []) {
@@ -155,42 +140,36 @@ class ProductsController extends BaseReportController
 			$product = $productElements[$item['productId']] ?? null;
 
 			if ($productsOrVariants === 'variants') {
-				$displayTitle = $item['productTitle'] . ': ' . $item['variantTitle'];
+				$displayTitle = $item['productTitle'] . ': ' . ($item['variantTitle'] ?? '');
 			} else {
 				$displayTitle = $item['productTitle'];
 			}
 
 			$ordersUrl = UrlHelper::cpUrl('best-sellers/products/orders', [
-				($productsOrVariants === 'variants' ? 'variantId' : 'productId') => $productsOrVariants === 'variants' ? $item['variantId'] : $item['productId'],
+				($productsOrVariants === 'variants' ? 'variantId' : 'productId') => $productsOrVariants === 'variants' ? ($item['variantId'] ?? 0) : $item['productId'],
 			]);
-
-			$unitsSold = isset($item['unitsSold']) && is_numeric($item['unitsSold']) ? (int) $item['unitsSold'] : 0;
-			$orderCount = isset($item['orderCount']) && is_numeric($item['orderCount']) ? (int) $item['orderCount'] : 0;
-			$revenue = isset($item['revenue']) && is_numeric($item['revenue']) ? (float) $item['revenue'] : 0.0;
-			$avgPrice = isset($item['avgPrice']) && is_numeric($item['avgPrice']) ? (float) $item['avgPrice'] : 0.0;
 
 			$rows[] = [
 				'displayTitle' => $displayTitle,
-				'cpEditUrl' => $product ? $product->cpEditUrl : null,
-				'frontEndUrl' => $product ? $product->url : null,
-				'sku' => $productsOrVariants === 'variants' ? ($item['variantSku'] ?? '') : ($product ? $product->defaultSku : ''),
-				'productType' => $item['productType'] ?? '',
-				'unitsSold' => $unitsSold,
-				'orderCount' => $orderCount,
-				'revenue' => $this->formatCurrency($revenue),
-				'avgPrice' => $this->formatCurrency($avgPrice),
+				'cpEditUrl' => $product?->cpEditUrl,
+				'frontEndUrl' => $product?->url,
+				'sku' => $productsOrVariants === 'variants' ? ($item['variantSku'] ?? '') : ($product?->defaultSku ?? ''),
+				'productType' => $item['productType'],
+				'unitsSold' => (int) $item['unitsSold'],
+				'orderCount' => (int) $item['orderCount'],
+				'revenue' => $this->formatCurrency((float) $item['revenue']),
+				'avgPrice' => $this->formatCurrency((float) $item['avgPrice']),
 				'ordersUrl' => $ordersUrl,
 			];
 		}
 
-		// Page totals
 		$totalUnitsSold = 0;
 		$totalOrderCount = 0;
 		$totalRevenue = 0.0;
 		foreach ($pageItems as $pageItem) {
-			$totalUnitsSold += isset($pageItem['unitsSold']) && is_numeric($pageItem['unitsSold']) ? (int) $pageItem['unitsSold'] : 0;
-			$totalOrderCount += isset($pageItem['orderCount']) && is_numeric($pageItem['orderCount']) ? (int) $pageItem['orderCount'] : 0;
-			$totalRevenue += isset($pageItem['revenue']) && is_numeric($pageItem['revenue']) ? (float) $pageItem['revenue'] : 0.0;
+			$totalUnitsSold += (int) $pageItem['unitsSold'];
+			$totalOrderCount += (int) $pageItem['orderCount'];
+			$totalRevenue += (float) $pageItem['revenue'];
 		}
 
 		$totals = [
@@ -218,17 +197,15 @@ class ProductsController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$productsOrVariantsParam = $request->getQueryParam('productsOrVariants', 'products');
-		$productsOrVariants = is_string($productsOrVariantsParam) ? $productsOrVariantsParam : 'products';
-
-		$sortByParam = $request->getQueryParam('sortBy', 'revenue');
-		$sortBy = is_string($sortByParam) ? $sortByParam : 'revenue';
-
-		$productTypeParam = $request->getQueryParam('productType', 'all');
-		$productType = is_string($productTypeParam) ? $productTypeParam : 'all';
-
-		$searchParam = $request->getQueryParam('search', '');
-		$search = trim(is_string($searchParam) ? $searchParam : '');
+		/** @var string $productsOrVariants */
+		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
+		/** @var string $sortBy */
+		$sortBy = $request->getQueryParam('sortBy', 'revenue');
+		/** @var string $productType */
+		$productType = $request->getQueryParam('productType', 'all');
+		/** @var string $rawSearch */
+		$rawSearch = $request->getQueryParam('search', '');
+		$search = trim($rawSearch);
 
 		$plugin = Plugin::getInstance();
 		assert($plugin !== null);
@@ -240,16 +217,12 @@ class ProductsController extends BaseReportController
 			$allItems = $productStats->getTopProducts($dateRange['fromDT'], $dateRange['toDT'], $sortBy, 10000, $productType);
 		}
 
-		/** @var array<int, array<string, mixed>> $allItems */
+		/** @var array<int, array{productId: int, variantId?: int, productTitle: string, variantTitle?: string, variantSku?: string, productType: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string}> $allItems */
 
 		if ($search !== '') {
 			$searchLower = strtolower($search);
-			$allItems = array_values(array_filter($allItems, function ($item) use ($searchLower): bool {
-				$productTitle = is_string($item['productTitle'] ?? null) ? $item['productTitle'] : '';
-				$variantTitle = is_string($item['variantTitle'] ?? null) ? $item['variantTitle'] : '';
-				$variantSku = is_string($item['variantSku'] ?? null) ? $item['variantSku'] : '';
-				$productTypeVal = is_string($item['productType'] ?? null) ? $item['productType'] : '';
-				$searchable = strtolower($productTitle . ' ' . $variantTitle . ' ' . $variantSku . ' ' . $productTypeVal);
+			$allItems = array_values(array_filter($allItems, function (array $item) use ($searchLower): bool {
+				$searchable = strtolower($item['productTitle'] . ' ' . ($item['variantTitle'] ?? '') . ' ' . ($item['variantSku'] ?? '') . ' ' . $item['productType']);
 				return str_contains($searchable, $searchLower);
 			}));
 		}
@@ -261,13 +234,12 @@ class ProductsController extends BaseReportController
 
 		foreach ($allItems as $allItem) {
 			$displayTitle = $productsOrVariants === 'variants'
-				? $allItem['productTitle'] . ': ' . $allItem['variantTitle']
+				? $allItem['productTitle'] . ': ' . ($allItem['variantTitle'] ?? '')
 				: $allItem['productTitle'];
 
-			$unitsSold = isset($allItem['unitsSold']) && is_numeric($allItem['unitsSold']) ? (int) $allItem['unitsSold'] : 0;
-			$orderCount = isset($allItem['orderCount']) && is_numeric($allItem['orderCount']) ? (int) $allItem['orderCount'] : 0;
-			$revenue = isset($allItem['revenue']) && is_numeric($allItem['revenue']) ? (float) $allItem['revenue'] : 0.0;
-			$avgPrice = isset($allItem['avgPrice']) && is_numeric($allItem['avgPrice']) ? (float) $allItem['avgPrice'] : 0.0;
+			$unitsSold = (int) $allItem['unitsSold'];
+			$orderCount = (int) $allItem['orderCount'];
+			$revenue = (float) $allItem['revenue'];
 
 			$totalUnitsSold += $unitsSold;
 			$totalOrderCount += $orderCount;
@@ -276,11 +248,11 @@ class ProductsController extends BaseReportController
 			$csvRows[] = [
 				'product' => $displayTitle,
 				'sku' => $allItem['variantSku'] ?? '',
-				'type' => $allItem['productType'] ?? '',
+				'type' => $allItem['productType'],
 				'unitsSold' => $unitsSold,
 				'orders' => $orderCount,
 				'revenue' => $revenue,
-				'avgPrice' => $avgPrice,
+				'avgPrice' => (float) $allItem['avgPrice'],
 			];
 		}
 
@@ -311,18 +283,19 @@ class ProductsController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$productIdParam = $request->getQueryParam('productId', 0);
-		$productId = is_numeric($productIdParam) ? (int) $productIdParam : 0;
+		/** @var int|string $productId */
+		$productId = $request->getQueryParam('productId', 0);
+		$productId = (int) $productId;
 
-		$variantIdParam = $request->getQueryParam('variantId', 0);
-		$variantId = is_numeric($variantIdParam) ? (int) $variantIdParam : 0;
+		/** @var int|string $variantId */
+		$variantId = $request->getQueryParam('variantId', 0);
+		$variantId = (int) $variantId;
 
 		if ($productId === 0 && $variantId === 0) {
 			throw new \yii\web\BadRequestHttpException('productId or variantId is required.');
 		}
 
-		// Get product/variant title for the heading
-		/** @var array<string, mixed>|null $titleRow */
+		/** @var array{productTitle: string, variantTitle: string}|null $titleRow */
 		$titleRow = (new Query())
 			->select(['[[variantSales.productTitle]]', '[[variantSales.variantTitle]]'])
 			->from([
@@ -336,13 +309,9 @@ class ProductsController extends BaseReportController
 			->limit(1)
 			->one();
 
-		if ($titleRow !== null) {
-			$productTitle = is_string($titleRow['productTitle']) ? $titleRow['productTitle'] : '';
-			$variantTitle = is_string($titleRow['variantTitle']) ? $titleRow['variantTitle'] : '';
-			$itemTitle = $variantId !== 0 ? ($productTitle . ': ' . $variantTitle) : $productTitle;
-		} else {
-			$itemTitle = 'Unknown';
-		}
+		$itemTitle = $titleRow !== null
+			? ($variantId !== 0 ? ($titleRow['productTitle'] . ': ' . $titleRow['variantTitle']) : $titleRow['productTitle'])
+			: 'Unknown';
 
 		return $this->renderTemplate('best-sellers/_product-orders', [
 			'title' => $itemTitle,
@@ -367,20 +336,24 @@ class ProductsController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$productIdParam = $request->getQueryParam('productId', 0);
-		$productId = is_numeric($productIdParam) ? (int) $productIdParam : 0;
+		/** @var int|string $productId */
+		$productId = $request->getQueryParam('productId', 0);
+		$productId = (int) $productId;
 
-		$variantIdParam = $request->getQueryParam('variantId', 0);
-		$variantId = is_numeric($variantIdParam) ? (int) $variantIdParam : 0;
+		/** @var int|string $variantId */
+		$variantId = $request->getQueryParam('variantId', 0);
+		$variantId = (int) $variantId;
 
-		$pageParam = $request->getQueryParam('page', '1');
-		$page = max(1, is_numeric($pageParam) ? (int) $pageParam : 1);
+		/** @var int|string $page */
+		$page = $request->getQueryParam('page', 1);
+		$page = max(1, (int) $page);
 
-		$sortParam = $request->getQueryParam('sort', 'dateOrdered');
-		$sort = trim(is_string($sortParam) ? $sortParam : 'dateOrdered');
-
-		$sortDirParam = $request->getQueryParam('sortDir', 'desc');
-		$sortDir = trim(is_string($sortDirParam) ? $sortDirParam : 'desc');
+		/** @var string $rawSort */
+		$rawSort = $request->getQueryParam('sort', 'dateOrdered');
+		$sort = trim($rawSort);
+		/** @var string $rawSortDir */
+		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
+		$sortDir = trim($rawSortDir);
 
 		$query = (new Query())
 			->select(['[[variantSales.orderId]]', '[[variantSales.qty]]', '[[variantSales.lineItemTotal]]'])
@@ -400,17 +373,12 @@ class ProductsController extends BaseReportController
 			]);
 		}
 
-		/** @var array<int, array<string, mixed>> $salesRows */
+		/** @var array<int, array{orderId: int, qty: int|string, lineItemTotal: float|string}> $salesRows */
 		$salesRows = $query->all();
 
 		$lineItemsByOrder = [];
 		foreach ($salesRows as $saleRow) {
-			$orderId = $saleRow['orderId'];
-			if (! is_int($orderId) && ! is_string($orderId)) {
-				continue;
-			}
-
-			$lineItemsByOrder[$orderId][] = $saleRow;
+			$lineItemsByOrder[$saleRow['orderId']][] = $saleRow;
 		}
 
 		$orderIds = array_keys($lineItemsByOrder);
@@ -418,7 +386,6 @@ class ProductsController extends BaseReportController
 		$totalPages = max(1, (int) ceil($totalItems / self::PER_PAGE));
 		$offset = ($page - 1) * self::PER_PAGE;
 
-		// Determine sort column for the element query
 		$elementSortColumns = ['reference', 'dateOrdered', 'email', 'totalPrice'];
 		$sortMapping = [
 			'orderTotal' => 'totalPrice',
@@ -461,7 +428,6 @@ class ProductsController extends BaseReportController
 				];
 			}
 
-			// Sort by non-element columns if needed
 			if ($sort === 'qty' || $sort === 'lineRevenue') {
 				$sortKey = $sort === 'lineRevenue' ? 'lineRevenueRaw' : 'qty';
 				usort($allOrderRows, function (array $rowA, array $rowB) use ($sortKey, $sortDir): int {

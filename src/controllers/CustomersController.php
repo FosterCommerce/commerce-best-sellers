@@ -21,7 +21,6 @@ class CustomersController extends BaseReportController
 		assert($plugin instanceof Plugin);
 		$customerStats = $plugin->customerStats;
 
-		// Written summary
 		$kpis = $customerStats->getCustomerKpis($dateRange['fromDT'], $dateRange['toDT']);
 		$prevKpis = $customerStats->getCustomerKpis($dateRange['prev']['fromDT'], $dateRange['prev']['toDT']);
 		$newCustomersChange = $this->percentChange($kpis['new'], $prevKpis['new']);
@@ -48,17 +47,19 @@ class CustomersController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$rawPage = $request->getQueryParam('page', 1);
-		$page = max(1, is_numeric($rawPage) ? (int) $rawPage : 1);
+		/** @var int|string $page */
+		$page = $request->getQueryParam('page', 1);
+		$page = max(1, (int) $page);
 
+		/** @var string $rawSearch */
 		$rawSearch = $request->getQueryParam('search', '');
-		$search = trim(is_string($rawSearch) ? $rawSearch : '');
-
+		$search = trim($rawSearch);
+		/** @var string $rawSort */
 		$rawSort = $request->getQueryParam('sort', 'totalSpent');
-		$sort = trim(is_string($rawSort) ? $rawSort : 'totalSpent');
-
+		$sort = trim($rawSort);
+		/** @var string $rawSortDir */
 		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
-		$sortDir = trim(is_string($rawSortDir) ? $rawSortDir : 'desc');
+		$sortDir = trim($rawSortDir);
 
 		$customerTypes = $request->getQueryParam('customerType', []);
 		if (is_string($customerTypes) && $customerTypes !== '') {
@@ -74,18 +75,15 @@ class CustomersController extends BaseReportController
 		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, status: string, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
 		$allCustomers = $customerStats->getTopCustomers($dateRange['fromDT'], $dateRange['toDT'], 10000);
 
-		// Server-side customer status filter (multi-select)
 		if ($customerTypes !== []) {
 			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => in_array($customer['status'], $customerTypes, true)));
 		}
 
-		// Server-side search
 		if ($search !== '') {
 			$searchLower = strtolower($search);
 			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => str_contains(strtolower($customer['email']), $searchLower)));
 		}
 
-		// Server-side sort
 		$allowedSortColumns = ['email', 'status', 'orderCount', 'totalSpent', 'aov', 'lastOrder'];
 		if (in_array($sort, $allowedSortColumns, true)) {
 			usort($allCustomers, function (array $customerA, array $customerB) use ($sort, $sortDir): int {
@@ -94,7 +92,7 @@ class CustomersController extends BaseReportController
 				if (is_numeric($valueA) && is_numeric($valueB)) {
 					$comparison = (float) $valueA <=> (float) $valueB;
 				} else {
-					$comparison = strcasecmp(is_string($valueA) ? $valueA : '', is_string($valueB) ? $valueB : '');
+					$comparison = strcasecmp((string) $valueA, (string) $valueB);
 				}
 
 				return $sortDir === 'asc' ? $comparison : -$comparison;
@@ -121,7 +119,6 @@ class CustomersController extends BaseReportController
 			];
 		}
 
-		// Page totals
 		$totalOrderCount = 0;
 		$totalSpentSum = 0.0;
 		foreach ($pageItems as $pageItem) {
@@ -153,8 +150,9 @@ class CustomersController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
+		/** @var string $rawSearch */
 		$rawSearch = $request->getQueryParam('search', '');
-		$search = trim(is_string($rawSearch) ? $rawSearch : '');
+		$search = trim($rawSearch);
 
 		$customerTypes = $request->getQueryParam('customerType', []);
 		if (is_string($customerTypes) && $customerTypes !== '') {
@@ -189,7 +187,7 @@ class CustomersController extends BaseReportController
 
 			$csvRows[] = [
 				'email' => $allCustomer['email'],
-				'status' => ucfirst((string) $allCustomer['status']),
+				'status' => ucfirst($allCustomer['status']),
 				'orders' => $allCustomer['orderCount'],
 				'totalSpent' => round($allCustomer['totalSpent'], 2),
 				'aov' => round($allCustomer['aov'], 2),

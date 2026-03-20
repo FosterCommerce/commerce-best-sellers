@@ -54,8 +54,10 @@ class OrdersController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$pageParam = $request->getQueryParam('page', 1);
-		$page = max(1, is_numeric($pageParam) ? (int) $pageParam : 1);
+		/** @var int|string $page */
+		$page = $request->getQueryParam('page', 1);
+		$page = max(1, (int) $page);
+
 		$offset = ($page - 1) * self::PER_PAGE;
 
 		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
@@ -70,7 +72,6 @@ class OrdersController extends BaseReportController
 
 		$rows = $this->buildOrderRows($orders);
 
-		// Page totals from order elements
 		$currency = $this->getStoreCurrency();
 		$totalItemSubtotal = 0;
 		$totalTax = 0;
@@ -175,20 +176,23 @@ class OrdersController extends BaseReportController
 	}
 
 	/**
-	 * Build the filtered orders query from request params.
-	 *
 	 * @param array{fromDT: string, toDT: string} $dateRange
 	 */
 	private function buildFilteredOrdersQuery(array $dateRange): \craft\commerce\elements\db\OrderQuery
 	{
 		/** @var \craft\web\Request $request */
 		$request = Craft::$app->getRequest();
-		$searchParam = $request->getQueryParam('search', '');
-		$search = is_string($searchParam) ? trim($searchParam) : '';
-		$sortParam = $request->getQueryParam('sort', 'dateOrdered');
-		$sort = is_string($sortParam) ? trim($sortParam) : 'dateOrdered';
-		$sortDirParam = $request->getQueryParam('sortDir', 'desc');
-		$sortDir = is_string($sortDirParam) ? trim($sortDirParam) : 'desc';
+
+		/** @var string $rawSearch */
+		$rawSearch = $request->getQueryParam('search', '');
+		$search = trim($rawSearch);
+		/** @var string $rawSort */
+		$rawSort = $request->getQueryParam('sort', 'dateOrdered');
+		$sort = trim($rawSort);
+		/** @var string $rawSortDir */
+		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
+		$sortDir = trim($rawSortDir);
+
 		$orderStatuses = $request->getQueryParam('orderStatus', []);
 		$paidFilters = $request->getQueryParam('paymentStatus', []);
 
@@ -251,8 +255,6 @@ class OrdersController extends BaseReportController
 	}
 
 	/**
-	 * Build formatted row data from Order elements.
-	 *
 	 * @param array<Order> $orders
 	 * @return list<array<string, mixed>>
 	 */
@@ -278,18 +280,14 @@ class OrdersController extends BaseReportController
 
 		$rows = [];
 		foreach ($orders as $order) {
-			$statusColor = $order->orderStatus->color;
-			$statusName = $order->orderStatus->name;
-
-			// Use per-order currency for accuracy
 			$currency = $order->currency;
 
 			$rows[] = [
 				'reference' => $order->reference,
 				'cpEditUrl' => $order->cpEditUrl,
 				'dateOrdered' => $order->dateOrdered ? $order->dateOrdered->format('m/d/Y g:ia') : '',
-				'statusColor' => $statusColor,
-				'statusName' => $statusName,
+				'statusColor' => $order->orderStatus->color,
+				'statusName' => $order->orderStatus->name,
 				'statusHandle' => $order->orderStatus->handle,
 				'itemSubtotal' => Craft::$app->getFormatter()->asCurrency($order->itemSubtotal, $currency),
 				'totalTax' => Craft::$app->getFormatter()->asCurrency($order->totalTax, $currency),

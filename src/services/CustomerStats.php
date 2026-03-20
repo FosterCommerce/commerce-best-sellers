@@ -222,7 +222,9 @@ class CustomerStats extends Component
 				'orders' => '{{%commerce_orders}}',
 			])
 			->leftJoin(
-				['users' => '{{%users}}'],
+				[
+					'users' => '{{%users}}',
+				],
 				'[[orders.customerId]] = [[users.id]]',
 			)
 			->where([
@@ -328,13 +330,19 @@ class CustomerStats extends Component
 				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'orderCount' => 'COUNT(*)',
 			])
-			->from(['orders' => '{{%commerce_orders}}'])
+			->from([
+				'orders' => '{{%commerce_orders}}',
+			])
 			->innerJoin(
-				['users' => '{{%users}}'],
+				[
+					'users' => '{{%users}}',
+				],
 				'[[orders.customerId]] = [[users.id]]',
 			)
 			->where($dateCondition)
-			->andWhere(['[[users.active]]' => true])
+			->andWhere([
+				'[[users.active]]' => true,
+			])
 			->groupBy('[[orders.email]]')
 			->all();
 
@@ -344,17 +352,27 @@ class CustomerStats extends Component
 				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'orderCount' => 'COUNT(*)',
 			])
-			->from(['orders' => '{{%commerce_orders}}'])
+			->from([
+				'orders' => '{{%commerce_orders}}',
+			])
 			->leftJoin(
-				['users' => '{{%users}}'],
+				[
+					'users' => '{{%users}}',
+				],
 				'[[orders.customerId]] = [[users.id]]',
 			)
 			->where($dateCondition)
 			->andWhere([
 				'or',
-				['[[orders.customerId]]' => null],
-				['[[users.active]]' => false],
-				['[[users.id]]' => null],
+				[
+					'[[orders.customerId]]' => null,
+				],
+				[
+					'[[users.active]]' => false,
+				],
+				[
+					'[[users.id]]' => null,
+				],
 			])
 			->groupBy('[[orders.email]]')
 			->all();

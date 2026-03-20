@@ -151,4 +151,4 @@ Best Sellers fires events that let you extend the reporting UI from other plugin
 
 ## Credits
 
-Brought to you by [Foster Commerce](https://fostercommerce.com)
+😊 Brought to you by [Foster Commerce](https://fostercommerce.com)

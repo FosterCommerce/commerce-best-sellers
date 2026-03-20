@@ -48,6 +48,8 @@ abstract class BaseReportController extends Controller
 
 	/**
 	 * Get the store's currency code (e.g. 'USD').
+	 *
+	 * @return non-empty-string
 	 */
 	protected function getStoreCurrency(): string
 	{

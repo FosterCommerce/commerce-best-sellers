@@ -75,21 +75,21 @@ class OrdersController extends BaseReportController
 
 		$rows = $this->buildOrderRows($orders);
 
-		$currency = $this->getStoreCurrency();
-		$mCurrency = new Currency($currency);
-		$totalItemSubtotal = new Money(0, $mCurrency);
-		$totalTax = new Money(0, $mCurrency);
-		$totalDiscount = new Money(0, $mCurrency);
-		$totalShipping = new Money(0, $mCurrency);
-		$totalPaid = new Money(0, $mCurrency);
+		$currencyCode = $this->getStoreCurrency();
+		$currency = new Currency($currencyCode);
+		$totalItemSubtotal = new Money(0, $currency);
+		$totalTax = new Money(0, $currency);
+		$totalDiscount = new Money(0, $currency);
+		$totalShipping = new Money(0, $currency);
+		$totalPaid = new Money(0, $currency);
 		$totalItemsSold = 0;
 
 		foreach ($orders as $order) {
-			$totalItemSubtotal = $totalItemSubtotal->add($this->toMoney($order->itemSubtotal, $mCurrency));
-			$totalTax = $totalTax->add($this->toMoney($order->totalTax, $mCurrency));
-			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount, $mCurrency));
-			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost, $mCurrency));
-			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid, $mCurrency));
+			$totalItemSubtotal = $totalItemSubtotal->add($this->toMoney($order->itemSubtotal, $currency));
+			$totalTax = $totalTax->add($this->toMoney($order->totalTax, $currency));
+			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount, $currency));
+			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost, $currency));
+			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid, $currency));
 		}
 
 		foreach ($rows as $row) {
@@ -97,11 +97,11 @@ class OrdersController extends BaseReportController
 		}
 
 		$totals = [
-			'itemSubtotal' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalItemSubtotal), $currency),
-			'totalTax' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalTax), $currency),
-			'totalDiscount' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalDiscount), $currency),
-			'totalShippingCost' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalShipping), $currency),
-			'totalPaid' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalPaid), $currency),
+			'itemSubtotal' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalItemSubtotal), $currencyCode),
+			'totalTax' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalTax), $currencyCode),
+			'totalDiscount' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalDiscount), $currencyCode),
+			'totalShippingCost' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalShipping), $currencyCode),
+			'totalPaid' => Craft::$app->getFormatter()->asCurrency(MoneyHelper::toDecimal($totalPaid), $currencyCode),
 			'itemsSold' => number_format($totalItemsSold),
 		];
 
@@ -127,20 +127,20 @@ class OrdersController extends BaseReportController
 		$rows = $this->buildOrderRows($orders);
 
 		$csvRows = [];
-		$mCurrency = new Currency($this->getStoreCurrency());
-		$totalMerchandise = new Money(0, $mCurrency);
-		$totalTax = new Money(0, $mCurrency);
-		$totalDiscount = new Money(0, $mCurrency);
-		$totalShipping = new Money(0, $mCurrency);
-		$totalPaid = new Money(0, $mCurrency);
+		$currency = new Currency($this->getStoreCurrency());
+		$totalMerchandise = new Money(0, $currency);
+		$totalTax = new Money(0, $currency);
+		$totalDiscount = new Money(0, $currency);
+		$totalShipping = new Money(0, $currency);
+		$totalPaid = new Money(0, $currency);
 		$totalItemsSold = 0;
 
 		foreach ($orders as $index => $order) {
-			$totalMerchandise = $totalMerchandise->add($this->toMoney($order->itemSubtotal, $mCurrency));
-			$totalTax = $totalTax->add($this->toMoney($order->totalTax, $mCurrency));
-			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount, $mCurrency));
-			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost, $mCurrency));
-			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid, $mCurrency));
+			$totalMerchandise = $totalMerchandise->add($this->toMoney($order->itemSubtotal, $currency));
+			$totalTax = $totalTax->add($this->toMoney($order->totalTax, $currency));
+			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount, $currency));
+			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost, $currency));
+			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid, $currency));
 			$itemsSold = $rows[$index]['itemsSold'] ?? 0;
 			$totalItemsSold += $itemsSold;
 

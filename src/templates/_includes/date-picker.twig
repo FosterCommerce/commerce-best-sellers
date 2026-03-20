@@ -1,0 +1,72 @@
+{# Global date picker for reports pages - uses Craft's native date range picker #}
+
+<form id="bs-date-form" method="get" style="display: flex; align-items: center; gap: 0.5rem;">
+	<input type="hidden" id="bs-startDate" name="from" value="{{ from }}" data-start-date>
+	<input type="hidden" id="bs-endDate" name="to" value="{{ to }}" data-end-date>
+	<input type="hidden" id="bs-dateRange" name="preset" value="{{ preset|default('past30Days') }}" data-date-range>
+
+	{# Preserve other query params through date changes #}
+	{% for key, value in craft.app.request.queryParams %}
+		{% if key not in ['from', 'to', 'preset'] %}
+			<input type="hidden" name="{{ key }}" value="{{ value }}">
+		{% endif %}
+	{% endfor %}
+
+	{% block filtersBefore %}{% endblock %}
+
+	<div data-date-range-picker></div>
+
+	{% block filtersAfter %}{% endblock %}
+</form>
+
+{% js %}
+(function() {
+	var initialized = false;
+
+	var options = {
+		selected: '{{ preset|default("past30Days") }}',
+		onChange: function(start, end, handle) {
+			if (!initialized) {
+				return;
+			}
+
+			var $startDate = document.getElementById('bs-startDate');
+			var $endDate = document.getElementById('bs-endDate');
+			var $dateRange = document.getElementById('bs-dateRange');
+
+			$startDate.value = '';
+			$endDate.value = '';
+			$dateRange.value = '';
+
+			if (start) {
+				$startDate.value = start.getFullYear() + '-' + (start.getMonth() + 1) + '-' + start.getDate();
+			}
+
+			if (end) {
+				$endDate.value = end.getFullYear() + '-' + (end.getMonth() + 1) + '-' + end.getDate();
+			}
+
+			if (handle) {
+				$dateRange.value = handle;
+			}
+
+			document.getElementById('bs-date-form').submit();
+		}
+	};
+
+	{% if preset == 'custom' and from %}
+		options['startDate'] = new Date({{ from|date('Y') }}, {{ from|date('m') - 1 }}, {{ from|date('d') }});
+	{% endif %}
+
+	{% if preset == 'custom' and to %}
+		options['endDate'] = new Date({{ to|date('Y') }}, {{ to|date('m') - 1 }}, {{ to|date('d') }});
+	{% endif %}
+
+	var $container = document.querySelector('[data-date-range-picker]');
+	if ($container && Craft.ui.createDateRangePicker) {
+		Craft.ui.createDateRangePicker(options).appendTo($container);
+	}
+
+	initialized = true;
+})();
+{% endjs %}

@@ -6,16 +6,12 @@ use Craft;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
-use craft\commerce\enums\LineItemType;
 use craft\commerce\models\LineItem;
 use craft\helpers\Db;
+use fostercommerce\bestsellers\helpers\LineItemHelper;
 use fostercommerce\bestsellers\records\VariantSale;
-use modules\site\utilities\LineItemHelper;
 use yii\base\Component;
 
-/**
- * Sales service
- */
 class Sales extends Component
 {
 	public function logOrderSales(Order $order): void
@@ -52,6 +48,9 @@ class Sales extends Component
 					'variantTitle' => $purchasable->title,
 					'variantSku' => $purchasable->sku,
 					'qty' => $lineItem->qty,
+					'lineItemPrice' => $lineItem->price,
+					'lineItemTotal' => $lineItem->subtotal,
+					'discount' => abs((float) $lineItem->promotionalAmount),
 					'orderId' => $order->id,
 					'dateOrdered' => Db::prepareDateForDb($order->dateOrdered),
 					'dateCreated' => Db::prepareDateForDb(new \DateTime()),
@@ -72,6 +71,9 @@ class Sales extends Component
 						'variantTitle',
 						'variantSku',
 						'qty',
+						'lineItemPrice',
+						'lineItemTotal',
+						'discount',
 						'orderId',
 						'dateOrdered',
 						'dateCreated',

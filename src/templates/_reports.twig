@@ -38,6 +38,10 @@
 	</form>
 {% endset %}
 
+{% css %}
+	{% include 'best-sellers/_includes/plugin-footer-css' %}
+{% endcss %}
+
 {% set products = craft.commerce.products %}
 
 {% set content %}
@@ -212,6 +216,7 @@
 		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 	{% endif %}
+	{% include 'best-sellers/_includes/plugin-footer' %}
 {% endset %}
 
 {% js %}
@@ -244,29 +249,31 @@
 
 		var ctx = document.getElementById('dailyChart').getContext('2d');
 		var dailyChart = new Chart(ctx, {
-			type: 'line',
 			data: {
 				labels: labels,
 				datasets: [
 					{
-						label: 'Daily Orders',
+						type: 'bar',
+						label: 'Orders',
 						data: ordersData,
-						fill: false,
+						backgroundColor: 'rgba(0, 115, 170, 0.6)',
 						borderColor: '#0073aa',
-						backgroundColor: '#0073aa',
-						tension: 0.3,
-						pointRadius: labels.length === 1 ? 6 : 3,
-						yAxisID: 'y'
+						borderWidth: 1,
+						yAxisID: 'y',
+						order: 2
 					},
 					{
-						label: 'Daily Revenue',
+						type: 'line',
+						label: 'Revenue',
 						data: revenueData,
 						fill: false,
 						borderColor: '#a100ff',
-						backgroundColor: '#a100ff',
-						tension: 0.3,
-						pointRadius: labels.length === 1 ? 6 : 3,
-						yAxisID: 'y1'
+						backgroundColor: 'transparent',
+						cubicInterpolationMode: 'monotone',
+						pointRadius: labels.length === 1 ? 6 : 1,
+						borderWidth: 1.5,
+						yAxisID: 'y1',
+						order: 1
 					}
 				]
 			},

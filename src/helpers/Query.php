@@ -23,34 +23,38 @@ class Query
 			return;
 		}
 
-		/** @var (ElementQuery<TKey, TElement> & SaleQueryBehavior<TKey, TElement>) $query */
+		/** @var SaleQueryBehavior<TKey, TElement> $behavior */
+		$behavior = $query->getBehavior('bestSellers');
 
-		// Behavior types aren't inferred
-		if (! $query->getIncludeBestSellersData()) {
+		if (! $behavior->getIncludeBestSellersData()) {
 			return;
 		}
 
 		$withQuery = (new DbQuery())
 			->select([
 				$id,
-				'totalQtySold' => 'SUM(qty)',
+				'totalQtySold' => 'COALESCE(SUM(qty), 0)',
+				'totalRevenue' => 'COALESCE(SUM(lineItemTotal), 0)',
 			])
 			->from(VariantSale::tableName())
 			->groupBy($id);
 
-		if ($query->bestSellersFrom !== null) {
-			$withQuery->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersFrom)]);
+		if ($behavior->bestSellersFrom !== null) {
+			$withQuery->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($behavior->bestSellersFrom)]);
 		}
 
-		if ($query->bestSellersTo !== null) {
-			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersTo)]);
+		if ($behavior->bestSellersTo !== null) {
+			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($behavior->bestSellersTo)]);
 		}
 
 		// Attach CTE only to subQuery (handles filtering/sorting).
 		// The outer query selects totalQtySold from the subquery results.
 		$query
 			->subQuery
-			?->addSelect(['variant_sales_cte.totalQtySold'])
+			?->addSelect([
+				'variant_sales_cte.totalQtySold',
+				'variant_sales_cte.totalRevenue',
+			])
 			->withQuery($withQuery, 'variant_sales_cte')
 			->leftJoin(
 				'variant_sales_cte',
@@ -59,6 +63,9 @@ class Query
 
 		$query
 			->query
-			?->addSelect(['subquery.totalQtySold']);
+			?->addSelect([
+				'subquery.totalQtySold',
+				'subquery.totalRevenue',
+			]);
 	}
 }

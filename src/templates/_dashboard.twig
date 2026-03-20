@@ -72,6 +72,10 @@
 
 {% set products = craft.commerce.products %}
 
+{% css %}
+	{% include 'best-sellers/_includes/plugin-footer-css' %}
+{% endcss %}
+
 {% set content %}
 	<main class="main-content">
 	<h2>{{ "Best Sellers"|t("best-sellers") }}</h2>
@@ -127,6 +131,7 @@
 		</div>
 	{% endif %}
 	</main>
+	{% include 'best-sellers/_includes/plugin-footer' %}
 {% endset %}
 
 {% js %}

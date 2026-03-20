@@ -1,0 +1,50 @@
+{#
+ # KPI Card macro
+ #
+ # Usage:
+ #   {% import 'best-sellers/_includes/kpi-card' as kpi %}
+ #   {{ kpi.card({ label: 'Revenue', value: '$1,234', change: 12.5, sparklineId: 'sparkRevenue' }) }}
+ #}
+
+{% macro card(params) %}
+	{% set label = params.label ?? '' %}
+	{% set value = params.value ?? '---' %}
+	{% set change = params.change ?? null %}
+	{% set sparklineId = params.sparklineId ?? null %}
+	{% set format = params.format ?? 'text' %}
+	{% set description = params.description ?? null %}
+
+	<div class="bs-kpi-card">
+		<div class="bs-kpi-card__header">
+			<p class="bs-kpi-card__label">{{ label|t('best-sellers') }}</p>
+			{% if change is not null %}
+				{% if change > 0 %}
+					<span class="bs-kpi-card__change bs-kpi-card__change--up">&#9650; {{ change|abs|number_format(2) }}%</span>
+				{% elseif change < 0 %}
+					<span class="bs-kpi-card__change bs-kpi-card__change--down">&#9660; {{ change|abs|number_format(2) }}%</span>
+				{% else %}
+					<span class="bs-kpi-card__change bs-kpi-card__change--neutral">0%</span>
+				{% endif %}
+			{% endif %}
+		</div>
+		<p class="bs-kpi-card__value">
+			{% if format == 'currency' %}
+				{{ value|commerceCurrency }}
+			{% elseif format == 'percent' %}
+				{{ value|number_format(1) }}%
+			{% elseif format == 'decimal' %}
+				{{ value|number_format(2) }}
+			{% elseif format == 'number' %}
+				{{ value|number_format }}
+			{% else %}
+				{{ value }}
+			{% endif %}
+		</p>
+		{% if description %}
+			<p style="margin: 0.5rem 0 0; font-size: 0.8rem; color: #999;">{{ description|t('best-sellers') }}</p>
+		{% endif %}
+		{% if sparklineId %}
+			<canvas id="{{ sparklineId }}" class="bs-kpi-card__sparkline"></canvas>
+		{% endif %}
+	</div>
+{% endmacro %}

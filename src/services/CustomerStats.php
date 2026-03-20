@@ -23,44 +23,47 @@ class CustomerStats extends Component
 		];
 
 		$total = (int) (new Query())
-			->select('COUNT(DISTINCT [[customerId]])')
+			->select('COUNT(DISTINCT [[email]])')
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
 			->andWhere([
 				'not', [
-					'customerId' => null,
+					'[[email]]' => null,
 				]])
+			->andWhere(['!=', '[[email]]', ''])
 			->scalar();
 
-		// Customer IDs who ordered in this period
-		$customerIds = (new Query())
-			->select('DISTINCT [[customerId]]')
+		// Emails who ordered in this period
+		$customerEmails = (new Query())
+			->select('DISTINCT [[email]]')
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
 			->andWhere([
 				'not', [
-					'customerId' => null,
+					'[[email]]' => null,
 				]])
+			->andWhere(['!=', '[[email]]', ''])
 			->column();
 
 		$new = 0;
 		$returning = 0;
 
-		if (! empty($customerIds)) {
+		if (! empty($customerEmails)) {
+			// Find emails whose first-ever completed order is within this period
 			$new = (int) (new Query())
 				->from([
 					'firstOrders' => (new Query())
 						->select([
-							'customerId',
+							'email' => '[[email]]',
 							'firstOrder' => 'MIN([[dateOrdered]])',
 						])
 						->from('{{%commerce_orders}}')
 						->where([
 							'and',
 							['=', '[[isCompleted]]', true],
-							['in', '[[customerId]]', $customerIds],
+							['in', '[[email]]', $customerEmails],
 						])
-						->groupBy('[[customerId]]'),
+						->groupBy('[[email]]'),
 				])
 				->andWhere(['>=', 'firstOrder', $fromDT])
 				->andWhere(['<=', 'firstOrder', $toDT])
@@ -93,9 +96,9 @@ class CustomerStats extends Component
 			? 'DATE([[dateOrdered]])'
 			: 'CAST([[dateOrdered]] AS DATE)';
 
-		// Get first order date for each customer who ordered in the range
-		$customerIds = (new Query())
-			->select('DISTINCT [[customerId]]')
+		// Get emails who ordered in the range
+		$customerEmails = (new Query())
+			->select('DISTINCT [[email]]')
 			->from('{{%commerce_orders}}')
 			->where([
 				'and',
@@ -104,12 +107,13 @@ class CustomerStats extends Component
 				['<=', '[[dateOrdered]]', $toDT],
 				[
 					'not', [
-						'customerId' => null,
+						'[[email]]' => null,
 					]],
+				['!=', '[[email]]', ''],
 			])
 			->column();
 
-		if (empty($customerIds)) {
+		if (empty($customerEmails)) {
 			return [
 				'labels' => [],
 				'new' => [],
@@ -117,32 +121,32 @@ class CustomerStats extends Component
 			];
 		}
 
-		// Get first order date for these customers
+		// Get first-ever order date for these emails (across all time)
 		$firstOrders = (new Query())
 			->select([
-				'customerId',
+				'email' => '[[email]]',
 				'firstOrder' => 'MIN([[dateOrdered]])',
 			])
 			->from('{{%commerce_orders}}')
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],
-				['in', '[[customerId]]', $customerIds],
+				['in', '[[email]]', $customerEmails],
 			])
-			->groupBy('[[customerId]]')
+			->groupBy('[[email]]')
 			->all();
 
 		$firstOrderMap = [];
 		foreach ($firstOrders as $firstOrder) {
-			/** @var array{customerId: string, firstOrder: string} $firstOrder */
-			$firstOrderMap[$firstOrder['customerId']] = substr($firstOrder['firstOrder'], 0, 10);
+			/** @var array{email: string, firstOrder: string} $firstOrder */
+			$firstOrderMap[$firstOrder['email']] = substr($firstOrder['firstOrder'], 0, 10);
 		}
 
-		// Get all orders in the range grouped by day and customer
+		// Get all orders in the range grouped by day and email
 		$orders = (new Query())
 			->select([
 				'day' => $dayExpression,
-				'customerId',
+				'email' => '[[email]]',
 			])
 			->from('{{%commerce_orders}}')
 			->where([
@@ -152,17 +156,18 @@ class CustomerStats extends Component
 				['<=', '[[dateOrdered]]', $toDT],
 				[
 					'not', [
-						'customerId' => null,
+						'[[email]]' => null,
 					]],
+				['!=', '[[email]]', ''],
 			])
 			->all();
 
 		// Group by day
 		$byDay = [];
-		/** @var array{day: string, customerId: string} $order */
+		/** @var array{day: string, email: string} $order */
 		foreach ($orders as $order) {
 			$day = $order['day'];
-			$customerId = $order['customerId'];
+			$email = $order['email'];
 			if (! isset($byDay[$day])) {
 				$byDay[$day] = [
 					'new' => [],
@@ -170,11 +175,11 @@ class CustomerStats extends Component
 				];
 			}
 
-			$isNew = isset($firstOrderMap[$customerId]) && $firstOrderMap[$customerId] === $day;
+			$isNew = isset($firstOrderMap[$email]) && $firstOrderMap[$email] === $day;
 			if ($isNew) {
-				$byDay[$day]['new'][$customerId] = true;
+				$byDay[$day]['new'][$email] = true;
 			} else {
-				$byDay[$day]['returning'][$customerId] = true;
+				$byDay[$day]['returning'][$email] = true;
 			}
 		}
 
@@ -232,10 +237,13 @@ class CustomerStats extends Component
 			/** @var array{email: string, customerId: ?string, orderCount: string, totalSpent: string, lastOrder: ?string} $row */
 			$orderCount = (int) $row['orderCount'];
 			$totalSpent = (float) $row['totalSpent'];
+			$customerId = $row['customerId'] ? (int) $row['customerId'] : null;
+
 			return [
 				'email' => $row['email'],
-				'customerId' => $row['customerId'] ? (int) $row['customerId'] : null,
+				'customerId' => $customerId,
 				'isGuest' => empty($row['customerId']),
+				'status' => $customerId !== null && $customerId !== 0 ? 'credentialed' : 'guest',
 				'orderCount' => $orderCount,
 				'totalSpent' => $totalSpent,
 				'aov' => $orderCount > 0 ? round($totalSpent / $orderCount, 2) : 0,
@@ -289,59 +297,74 @@ class CustomerStats extends Component
 	}
 
 	/**
-	 * Get LTV distribution buckets.
+	 * Get LTV comparison between credentialed and guest customers.
 	 *
-	 * @return array{labels: list<string>, counts: list<int>}
+	 * @return array{credentialed: array{count: int, totalRevenue: float, avgLtv: float, avgOrders: float}, guest: array{count: int, totalRevenue: float, avgLtv: float, avgOrders: float}}
 	 */
-	public function getLtvDistribution(string $fromDT, string $toDT): array
+	public function getLtvComparison(string $fromDT, string $toDT): array
 	{
-		$customers = (new Query())
-			->select([
-				'totalSpent' => 'COALESCE(SUM([[totalPrice]]), 0)',
-			])
-			->from('{{%commerce_orders}}')
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
-				[
-					'not', [
-						'customerId' => null,
-					]],
-			])
-			->groupBy('[[customerId]]')
-			->column();
-
-		$buckets = [
-			'$0-50' => 0,
-			'$50-100' => 0,
-			'$100-250' => 0,
-			'$250-500' => 0,
-			'$500-1000' => 0,
-			'$1000+' => 0,
+		$dateCondition = [
+			'and',
+			['=', '[[isCompleted]]', true],
+			['>=', '[[dateOrdered]]', $fromDT],
+			['<=', '[[dateOrdered]]', $toDT],
+			[
+				'not', [
+					'[[email]]' => null,
+				]],
+			['!=', '[[email]]', ''],
 		];
 
-		foreach ($customers as $customer) {
-			$customer = (float) $customer;
-			if ($customer < 50) {
-				$buckets['$0-50']++;
-			} elseif ($customer < 100) {
-				$buckets['$50-100']++;
-			} elseif ($customer < 250) {
-				$buckets['$100-250']++;
-			} elseif ($customer < 500) {
-				$buckets['$250-500']++;
-			} elseif ($customer < 1000) {
-				$buckets['$500-1000']++;
-			} else {
-				$buckets['$1000+']++;
-			}
-		}
+		// Credentialed: has a customerId
+		$credentialedRows = (new Query())
+			->select([
+				'totalSpent' => 'COALESCE(SUM([[totalPrice]]), 0)',
+				'orderCount' => 'COUNT(*)',
+			])
+			->from('{{%commerce_orders}}')
+			->where($dateCondition)
+			->andWhere([
+				'not', [
+					'[[customerId]]' => null,
+				]])
+			->groupBy('[[email]]')
+			->all();
+
+		// Guest: no customerId
+		$guestRows = (new Query())
+			->select([
+				'totalSpent' => 'COALESCE(SUM([[totalPrice]]), 0)',
+				'orderCount' => 'COUNT(*)',
+			])
+			->from('{{%commerce_orders}}')
+			->where($dateCondition)
+			->andWhere([
+				'[[customerId]]' => null,
+			])
+			->groupBy('[[email]]')
+			->all();
+
+		$credentialedCount = count($credentialedRows);
+		$credentialedRevenue = array_sum(array_column($credentialedRows, 'totalSpent'));
+		$credentialedOrders = array_sum(array_column($credentialedRows, 'orderCount'));
+
+		$guestCount = count($guestRows);
+		$guestRevenue = array_sum(array_column($guestRows, 'totalSpent'));
+		$guestOrders = array_sum(array_column($guestRows, 'orderCount'));
 
 		return [
-			'labels' => array_map('strval', array_keys($buckets)),
-			'counts' => array_values($buckets),
+			'credentialed' => [
+				'count' => $credentialedCount,
+				'totalRevenue' => (float) $credentialedRevenue,
+				'avgLtv' => $credentialedCount > 0 ? round($credentialedRevenue / $credentialedCount, 2) : 0,
+				'avgOrders' => $credentialedCount > 0 ? round($credentialedOrders / $credentialedCount, 2) : 0,
+			],
+			'guest' => [
+				'count' => $guestCount,
+				'totalRevenue' => (float) $guestRevenue,
+				'avgLtv' => $guestCount > 0 ? round($guestRevenue / $guestCount, 2) : 0,
+				'avgOrders' => $guestCount > 0 ? round($guestOrders / $guestCount, 2) : 0,
+			],
 		];
 	}
 }

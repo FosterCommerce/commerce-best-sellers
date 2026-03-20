@@ -17,11 +17,11 @@ abstract class BaseReportController extends Controller
 	 */
 	public function percentChange(float|int $current, float|int $previous): ?float
 	{
-		if ($previous === 0 && $current === 0) {
+		if ((float) $previous === 0.0 && (float) $current === 0.0) {
 			return null;
 		}
 
-		if ($previous === 0) {
+		if ((float) $previous === 0.0) {
 			return null;
 		}
 

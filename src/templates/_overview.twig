@@ -75,14 +75,38 @@
 						{% endif %}
 					</div>
 					<div class="bs-chart-container">
-						<h3 class="bs-chart-container__title">{{ "Customer Spend Distribution"|t('best-sellers') }}</h3>
-						{% if ltvDistribution.counts|length > 0 %}
-							<div style="position: relative; height: 300px;">
-								<canvas id="ltvChart"></canvas>
-							</div>
-						{% else %}
-							<p>{{ "No data available"|t('best-sellers') }}</p>
-						{% endif %}
+						<h3 class="bs-chart-container__title">{{ "Credentialed vs Guest"|t('best-sellers') }}</h3>
+						<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+							<thead>
+								<tr>
+									<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;"></th>
+									<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #0073aa; font-size: 0.8rem;">{{ "Credentialed"|t('best-sellers') }}</th>
+									<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #95a5a6; font-size: 0.8rem;">{{ "Guest"|t('best-sellers') }}</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td style="padding: 0.6rem 0.5rem;">{{ "Customers"|t('best-sellers') }}</td>
+									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.count|number_format }}</td>
+									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.count|number_format }}</td>
+								</tr>
+								<tr>
+									<td style="padding: 0.6rem 0.5rem;">{{ "Avg LTV"|t('best-sellers') }}</td>
+									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.avgLtv|commerceCurrency }}</td>
+									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.avgLtv|commerceCurrency }}</td>
+								</tr>
+								<tr>
+									<td style="padding: 0.6rem 0.5rem;">{{ "Avg Orders"|t('best-sellers') }}</td>
+									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.avgOrders }}</td>
+									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.avgOrders }}</td>
+								</tr>
+								<tr>
+									<td style="padding: 0.6rem 0.5rem;">{{ "Total Revenue"|t('best-sellers') }}</td>
+									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.totalRevenue|commerceCurrency }}</td>
+									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.totalRevenue|commerceCurrency }}</td>
+								</tr>
+							</tbody>
+						</table>
 					</div>
 				</div>
 			{% endif %}
@@ -138,40 +162,28 @@ document.addEventListener('DOMContentLoaded', function () {
 			responsive: true,
 			maintainAspectRatio: false,
 			interaction: { mode: 'index', intersect: false },
-			plugins: { legend: { position: 'bottom' } },
+			plugins: {
+					legend: { position: 'bottom' },
+					tooltip: {
+						callbacks: {
+							title: function (items) {
+								var date = new Date(items[0].parsed.x);
+								return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+							}
+						}
+					}
+				},
 			scales: {
 				x: {
 					type: 'time',
-					time: { unit: nvrTimeScale.unit, stepSize: nvrTimeScale.stepSize, displayFormats: { day: 'MMM d', month: 'MMM yyyy' } }
+					time: { unit: nvrTimeScale.unit, stepSize: nvrTimeScale.stepSize, displayFormats: { day: 'MMM d', month: 'MMM yyyy' }, tooltipFormat: 'MMM d, yyyy' }
 				},
-				y: { beginAtZero: true, stacked: true }
+				y: { beginAtZero: true }
 			}
 		}
 	});
 	{% endif %}
 
-	// LTV Distribution
-	{% if ltvDistribution.counts|length > 0 %}
-	new Chart(document.getElementById('ltvChart').getContext('2d'), {
-		type: 'bar',
-		data: {
-			labels: {{ ltvDistribution.labels|json_encode|raw }},
-			datasets: [{
-				label: '{{ "Customers"|t("best-sellers") }}',
-				data: {{ ltvDistribution.counts|json_encode|raw }},
-				backgroundColor: 'rgba(0, 115, 170, 0.6)',
-				borderColor: '#0073aa',
-				borderWidth: 1
-			}]
-		},
-		options: {
-			responsive: true,
-			maintainAspectRatio: false,
-			plugins: { legend: { display: false } },
-			scales: { y: { beginAtZero: true } }
-		}
-	});
-	{% endif %}
 
 	// Toggle chart
 	var datasets = {

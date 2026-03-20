@@ -27,12 +27,6 @@
 				<option value="variants" {% if productsOrVariants == 'variants' %}selected{% endif %}>{{ "Variants"|t('best-sellers') }}</option>
 			</select>
 		</div>
-		<div class="bs-filter-bar__item">
-			<select id="sort-by" class="text fullwidth">
-				<option value="revenue" {% if sortBy == 'revenue' %}selected{% endif %}>{{ "Sort by Revenue"|t('best-sellers') }}</option>
-				<option value="units" {% if sortBy == 'units' %}selected{% endif %}>{{ "Sort by Units Sold"|t('best-sellers') }}</option>
-			</select>
-		</div>
 		{% set allProductTypes = craft.commerce.productTypes.allProductTypes %}
 		{% if allProductTypes|length > 1 %}
 			<div class="bs-filter-bar__item">
@@ -87,7 +81,6 @@
 document.addEventListener('DOMContentLoaded', function () {
 	var searchInput = document.getElementById('product-search');
 	var productsOrVariantsSelect = document.getElementById('products-or-variants');
-	var sortBySelect = document.getElementById('sort-by');
 	var productTypeFilter = document.getElementById('product-type-filter');
 	var searchTimer = null;
 
@@ -138,7 +131,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		getFilterParams: function () {
 			var params = {};
 			params.productsOrVariants = productsOrVariantsSelect ? productsOrVariantsSelect.value : 'products';
-			params.sortBy = sortBySelect ? sortBySelect.value : 'revenue';
 			if (productTypeFilter) { params.productType = productTypeFilter.value; }
 			var searchValue = searchInput ? searchInput.value.trim() : '';
 			if (searchValue) { params.search = searchValue; }
@@ -147,7 +139,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		restoreFilterState: function (filters) {
 			if (filters.search && searchInput) { searchInput.value = filters.search; }
 			if (filters.productsOrVariants && productsOrVariantsSelect) { productsOrVariantsSelect.value = filters.productsOrVariants; }
-			if (filters.sortBy && sortBySelect) { sortBySelect.value = filters.sortBy; }
 			if (filters.productType && productTypeFilter) { productTypeFilter.value = filters.productType; }
 		}
 	});
@@ -161,7 +152,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 	if (productsOrVariantsSelect) productsOrVariantsSelect.addEventListener('change', reloadTable);
-	if (sortBySelect) sortBySelect.addEventListener('change', reloadTable);
 	if (productTypeFilter) productTypeFilter.addEventListener('change', reloadTable);
 
 	table.init();

@@ -71,18 +71,12 @@ class CustomersController extends BaseReportController
 		assert($plugin instanceof Plugin);
 		$customerStats = $plugin->customerStats;
 
-		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
+		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, status: string, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
 		$allCustomers = $customerStats->getTopCustomers($dateRange['fromDT'], $dateRange['toDT'], 10000);
 
-		// Server-side customer type filter (multi-select)
-		if ($customerTypes !== [] && count($customerTypes) < 2) {
-			$wantGuest = in_array('guest', $customerTypes, true);
-			$wantRegistered = in_array('registered', $customerTypes, true);
-			if ($wantGuest && ! $wantRegistered) {
-				$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => $customer['isGuest']));
-			} elseif ($wantRegistered && ! $wantGuest) {
-				$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => ! $customer['isGuest']));
-			}
+		// Server-side customer status filter (multi-select)
+		if ($customerTypes !== []) {
+			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => in_array($customer['status'], $customerTypes, true)));
 		}
 
 		// Server-side search
@@ -92,7 +86,7 @@ class CustomersController extends BaseReportController
 		}
 
 		// Server-side sort
-		$allowedSortColumns = ['email', 'orderCount', 'totalSpent', 'aov', 'lastOrder'];
+		$allowedSortColumns = ['email', 'status', 'orderCount', 'totalSpent', 'aov', 'lastOrder'];
 		if (in_array($sort, $allowedSortColumns, true)) {
 			usort($allCustomers, function (array $customerA, array $customerB) use ($sort, $sortDir): int {
 				$valueA = $customerA[$sort] ?? 0;
@@ -118,6 +112,7 @@ class CustomersController extends BaseReportController
 				'email' => $customer['email'],
 				'customerId' => $customer['customerId'],
 				'isGuest' => $customer['isGuest'],
+				'status' => $customer['status'],
 				'orderCount' => $customer['orderCount'],
 				'totalSpent' => $this->formatCurrency($customer['totalSpent']),
 				'aov' => $this->formatCurrency($customer['aov']),
@@ -172,17 +167,11 @@ class CustomersController extends BaseReportController
 		assert($plugin instanceof Plugin);
 		$customerStats = $plugin->customerStats;
 
-		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
+		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, status: string, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
 		$allCustomers = $customerStats->getTopCustomers($dateRange['fromDT'], $dateRange['toDT'], 10000);
 
-		if ($customerTypes !== [] && count($customerTypes) < 2) {
-			$wantGuest = in_array('guest', $customerTypes, true);
-			$wantRegistered = in_array('registered', $customerTypes, true);
-			if ($wantGuest && ! $wantRegistered) {
-				$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => $customer['isGuest']));
-			} elseif ($wantRegistered && ! $wantGuest) {
-				$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => ! $customer['isGuest']));
-			}
+		if ($customerTypes !== []) {
+			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => in_array($customer['status'], $customerTypes, true)));
 		}
 
 		if ($search !== '') {
@@ -200,7 +189,7 @@ class CustomersController extends BaseReportController
 
 			$csvRows[] = [
 				'email' => $allCustomer['email'],
-				'type' => $allCustomer['isGuest'] ? 'Guest' : 'Registered',
+				'status' => ucfirst((string) $allCustomer['status']),
 				'orders' => $allCustomer['orderCount'],
 				'totalSpent' => round($allCustomer['totalSpent'], 2),
 				'aov' => round($allCustomer['aov'], 2),
@@ -210,7 +199,7 @@ class CustomersController extends BaseReportController
 
 		$csvRows[] = [
 			'email' => 'TOTAL',
-			'type' => '',
+			'status' => '',
 			'orders' => $totalOrderCount,
 			'totalSpent' => round($totalSpentSum, 2),
 			'aov' => '',
@@ -218,7 +207,7 @@ class CustomersController extends BaseReportController
 		];
 
 		return $this->asCsv($csvRows, [
-			'Email', 'Type', '# Orders', 'Total Spent', 'AOV', 'Last Purchase',
+			'Email', 'Status', '# Orders', 'Total Spent', 'AOV', 'Last Purchase',
 		], 'customers');
 	}
 }

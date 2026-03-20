@@ -97,7 +97,7 @@ class OverviewController extends BaseReportController
 		// Customer charts
 		$customerStats = $plugin->customerStats;
 		$newVsReturning = $customerStats->getNewVsReturningByDay($dateRange['fromDT'], $dateRange['toDT']);
-		$ltvDistribution = $customerStats->getLtvDistribution($dateRange['fromDT'], $dateRange['toDT']);
+		$ltvComparison = $customerStats->getLtvComparison($dateRange['fromDT'], $dateRange['toDT']);
 
 		// Daily chart data
 		$dailyRows = $dailyStats->getDailyRows($dateRange['from'], $dateRange['to']);
@@ -142,7 +142,7 @@ class OverviewController extends BaseReportController
 			'bestSellers' => $bestSellers,
 			'bestSellerElements' => $bestSellerElements,
 			'newVsReturning' => $newVsReturning,
-			'ltvDistribution' => $ltvDistribution,
+			'ltvComparison' => $ltvComparison,
 		]);
 	}
 }

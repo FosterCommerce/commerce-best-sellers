@@ -32,7 +32,7 @@ class DailyStats extends Component
 				'totalDiscount' => 'COALESCE(SUM([[totalDiscount]]), 0)',
 				'totalShipping' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
 				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
-				'uniqueCustomers' => 'COUNT(DISTINCT [[customerId]])',
+				'uniqueCustomers' => 'COUNT(DISTINCT [[email]])',
 			])
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
@@ -62,35 +62,36 @@ class DailyStats extends Component
 			])
 			->scalar();
 
-		// New vs returning customers
-		$customerIds = (new Query())
-			->select('[[customerId]]')
+		// New vs returning customers (tracked by email across all time)
+		$customerEmails = (new Query())
+			->select('DISTINCT [[email]]')
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
 			->andWhere([
 				'not', [
-					'customerId' => null,
+					'[[email]]' => null,
 				]])
+			->andWhere(['!=', '[[email]]', ''])
 			->column();
 
 		$newCustomers = 0;
 		$returningCustomers = 0;
 
-		if (! empty($customerIds)) {
+		if (! empty($customerEmails)) {
 			$newCustomers = (int) (new Query())
 				->from([
 					'firstOrders' => (new Query())
 						->select([
-							'customerId',
+							'email' => '[[email]]',
 							'firstOrder' => 'MIN([[dateOrdered]])',
 						])
 						->from('{{%commerce_orders}}')
 						->where([
 							'and',
 							['=', '[[isCompleted]]', true],
-							['in', '[[customerId]]', $customerIds],
+							['in', '[[email]]', $customerEmails],
 						])
-						->groupBy('[[customerId]]'),
+						->groupBy('[[email]]'),
 				])
 				->andWhere(['>=', 'firstOrder', $dateStart])
 				->andWhere(['<=', 'firstOrder', $dateEnd])

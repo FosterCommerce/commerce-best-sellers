@@ -10,8 +10,13 @@
 	} only %}
 {% endset %}
 
+{% css %}
+	{% include 'best-sellers/_includes/plugin-footer-css' %}
+{% endcss %}
+
 {% set content %}
 	<div class="bs-reports-container">
 		{% block reportContent %}{% endblock %}
 	</div>
+	{% include 'best-sellers/_includes/plugin-footer' %}
 {% endset %}

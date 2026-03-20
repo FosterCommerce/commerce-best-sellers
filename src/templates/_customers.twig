@@ -28,8 +28,8 @@
 		<div class="bs-multiselect" id="customer-type-multiselect">
 			<button type="button" class="bs-multiselect__btn" data-label="{{ 'Customer Type'|t('best-sellers') }}">{{ "Customer Type"|t('best-sellers') }}</button>
 			<div class="bs-multiselect__dropdown">
-				<label><input type="checkbox" value="guest"> {{ "Guests"|t('best-sellers') }}</label>
-				<label><input type="checkbox" value="registered"> {{ "Registered"|t('best-sellers') }}</label>
+				<label><input type="checkbox" value="credentialed"> {{ "Credentialed"|t('best-sellers') }}</label>
+				<label><input type="checkbox" value="guest"> {{ "Guest"|t('best-sellers') }}</label>
 			</div>
 		</div>
 		<div class="bs-filter-bar__item">
@@ -50,6 +50,7 @@
 				<thead>
 					<tr>
 						<th data-sort="email">{{ "Email"|t('best-sellers') }}</th>
+						<th data-sort="status">{{ "Status"|t('best-sellers') }}</th>
 						<th class="bs-data-table--right" data-sort="orderCount">{{ "# Orders"|t('best-sellers') }}</th>
 						<th class="bs-data-table--right" data-sort="totalSpent">{{ "Total Spent"|t('best-sellers') }}</th>
 						<th class="bs-data-table--right" data-sort="aov">{{ "AOV"|t('best-sellers') }}</th>
@@ -89,10 +90,17 @@ document.addEventListener('DOMContentLoaded', function () {
 			var row = document.createElement('tr');
 			var emailCell = customer.cpUrl
 				? '<a href="' + customer.cpUrl + '" class="go">' + customer.email + '</a>'
-				: customer.email + ' <span class="light">(Guest)</span>';
+				: customer.email;
+
+			var statusColors = { credentialed: 'green', guest: '' };
+			var statusLabels = { credentialed: 'Credentialed', guest: 'Guest' };
+			var statusColor = statusColors[customer.status] || '';
+			var statusLabel = statusLabels[customer.status] || customer.status;
+			var statusCell = '<span class="status ' + statusColor + '"></span> ' + statusLabel;
 
 			row.innerHTML =
 				'<td>' + emailCell + '</td>' +
+				'<td>' + statusCell + '</td>' +
 				'<td class="bs-data-table--right">' + customer.orderCount + '</td>' +
 				'<td class="bs-data-table--right">' + customer.totalSpent + '</td>' +
 				'<td class="bs-data-table--right">' + customer.aov + '</td>' +
@@ -103,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			var row = document.createElement('tr');
 			row.innerHTML =
 				'<td>{{ "Page Total"|t("best-sellers") }}</td>' +
+				'<td></td>' +
 				'<td class="bs-data-table--right">' + totals.orderCount + '</td>' +
 				'<td class="bs-data-table--right">' + totals.totalSpent + '</td>' +
 				'<td></td>' +

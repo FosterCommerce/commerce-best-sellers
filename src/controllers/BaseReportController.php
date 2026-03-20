@@ -4,13 +4,18 @@ namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
 use craft\commerce\Plugin as CommercePlugin;
+use craft\helpers\MoneyHelper;
 use craft\web\Controller;
 use fostercommerce\bestsellers\Plugin;
+use Money\Currency;
+use Money\Money;
 use yii\web\Response;
 
 abstract class BaseReportController extends Controller
 {
 	protected array|bool|int $allowAnonymous = false;
+
+	private ?Currency $storeCurrency = null;
 
 	/**
 	 * Calculate percentage change between two values.
@@ -46,21 +51,50 @@ abstract class BaseReportController extends Controller
 		]);
 	}
 
-	/**
-	 * Get the store's currency code (e.g. 'USD').
-	 */
-	protected function getStoreCurrency(): string
+	protected function getStoreCurrency(): Currency
 	{
-		$store = CommercePlugin::getInstance()?->getStores()->getPrimaryStore();
-		return $store?->getCurrency()?->getCode() ?? 'USD';
+		if (! $this->storeCurrency instanceof Currency) {
+			$store = CommercePlugin::getInstance()?->getStores()->getPrimaryStore();
+			$code = $store?->getCurrency()?->getCode() ?? 'USD';
+			$this->storeCurrency = new Currency($code);
+		}
+
+		return $this->storeCurrency;
+	}
+
+	/**
+	 * @return non-empty-string
+	 */
+	protected function getStoreCurrencyCode(): string
+	{
+		return $this->getStoreCurrency()->getCode();
 	}
 
 	/**
 	 * Format a number as the store's currency.
 	 */
-	protected function formatCurrency(float|int $amount): string
+	protected function formatCurrency(float|int|string $amount): string
 	{
-		return Craft::$app->getFormatter()->asCurrency($amount, $this->getStoreCurrency());
+		return Craft::$app->getFormatter()->asCurrency($amount, $this->getStoreCurrencyCode());
+	}
+
+	/**
+	 * Format a Money object as the store's currency string.
+	 */
+	protected function formatMoney(Money $money): string
+	{
+		return $this->formatCurrency((string) MoneyHelper::toDecimal($money));
+	}
+
+	protected function toMoney(float $amount): Money
+	{
+		/** @var Money $money */
+		$money = MoneyHelper::toMoney([
+			'value' => (string) $amount,
+			'currency' => $this->getStoreCurrency(),
+		]);
+
+		return $money;
 	}
 
 	/**

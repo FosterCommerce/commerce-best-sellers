@@ -5,8 +5,10 @@ namespace fostercommerce\bestsellers\controllers;
 use Craft;
 use craft\commerce\elements\Order;
 use craft\db\Query;
+use craft\helpers\MoneyHelper;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\Plugin;
+use Money\Money;
 use yii\web\Response;
 
 class OrdersController extends BaseReportController
@@ -73,19 +75,19 @@ class OrdersController extends BaseReportController
 		$rows = $this->buildOrderRows($orders);
 
 		$currency = $this->getStoreCurrency();
-		$totalItemSubtotal = 0;
-		$totalTax = 0;
-		$totalDiscount = 0;
-		$totalShipping = 0;
-		$totalPaid = 0;
+		$totalItemSubtotal = new Money(0, $currency);
+		$totalTax = new Money(0, $currency);
+		$totalDiscount = new Money(0, $currency);
+		$totalShipping = new Money(0, $currency);
+		$totalPaid = new Money(0, $currency);
 		$totalItemsSold = 0;
 
 		foreach ($orders as $order) {
-			$totalItemSubtotal += $order->itemSubtotal;
-			$totalTax += $order->totalTax;
-			$totalDiscount += $order->totalDiscount;
-			$totalShipping += $order->totalShippingCost;
-			$totalPaid += $order->totalPaid;
+			$totalItemSubtotal = $totalItemSubtotal->add($this->toMoney($order->itemSubtotal));
+			$totalTax = $totalTax->add($this->toMoney($order->totalTax));
+			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount));
+			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost));
+			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid));
 		}
 
 		foreach ($rows as $row) {
@@ -93,11 +95,11 @@ class OrdersController extends BaseReportController
 		}
 
 		$totals = [
-			'itemSubtotal' => Craft::$app->getFormatter()->asCurrency($totalItemSubtotal, $currency),
-			'totalTax' => Craft::$app->getFormatter()->asCurrency($totalTax, $currency),
-			'totalDiscount' => Craft::$app->getFormatter()->asCurrency($totalDiscount, $currency),
-			'totalShippingCost' => Craft::$app->getFormatter()->asCurrency($totalShipping, $currency),
-			'totalPaid' => Craft::$app->getFormatter()->asCurrency($totalPaid, $currency),
+			'itemSubtotal' => $this->formatMoney($totalItemSubtotal),
+			'totalTax' => $this->formatMoney($totalTax),
+			'totalDiscount' => $this->formatMoney($totalDiscount),
+			'totalShippingCost' => $this->formatMoney($totalShipping),
+			'totalPaid' => $this->formatMoney($totalPaid),
 			'itemsSold' => number_format($totalItemsSold),
 		];
 
@@ -123,19 +125,20 @@ class OrdersController extends BaseReportController
 		$rows = $this->buildOrderRows($orders);
 
 		$csvRows = [];
-		$totalMerchandise = 0;
-		$totalTax = 0;
-		$totalDiscount = 0;
-		$totalShipping = 0;
-		$totalPaid = 0;
+		$currency = $this->getStoreCurrency();
+		$totalMerchandise = new Money(0, $currency);
+		$totalTax = new Money(0, $currency);
+		$totalDiscount = new Money(0, $currency);
+		$totalShipping = new Money(0, $currency);
+		$totalPaid = new Money(0, $currency);
 		$totalItemsSold = 0;
 
 		foreach ($orders as $index => $order) {
-			$totalMerchandise += $order->itemSubtotal;
-			$totalTax += $order->totalTax;
-			$totalDiscount += $order->totalDiscount;
-			$totalShipping += $order->totalShippingCost;
-			$totalPaid += $order->totalPaid;
+			$totalMerchandise = $totalMerchandise->add($this->toMoney($order->itemSubtotal));
+			$totalTax = $totalTax->add($this->toMoney($order->totalTax));
+			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount));
+			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost));
+			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid));
 			$itemsSold = $rows[$index]['itemsSold'] ?? 0;
 			$totalItemsSold += $itemsSold;
 
@@ -159,11 +162,11 @@ class OrdersController extends BaseReportController
 			'dateOrdered' => '',
 			'status' => '',
 			'email' => '',
-			'merchandiseTotal' => round($totalMerchandise, 2),
-			'tax' => round($totalTax, 2),
-			'discount' => round($totalDiscount, 2),
-			'shipping' => round($totalShipping, 2),
-			'totalPaid' => round($totalPaid, 2),
+			'merchandiseTotal' => MoneyHelper::toDecimal($totalMerchandise),
+			'tax' => MoneyHelper::toDecimal($totalTax),
+			'discount' => MoneyHelper::toDecimal($totalDiscount),
+			'shipping' => MoneyHelper::toDecimal($totalShipping),
+			'totalPaid' => MoneyHelper::toDecimal($totalPaid),
 			'itemsSold' => $totalItemsSold,
 			'paymentStatus' => '',
 		];

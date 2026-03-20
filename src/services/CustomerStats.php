@@ -17,9 +17,9 @@ class CustomerStats extends Component
 	{
 		$dateCondition = [
 			'and',
-			['=', 'isCompleted', true],
-			['>=', 'dateOrdered', $fromDT],
-			['<=', 'dateOrdered', $toDT],
+			['=', '[[isCompleted]]', true],
+			['>=', '[[dateOrdered]]', $fromDT],
+			['<=', '[[dateOrdered]]', $toDT],
 		];
 
 		$total = (int) (new Query())
@@ -43,7 +43,7 @@ class CustomerStats extends Component
 		if (! empty($customerIds)) {
 			$new = (int) (new Query())
 				->from([
-					'sub' => (new Query())
+					'firstOrders' => (new Query())
 						->select([
 							'customerId',
 							'firstOrder' => 'MIN([[dateOrdered]])',
@@ -51,8 +51,8 @@ class CustomerStats extends Component
 						->from('{{%commerce_orders}}')
 						->where([
 							'and',
-							['=', 'isCompleted', true],
-							['in', 'customerId', $customerIds],
+							['=', '[[isCompleted]]', true],
+							['in', '[[customerId]]', $customerIds],
 						])
 						->groupBy('[[customerId]]'),
 				])
@@ -93,9 +93,9 @@ class CustomerStats extends Component
 			->from('{{%commerce_orders}}')
 			->where([
 				'and',
-				['=', 'isCompleted', true],
-				['>=', 'dateOrdered', $fromDT],
-				['<=', 'dateOrdered', $toDT],
+				['=', '[[isCompleted]]', true],
+				['>=', '[[dateOrdered]]', $fromDT],
+				['<=', '[[dateOrdered]]', $toDT],
 				['not', ['customerId' => null]],
 			])
 			->column();
@@ -113,8 +113,8 @@ class CustomerStats extends Component
 			->from('{{%commerce_orders}}')
 			->where([
 				'and',
-				['=', 'isCompleted', true],
-				['in', 'customerId', $customerIds],
+				['=', '[[isCompleted]]', true],
+				['in', '[[customerId]]', $customerIds],
 			])
 			->groupBy('[[customerId]]')
 			->all();
@@ -133,9 +133,9 @@ class CustomerStats extends Component
 			->from('{{%commerce_orders}}')
 			->where([
 				'and',
-				['=', 'isCompleted', true],
-				['>=', 'dateOrdered', $fromDT],
-				['<=', 'dateOrdered', $toDT],
+				['=', '[[isCompleted]]', true],
+				['>=', '[[dateOrdered]]', $fromDT],
+				['<=', '[[dateOrdered]]', $toDT],
 				['not', ['customerId' => null]],
 			])
 			->all();
@@ -144,15 +144,15 @@ class CustomerStats extends Component
 		$byDay = [];
 		foreach ($orders as $row) {
 			$day = $row['day'];
-			$cid = $row['customerId'];
+			$customerId = $row['customerId'];
 			if (! isset($byDay[$day])) {
 				$byDay[$day] = ['new' => [], 'returning' => []];
 			}
-			$isNew = isset($firstOrderMap[$cid]) && $firstOrderMap[$cid] === $day;
+			$isNew = isset($firstOrderMap[$customerId]) && $firstOrderMap[$customerId] === $day;
 			if ($isNew) {
-				$byDay[$day]['new'][$cid] = true;
+				$byDay[$day]['new'][$customerId] = true;
 			} else {
-				$byDay[$day]['returning'][$cid] = true;
+				$byDay[$day]['returning'][$customerId] = true;
 			}
 		}
 
@@ -184,20 +184,20 @@ class CustomerStats extends Component
 	{
 		$rows = (new Query())
 			->select([
-				'email' => 'o.[[email]]',
-				'customerId' => 'o.[[customerId]]',
+				'email' => '[[orders.email]]',
+				'customerId' => '[[orders.customerId]]',
 				'orderCount' => 'COUNT(*)',
-				'totalSpent' => 'COALESCE(SUM(o.[[totalPrice]]), 0)',
-				'lastOrder' => 'MAX(o.[[dateOrdered]])',
+				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
+				'lastOrder' => 'MAX([[orders.dateOrdered]])',
 			])
-			->from(['o' => '{{%commerce_orders}}'])
+			->from(['orders' => '{{%commerce_orders}}'])
 			->where([
 				'and',
-				['=', 'o.[[isCompleted]]', true],
-				['>=', 'o.[[dateOrdered]]', $fromDT],
-				['<=', 'o.[[dateOrdered]]', $toDT],
+				['=', '[[orders.isCompleted]]', true],
+				['>=', '[[orders.dateOrdered]]', $fromDT],
+				['<=', '[[orders.dateOrdered]]', $toDT],
 			])
-			->groupBy('o.[[email]], o.[[customerId]]')
+			->groupBy('[[orders.email]], [[orders.customerId]]')
 			->orderBy(['totalSpent' => SORT_DESC])
 			->limit($limit)
 			->all();
@@ -226,20 +226,20 @@ class CustomerStats extends Component
 	{
 		$rows = (new Query())
 			->select([
-				'country' => 'a.[[countryCode]]',
-				'state' => 'COALESCE(a.[[administrativeArea]], \'\')',
-				'count' => 'COUNT(DISTINCT o.[[email]])',
+				'country' => '[[addresses.countryCode]]',
+				'state' => 'COALESCE([[addresses.administrativeArea]], \'\')',
+				'count' => 'COUNT(DISTINCT [[orders.email]])',
 			])
-			->from(['o' => '{{%commerce_orders}}'])
-			->innerJoin(['a' => '{{%addresses}}'], 'o.[[shippingAddressId]] = a.[[id]]')
+			->from(['orders' => '{{%commerce_orders}}'])
+			->innerJoin(['addresses' => '{{%addresses}}'], '[[orders.shippingAddressId]] = [[addresses.id]]')
 			->where([
 				'and',
-				['=', 'o.[[isCompleted]]', true],
-				['>=', 'o.[[dateOrdered]]', $fromDT],
-				['<=', 'o.[[dateOrdered]]', $toDT],
-				['not', ['a.[[countryCode]]' => null]],
+				['=', '[[orders.isCompleted]]', true],
+				['>=', '[[orders.dateOrdered]]', $fromDT],
+				['<=', '[[orders.dateOrdered]]', $toDT],
+				['not', ['[[addresses.countryCode]]' => null]],
 			])
-			->groupBy('a.[[countryCode]], a.[[administrativeArea]]')
+			->groupBy('[[addresses.countryCode]], [[addresses.administrativeArea]]')
 			->orderBy(['count' => SORT_DESC])
 			->limit($limit)
 			->all();
@@ -265,9 +265,9 @@ class CustomerStats extends Component
 			->from('{{%commerce_orders}}')
 			->where([
 				'and',
-				['=', 'isCompleted', true],
-				['>=', 'dateOrdered', $fromDT],
-				['<=', 'dateOrdered', $toDT],
+				['=', '[[isCompleted]]', true],
+				['>=', '[[dateOrdered]]', $fromDT],
+				['<=', '[[dateOrdered]]', $toDT],
 				['not', ['customerId' => null]],
 			])
 			->groupBy('[[customerId]]')

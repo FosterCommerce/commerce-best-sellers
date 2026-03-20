@@ -34,6 +34,8 @@
 				{{ value|number_format(1) }}%
 			{% elseif format == 'decimal' %}
 				{{ value|number_format(2) }}
+			{% elseif format == 'number' %}
+				{{ value|number_format }}
 			{% else %}
 				{{ value }}
 			{% endif %}

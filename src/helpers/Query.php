@@ -33,7 +33,7 @@ class Query
 		$withQuery = (new DbQuery())
 			->select([
 				$id,
-				'totalQtySold' => 'SUM(qty)',
+				'totalQtySold' => 'COALESCE(SUM(qty), 0)',
 				'totalRevenue' => 'COALESCE(SUM(lineItemTotal), 0)',
 			])
 			->from(VariantSale::tableName())

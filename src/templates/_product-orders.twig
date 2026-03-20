@@ -10,35 +10,64 @@
 		</a>
 	</p>
 
-	{% if orders|length > 0 %}
-		<table class="bs-data-table">
-			<thead>
-				<tr>
-					<th>{{ "Order"|t('best-sellers') }}</th>
-					<th>{{ "Date"|t('best-sellers') }}</th>
-					<th>{{ "Customer"|t('best-sellers') }}</th>
-					<th class="bs-data-table--right">{{ "Qty"|t('best-sellers') }}</th>
-					<th class="bs-data-table--right">{{ "Line Revenue"|t('best-sellers') }}</th>
-					<th class="bs-data-table--right">{{ "Order Total"|t('best-sellers') }}</th>
-				</tr>
-			</thead>
-			<tbody>
-				{% for row in orders %}
-					{% set order = row.order %}
+	{# Loading State #}
+	<div id="product-orders-loading" class="bs-loading">
+		<div class="bs-loading__spinner"></div>
+		<p class="bs-loading__message">{{ "Our diligent elf is sorting receipts..."|t('best-sellers') }}</p>
+	</div>
+
+	<div id="product-orders-container" style="display: none;">
+		<div style="overflow-x: auto;">
+			<table class="bs-data-table">
+				<thead>
 					<tr>
-						<td>
-							<a href="{{ order.cpEditUrl }}" class="go">{{ order.reference }}</a>
-						</td>
-						<td>{{ order.dateOrdered|date('Y-m-d') }}</td>
-						<td>{{ order.email }}</td>
-						<td class="bs-data-table--right">{{ row.qty }}</td>
-						<td class="bs-data-table--right">{{ row.revenue|commerceCurrency }}</td>
-						<td class="bs-data-table--right">{{ order.totalPrice|commerceCurrency }}</td>
+						<th data-sort="reference">{{ "Order"|t('best-sellers') }}</th>
+						<th data-sort="dateOrdered">{{ "Date"|t('best-sellers') }}</th>
+						<th data-sort="email">{{ "Customer"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="qty">{{ "Qty"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="lineRevenue">{{ "Line Revenue"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="orderTotal">{{ "Order Total"|t('best-sellers') }}</th>
 					</tr>
-				{% endfor %}
-			</tbody>
-		</table>
-	{% else %}
-		<p>{{ "No orders found for this period."|t('best-sellers') }}</p>
-	{% endif %}
+				</thead>
+				<tbody id="product-orders-tbody"></tbody>
+			</table>
+		</div>
+		<div id="product-orders-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+	</div>
 {% endblock %}
+
+{% js %}
+document.addEventListener('DOMContentLoaded', function () {
+	var table = BestSellersReports.createAjaxTable({
+		loadingEl: document.getElementById('product-orders-loading'),
+		containerEl: document.getElementById('product-orders-container'),
+		tbodyEl: document.getElementById('product-orders-tbody'),
+		paginationEl: document.getElementById('product-orders-pagination'),
+		actionUrl: 'best-sellers/products/product-orders-data',
+		defaultSort: 'dateOrdered',
+		defaultSortDir: 'desc',
+		baseParams: {
+			from: '{{ from }}',
+			to: '{{ to }}',
+			preset: '{{ preset }}',
+			productId: '{{ productId }}',
+			variantId: '{{ variantId }}'
+		},
+		itemLabel: 'orders',
+		emptyMessage: 'No orders found for this period.',
+		buildRow: function (order) {
+			var row = document.createElement('tr');
+			row.innerHTML =
+				'<td><a href="' + order.cpEditUrl + '" class="go">' + order.reference + '</a></td>' +
+				'<td>' + order.dateOrdered + '</td>' +
+				'<td>' + order.email + '</td>' +
+				'<td class="bs-data-table--right">' + order.qty + '</td>' +
+				'<td class="bs-data-table--right">' + order.lineRevenue + '</td>' +
+				'<td class="bs-data-table--right">' + order.orderTotal + '</td>';
+			return row;
+		}
+	});
+
+	table.init();
+});
+{% endjs %}

@@ -18,9 +18,9 @@ class OperationsStats extends Component
 	{
 		$dateCondition = [
 			'and',
-			['=', 'isCompleted', true],
-			['>=', 'dateOrdered', $fromDT],
-			['<=', 'dateOrdered', $toDT],
+			['=', '[[isCompleted]]', true],
+			['>=', '[[dateOrdered]]', $fromDT],
+			['<=', '[[dateOrdered]]', $toDT],
 		];
 
 		$orderStats = (new Query())
@@ -40,14 +40,14 @@ class OperationsStats extends Component
 
 		// Total items sold
 		$totalItemsSold = (int) (new Query())
-			->select('COALESCE(SUM(li.[[qty]]), 0)')
-			->from(['li' => '{{%commerce_lineitems}}'])
-			->innerJoin(['o' => '{{%commerce_orders}}'], 'li.[[orderId]] = o.[[id]]')
+			->select('COALESCE(SUM([[lineItems.qty]]), 0)')
+			->from(['lineItems' => '{{%commerce_lineitems}}'])
+			->innerJoin(['orders' => '{{%commerce_orders}}'], '[[lineItems.orderId]] = [[orders.id]]')
 			->where([
 				'and',
-				['=', 'o.[[isCompleted]]', true],
-				['>=', 'o.[[dateOrdered]]', $fromDT],
-				['<=', 'o.[[dateOrdered]]', $toDT],
+				['=', '[[orders.isCompleted]]', true],
+				['>=', '[[orders.dateOrdered]]', $fromDT],
+				['<=', '[[orders.dateOrdered]]', $toDT],
 			])
 			->scalar();
 
@@ -85,19 +85,19 @@ class OperationsStats extends Component
 	{
 		$dateCondition = [
 			'and',
-			['=', 'o.[[isCompleted]]', true],
-			['>=', 'o.[[dateOrdered]]', $fromDT],
-			['<=', 'o.[[dateOrdered]]', $toDT],
+			['=', '[[orders.isCompleted]]', true],
+			['>=', '[[orders.dateOrdered]]', $fromDT],
+			['<=', '[[orders.dateOrdered]]', $toDT],
 		];
 
 		$orders = (new Query())
 			->select([
-				'itemCount' => 'SUM(li.[[qty]])',
+				'itemCount' => 'SUM([[lineItems.qty]])',
 			])
-			->from(['li' => '{{%commerce_lineitems}}'])
-			->innerJoin(['o' => '{{%commerce_orders}}'], 'li.[[orderId]] = o.[[id]]')
+			->from(['lineItems' => '{{%commerce_lineitems}}'])
+			->innerJoin(['orders' => '{{%commerce_orders}}'], '[[lineItems.orderId]] = [[orders.id]]')
 			->where($dateCondition)
-			->groupBy('o.[[id]]')
+			->groupBy('[[orders.id]]')
 			->column();
 
 		$buckets = [
@@ -141,9 +141,9 @@ class OperationsStats extends Component
 	{
 		$dateCondition = [
 			'and',
-			['=', 'isCompleted', true],
-			['>=', 'dateOrdered', $fromDT],
-			['<=', 'dateOrdered', $toDT],
+			['=', '[[isCompleted]]', true],
+			['>=', '[[dateOrdered]]', $fromDT],
+			['<=', '[[dateOrdered]]', $toDT],
 		];
 
 		return (new Query())
@@ -168,9 +168,9 @@ class OperationsStats extends Component
 	{
 		$dateCondition = [
 			'and',
-			['=', 'isCompleted', true],
-			['>=', 'dateOrdered', $fromDT],
-			['<=', 'dateOrdered', $toDT],
+			['=', '[[isCompleted]]', true],
+			['>=', '[[dateOrdered]]', $fromDT],
+			['<=', '[[dateOrdered]]', $toDT],
 			['not', ['couponCode' => null]],
 			['!=', 'couponCode', ''],
 		];

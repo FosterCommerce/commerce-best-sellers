@@ -8,7 +8,7 @@
 	<div class="bs-chart-container" style="margin-bottom: 2rem;">
 		<p style="font-size: 1.1rem; margin: 0;">
 			{{ "You've had"|t('best-sellers') }}
-			<strong style="color: #0073aa;">{{ kpis.new }}</strong>
+			<strong style="color: #0073aa;">{{ kpis.new|number_format }}</strong>
 			{{ "new customers,"|t('best-sellers') }}
 			{% if newCustomersChange is not null %}
 				{% if newCustomersChange >= 0 %}
@@ -23,80 +23,121 @@
 		</p>
 	</div>
 
-	{# Top Customers Table #}
-	{% if topCustomers|length > 0 %}
-		<div class="bs-section">
-			<div class="bs-filter-bar" style="margin-bottom: 1rem;">
-				<div>
-					<select id="customer-type-filter" class="text">
-						<option value="">{{ "All Customers"|t('best-sellers') }}</option>
-						<option value="guest">{{ "Guests"|t('best-sellers') }}</option>
-						<option value="registered">{{ "Registered"|t('best-sellers') }}</option>
-					</select>
-				</div>
-				<div class="bs-filter-bar__item">
-					<input type="text" id="customer-search" class="text fullwidth" placeholder="{{ 'Search customers...'|t('best-sellers') }}" autocomplete="off">
-				</div>
+	{# Filters #}
+	<div class="bs-filter-bar" style="margin-bottom: 1rem;">
+		<div class="bs-multiselect" id="customer-type-multiselect">
+			<button type="button" class="bs-multiselect__btn" data-label="{{ 'Customer Type'|t('best-sellers') }}">{{ "Customer Type"|t('best-sellers') }}</button>
+			<div class="bs-multiselect__dropdown">
+				<label><input type="checkbox" value="guest"> {{ "Guests"|t('best-sellers') }}</label>
+				<label><input type="checkbox" value="registered"> {{ "Registered"|t('best-sellers') }}</label>
 			</div>
+		</div>
+		<div class="bs-filter-bar__item">
+			<input type="text" id="customer-search" class="text fullwidth" placeholder="{{ 'Search customers...'|t('best-sellers') }}" autocomplete="off">
+		</div>
+	</div>
 
-			<div style="overflow-x: auto;">
+	{# Loading State #}
+	<div id="customers-loading" class="bs-loading">
+		<div class="bs-loading__spinner"></div>
+		<p class="bs-loading__message">{{ "Crunching numbers at elf speed..."|t('best-sellers') }}</p>
+	</div>
+
+	{# Customers Table (hidden until loaded) #}
+	<div id="customers-container" style="display: none;">
+		<div style="overflow-x: auto;">
 			<table class="bs-data-table" id="customers-table">
 				<thead>
 					<tr>
-						<th>{{ "Email"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "# Orders"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "Total Spent"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" style="white-space: nowrap;">{{ "AOV"|t('best-sellers') }}</th>
-						<th style="white-space: nowrap;">{{ "Last Purchase"|t('best-sellers') }}</th>
+						<th data-sort="email">{{ "Email"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="orderCount">{{ "# Orders"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="totalSpent">{{ "Total Spent"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="aov">{{ "AOV"|t('best-sellers') }}</th>
+						<th data-sort="lastOrder">{{ "Last Purchase"|t('best-sellers') }}</th>
 					</tr>
 				</thead>
-				<tbody>
-					{% for customer in topCustomers %}
-						<tr data-customer-type="{{ customer.isGuest ? 'guest' : 'registered' }}">
-							<td style="white-space: nowrap;">
-								{% if customer.customerId %}
-									<a href="{{ cpUrl('users/' ~ customer.customerId) }}" class="go">{{ customer.email }}</a>
-								{% else %}
-									{{ customer.email }}
-									<span class="light">({{ "Guest"|t('best-sellers') }})</span>
-								{% endif %}
-							</td>
-							<td class="bs-data-table--right">{{ customer.orderCount }}</td>
-							<td class="bs-data-table--right" style="white-space: nowrap;">{{ customer.totalSpent|commerceCurrency }}</td>
-							<td class="bs-data-table--right" style="white-space: nowrap;">{{ customer.aov|commerceCurrency }}</td>
-							<td style="white-space: nowrap;">{{ customer.lastOrder|date('Y-m-d') }}</td>
-						</tr>
-					{% endfor %}
-				</tbody>
+				<tbody id="customers-tbody"></tbody>
 			</table>
-			</div>
 		</div>
-	{% endif %}
+		<div id="customers-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+	</div>
 {% endblock %}
 
 {% js %}
 document.addEventListener('DOMContentLoaded', function () {
-	// Customer filtering
 	var searchInput = document.getElementById('customer-search');
-	var typeFilter = document.getElementById('customer-type-filter');
-	var table = document.getElementById('customers-table');
+	var searchTimer = null;
 
-	if (table) {
-		var rows = Array.from(table.querySelector('tbody').querySelectorAll('tr'));
+	var customerTypeMulti = BestSellersReports.createMultiSelect({
+		container: document.getElementById('customer-type-multiselect'),
+		onChange: function () { table.reload(); }
+	});
 
-		function filterCustomers() {
-			var query = searchInput ? searchInput.value.toLowerCase().trim() : '';
-			var type = typeFilter ? typeFilter.value : '';
+	var table = BestSellersReports.createAjaxTable({
+		loadingEl: document.getElementById('customers-loading'),
+		containerEl: document.getElementById('customers-container'),
+		tbodyEl: document.getElementById('customers-tbody'),
+		paginationEl: document.getElementById('customers-pagination'),
+		actionUrl: 'best-sellers/customers/customers-data',
+		exportUrl: 'best-sellers/customers/export-csv',
+		baseParams: { from: '{{ from }}', to: '{{ to }}', preset: '{{ preset }}' },
+		defaultSort: 'totalSpent',
+		defaultSortDir: 'desc',
+		itemLabel: 'customers',
+		emptyMessage: 'No customers found matching your filters.',
+		buildRow: function (customer) {
+			var row = document.createElement('tr');
+			var emailCell = customer.cpUrl
+				? '<a href="' + customer.cpUrl + '" class="go">' + customer.email + '</a>'
+				: customer.email + ' <span class="light">(Guest)</span>';
 
-			rows.forEach(function (row) {
-				var textMatch = !query || row.textContent.toLowerCase().indexOf(query) !== -1;
-				var typeMatch = !type || row.getAttribute('data-customer-type') === type;
-				row.style.display = (textMatch && typeMatch) ? '' : 'none';
-			});
+			row.innerHTML =
+				'<td>' + emailCell + '</td>' +
+				'<td class="bs-data-table--right">' + customer.orderCount + '</td>' +
+				'<td class="bs-data-table--right">' + customer.totalSpent + '</td>' +
+				'<td class="bs-data-table--right">' + customer.aov + '</td>' +
+				'<td>' + customer.lastOrder + '</td>';
+			return row;
+		},
+		buildTotalsRow: function (totals) {
+			var row = document.createElement('tr');
+			row.innerHTML =
+				'<td>{{ "Page Total"|t("best-sellers") }}</td>' +
+				'<td class="bs-data-table--right">' + totals.orderCount + '</td>' +
+				'<td class="bs-data-table--right">' + totals.totalSpent + '</td>' +
+				'<td></td>' +
+				'<td></td>';
+			return row;
+		},
+		getFilterParams: function () {
+			var params = {};
+			var searchValue = searchInput ? searchInput.value.trim() : '';
+			if (searchValue) { params.search = searchValue; }
+			var customerTypes = customerTypeMulti.getSelected();
+			if (customerTypes.length > 0) { params['customerType[]'] = customerTypes; }
+			return params;
+		},
+		restoreFilterState: function (filters) {
+			if (filters.search && searchInput) { searchInput.value = filters.search; }
+			if (filters['customerType[]']) {
+				var customerTypeContainer = document.getElementById('customer-type-multiselect');
+				var customerTypeCheckboxes = customerTypeContainer.querySelectorAll('input[type="checkbox"]');
+				var customerTypeValues = filters['customerType[]'];
+				customerTypeCheckboxes.forEach(function (checkbox) {
+					checkbox.checked = customerTypeValues.indexOf(checkbox.value) !== -1;
+				});
+				customerTypeMulti.refresh();
+			}
 		}
+	});
 
-		if (searchInput) searchInput.addEventListener('input', filterCustomers);
-		if (typeFilter) typeFilter.addEventListener('change', filterCustomers);
+	if (searchInput) {
+		searchInput.addEventListener('input', function () {
+			clearTimeout(searchTimer);
+			searchTimer = setTimeout(function () { table.reload(); }, 400);
+		});
 	}
+
+	table.init();
 });
 {% endjs %}

@@ -124,7 +124,7 @@ class Plugin extends BasePlugin
 			],
 			'orders' => [
 				'label' => 'Orders',
-				'url' => 'best-sellers/sales',
+				'url' => 'best-sellers/orders',
 			],
 			'products' => [
 				'label' => 'Products',
@@ -236,14 +236,22 @@ class Plugin extends BasePlugin
 			UrlManager::EVENT_REGISTER_CP_URL_RULES,
 			static function (RegisterUrlRulesEvent $registerUrlRulesEvent): void {
 				$registerUrlRulesEvent->rules['best-sellers'] = 'best-sellers/overview';
-				$registerUrlRulesEvent->rules['best-sellers/sales'] = 'best-sellers/sales';
+				$registerUrlRulesEvent->rules['best-sellers/orders'] = 'best-sellers/orders';
+				$registerUrlRulesEvent->rules['best-sellers/orders/orders-data'] = 'best-sellers/orders/orders-data';
+				$registerUrlRulesEvent->rules['best-sellers/orders/export-csv'] = 'best-sellers/orders/export-csv';
 				$registerUrlRulesEvent->rules['best-sellers/products'] = 'best-sellers/products';
 				$registerUrlRulesEvent->rules['best-sellers/products/orders'] = 'best-sellers/products/orders';
+				$registerUrlRulesEvent->rules['best-sellers/products/products-data'] = 'best-sellers/products/products-data';
+				$registerUrlRulesEvent->rules['best-sellers/products/product-orders-data'] = 'best-sellers/products/product-orders-data';
+				$registerUrlRulesEvent->rules['best-sellers/products/export-csv'] = 'best-sellers/products/export-csv';
 				$registerUrlRulesEvent->rules['best-sellers/customers'] = 'best-sellers/customers';
+				$registerUrlRulesEvent->rules['best-sellers/customers/customers-data'] = 'best-sellers/customers/customers-data';
+				$registerUrlRulesEvent->rules['best-sellers/customers/export-csv'] = 'best-sellers/customers/export-csv';
 				$registerUrlRulesEvent->rules['best-sellers/operations'] = 'best-sellers/operations';
 
 				// Backward compatibility redirects
-				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/sales';
+				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/orders';
+				$registerUrlRulesEvent->rules['best-sellers/sales'] = 'best-sellers/orders';
 				$registerUrlRulesEvent->rules['best-sellers/dashboard'] = 'best-sellers/products';
 			}
 		);

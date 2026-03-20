@@ -18,23 +18,23 @@ class ProductStats extends Component
 	{
 		$query = (new Query())
 			->select([
-				'productId' => 'vs.[[productId]]',
-				'productTitle' => 'vs.[[productTitle]]',
-				'unitsSold' => 'SUM(vs.[[qty]])',
-				'orderCount' => 'COUNT(DISTINCT vs.[[orderId]])',
-				'revenue' => 'COALESCE(SUM(vs.[[lineItemTotal]]), 0)',
-				'avgPrice' => 'COALESCE(AVG(vs.[[lineItemPrice]]), 0)',
-				'productType' => 'pt.[[name]]',
+				'productId' => '[[variantSales.productId]]',
+				'productTitle' => '[[variantSales.productTitle]]',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
+				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'productType' => '[[productTypes.name]]',
 			])
-			->from(['vs' => VariantSale::tableName()])
-			->innerJoin(['p' => '{{%commerce_products}}'], 'vs.[[productId]] = p.[[id]]')
-			->innerJoin(['pt' => '{{%commerce_producttypes}}'], 'p.[[typeId]] = pt.[[id]]')
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
-			->groupBy('vs.[[productId]], vs.[[productTitle]], pt.[[name]]');
+			->from(['variantSales' => VariantSale::tableName()])
+			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
+			->groupBy('[[variantSales.productId]], [[variantSales.productTitle]], [[productTypes.name]]');
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
-			$query->andWhere(['pt.[[handle]]' => $productTypeHandle]);
+			$query->andWhere(['[[productTypes.handle]]' => $productTypeHandle]);
 		}
 
 		$orderColumn = $sortBy === 'units' ? 'unitsSold' : 'revenue';
@@ -52,26 +52,26 @@ class ProductStats extends Component
 	{
 		$query = (new Query())
 			->select([
-				'productId' => 'vs.[[productId]]',
-				'variantId' => 'vs.[[variantId]]',
-				'variantTitle' => 'vs.[[variantTitle]]',
-				'variantSku' => 'vs.[[variantSku]]',
-				'productTitle' => 'vs.[[productTitle]]',
-				'unitsSold' => 'SUM(vs.[[qty]])',
-				'orderCount' => 'COUNT(DISTINCT vs.[[orderId]])',
-				'revenue' => 'COALESCE(SUM(vs.[[lineItemTotal]]), 0)',
-				'avgPrice' => 'COALESCE(AVG(vs.[[lineItemPrice]]), 0)',
-				'productType' => 'pt.[[name]]',
+				'productId' => '[[variantSales.productId]]',
+				'variantId' => '[[variantSales.variantId]]',
+				'variantTitle' => '[[variantSales.variantTitle]]',
+				'variantSku' => '[[variantSales.variantSku]]',
+				'productTitle' => '[[variantSales.productTitle]]',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
+				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'productType' => '[[productTypes.name]]',
 			])
-			->from(['vs' => VariantSale::tableName()])
-			->innerJoin(['p' => '{{%commerce_products}}'], 'vs.[[productId]] = p.[[id]]')
-			->innerJoin(['pt' => '{{%commerce_producttypes}}'], 'p.[[typeId]] = pt.[[id]]')
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
-			->groupBy('vs.[[productId]], vs.[[variantId]], vs.[[variantTitle]], vs.[[variantSku]], vs.[[productTitle]], pt.[[name]]');
+			->from(['variantSales' => VariantSale::tableName()])
+			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
+			->groupBy('[[variantSales.productId]], [[variantSales.variantId]], [[variantSales.variantTitle]], [[variantSales.variantSku]], [[variantSales.productTitle]], [[productTypes.name]]');
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
-			$query->andWhere(['pt.[[handle]]' => $productTypeHandle]);
+			$query->andWhere(['[[productTypes.handle]]' => $productTypeHandle]);
 		}
 
 		$orderColumn = $sortBy === 'units' ? 'unitsSold' : 'revenue';
@@ -89,30 +89,30 @@ class ProductStats extends Component
 	{
 		$db = Craft::$app->getDb();
 		$isMysql = $db->getIsMysql();
-		$dayExpr = $isMysql ? 'DATE(vs.[[dateOrdered]])' : 'CAST(vs.[[dateOrdered]] AS DATE)';
+		$dayExpr = $isMysql ? 'DATE([[variantSales.dateOrdered]])' : 'CAST([[variantSales.dateOrdered]] AS DATE)';
 
 		$idCol = $variants ? 'variantId' : 'productId';
 		$titleCol = $variants ? 'variantTitle' : 'productTitle';
 
 		// Get top N by total revenue
 		$selectFields = [
-			'itemId' => "vs.[[{$idCol}]]",
-			'title' => "vs.[[{$titleCol}]]",
+			'itemId' => "[[variantSales.{$idCol}]]",
+			'title' => "[[variantSales.{$titleCol}]]",
 		];
-		$groupFields = "vs.[[{$idCol}]], vs.[[{$titleCol}]]";
+		$groupFields = "[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]";
 
 		if ($variants) {
-			$selectFields['productTitle'] = 'vs.[[productTitle]]';
-			$groupFields .= ', vs.[[productTitle]]';
+			$selectFields['productTitle'] = '[[variantSales.productTitle]]';
+			$groupFields .= ', [[variantSales.productTitle]]';
 		}
 
 		$topItems = (new Query())
 			->select($selectFields)
-			->from(['vs' => VariantSale::tableName()])
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
+			->from(['variantSales' => VariantSale::tableName()])
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->groupBy($groupFields)
-			->orderBy(['SUM(vs.[[lineItemTotal]])' => SORT_DESC])
+			->orderBy(['SUM([[variantSales.lineItemTotal]])' => SORT_DESC])
 			->limit($limit)
 			->all();
 
@@ -134,14 +134,14 @@ class ProductStats extends Component
 		$rows = (new Query())
 			->select([
 				'day' => $dayExpr,
-				'itemId' => "vs.[[{$idCol}]]",
-				'revenue' => 'COALESCE(SUM(vs.[[lineItemTotal]]), 0)',
+				'itemId' => "[[variantSales.{$idCol}]]",
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 			])
-			->from(['vs' => VariantSale::tableName()])
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
-			->andWhere(['in', "vs.[[{$idCol}]]", $itemIds])
-			->groupBy([$dayExpr, "vs.[[{$idCol}]]"])
+			->from(['variantSales' => VariantSale::tableName()])
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
+			->andWhere(['in', "[[variantSales.{$idCol}]]", $itemIds])
+			->groupBy([$dayExpr, "[[variantSales.{$idCol}]]"])
 			->orderBy(['day' => SORT_ASC])
 			->all();
 
@@ -182,19 +182,19 @@ class ProductStats extends Component
 
 		$query = (new Query())
 			->select([
-				'title' => "vs.[[{$titleCol}]]",
-				'revenue' => 'COALESCE(SUM(vs.[[lineItemTotal]]), 0)',
+				'title' => "[[variantSales.{$titleCol}]]",
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 			])
-			->from(['vs' => VariantSale::tableName()])
-			->innerJoin(['p' => '{{%commerce_products}}'], 'vs.[[productId]] = p.[[id]]')
-			->innerJoin(['pt' => '{{%commerce_producttypes}}'], 'p.[[typeId]] = pt.[[id]]')
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
-			->groupBy("vs.[[{$idCol}]], vs.[[{$titleCol}]]")
+			->from(['variantSales' => VariantSale::tableName()])
+			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
+			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
 			->orderBy(['revenue' => SORT_DESC]);
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
-			$query->andWhere(['pt.[[handle]]' => $productTypeHandle]);
+			$query->andWhere(['[[productTypes.handle]]' => $productTypeHandle]);
 		}
 
 		$rows = $query->all();
@@ -232,20 +232,20 @@ class ProductStats extends Component
 
 		$query = (new Query())
 			->select([
-				'title' => "vs.[[{$titleCol}]]",
-				'avgPrice' => 'COALESCE(AVG(vs.[[lineItemPrice]]), 0)',
-				'unitsSold' => 'SUM(vs.[[qty]])',
+				'title' => "[[variantSales.{$titleCol}]]",
+				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
-			->from(['vs' => VariantSale::tableName()])
-			->innerJoin(['p' => '{{%commerce_products}}'], 'vs.[[productId]] = p.[[id]]')
-			->innerJoin(['pt' => '{{%commerce_producttypes}}'], 'p.[[typeId]] = pt.[[id]]')
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
-			->groupBy("vs.[[{$idCol}]], vs.[[{$titleCol}]]")
+			->from(['variantSales' => VariantSale::tableName()])
+			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
+			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
 			->orderBy(['unitsSold' => SORT_DESC]);
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
-			$query->andWhere(['pt.[[handle]]' => $productTypeHandle]);
+			$query->andWhere(['[[productTypes.handle]]' => $productTypeHandle]);
 		}
 
 		return array_map(fn ($row) => [
@@ -263,31 +263,31 @@ class ProductStats extends Component
 	public function getSummaryStats(string $fromDT, string $toDT): array
 	{
 		$uniqueProducts = (int) (new Query())
-			->select('COUNT(DISTINCT vs.[[productId]])')
-			->from(['vs' => VariantSale::tableName()])
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
+			->select('COUNT(DISTINCT [[variantSales.productId]])')
+			->from(['variantSales' => VariantSale::tableName()])
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->scalar();
 
 		$topProduct = (new Query())
 			->select([
-				'title' => 'vs.[[productTitle]]',
-				'unitsSold' => 'SUM(vs.[[qty]])',
-				'revenue' => new \yii\db\Expression('COALESCE(SUM(vs.[[lineItemTotal]]), 0)'),
+				'title' => '[[variantSales.productTitle]]',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
+				'revenue' => new \yii\db\Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'),
 			])
-			->from(['vs' => VariantSale::tableName()])
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
-			->groupBy('vs.[[productId]], vs.[[productTitle]]')
+			->from(['variantSales' => VariantSale::tableName()])
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
+			->groupBy('[[variantSales.productId]], [[variantSales.productTitle]]')
 			->orderBy(['unitsSold' => SORT_DESC])
 			->limit(1)
 			->one();
 
 		$totalProductRevenue = (float) (new Query())
-			->select(new \yii\db\Expression('COALESCE(SUM(vs.[[lineItemTotal]]), 0)'))
-			->from(['vs' => VariantSale::tableName()])
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
+			->select(new \yii\db\Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'))
+			->from(['variantSales' => VariantSale::tableName()])
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->scalar();
 
 		return [
@@ -307,16 +307,16 @@ class ProductStats extends Component
 	{
 		return (new Query())
 			->select([
-				'productType' => 'pt.[[name]]',
-				'revenue' => 'COALESCE(SUM(vs.[[lineItemTotal]]), 0)',
-				'unitsSold' => 'SUM(vs.[[qty]])',
+				'productType' => '[[productTypes.name]]',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
-			->from(['vs' => VariantSale::tableName()])
-			->innerJoin(['p' => '{{%commerce_products}}'], 'vs.[[productId]] = p.[[id]]')
-			->innerJoin(['pt' => '{{%commerce_producttypes}}'], 'p.[[typeId]] = pt.[[id]]')
-			->where(['>=', 'vs.[[dateOrdered]]', $fromDT])
-			->andWhere(['<=', 'vs.[[dateOrdered]]', $toDT])
-			->groupBy('pt.[[name]]')
+			->from(['variantSales' => VariantSale::tableName()])
+			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
+			->groupBy('[[productTypes.name]]')
 			->orderBy(['revenue' => SORT_DESC])
 			->all();
 	}

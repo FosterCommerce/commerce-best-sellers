@@ -16,17 +16,17 @@ class m260320_000001_backfill_revenue_columns extends Migration
 		// discount = promotionalAmount (line-level promotional discount)
 		$rows = (new Query())
 			->select([
-				'vs.[[id]]',
-				'li.[[price]]',
-				'li.[[subtotal]]',
-				'li.[[promotionalAmount]]',
+				'[[variantSales.id]]',
+				'[[lineItems.price]]',
+				'[[lineItems.subtotal]]',
+				'[[lineItems.promotionalAmount]]',
 			])
-			->from(['vs' => VariantSale::tableName()])
+			->from(['variantSales' => VariantSale::tableName()])
 			->innerJoin(
-				['li' => '{{%commerce_lineitems}}'],
-				'li.[[orderId]] = vs.[[orderId]] AND li.[[purchasableId]] = vs.[[variantId]]'
+				['lineItems' => '{{%commerce_lineitems}}'],
+				'[[lineItems.orderId]] = [[variantSales.orderId]] AND [[lineItems.purchasableId]] = [[variantSales.variantId]]'
 			)
-			->where(['vs.[[lineItemTotal]]' => null])
+			->where(['[[variantSales.lineItemTotal]]' => null])
 			->all();
 
 		foreach ($rows as $row) {

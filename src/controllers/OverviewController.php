@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\commerce\elements\Product;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\helpers\KpiCards;
 use fostercommerce\bestsellers\Plugin;
@@ -13,7 +14,7 @@ class OverviewController extends BaseReportController
 	private const CARD_GROUPS = [
 		'Orders' => [
 			'keys' => ['revenue', 'orders', 'aov', 'totalDiscount', 'itemsSold', 'avgItemsPerOrder'],
-			'link' => 'best-sellers/sales',
+			'link' => 'best-sellers/orders',
 			'linkLabel' => 'See all orders',
 		],
 		'Customers' => [
@@ -61,6 +62,16 @@ class OverviewController extends BaseReportController
 		$prevProductSummary = $productStats->getSummaryStats($dateRange['prev']['fromDT'], $dateRange['prev']['toDT']);
 		$bestSellers = $productStats->getTopProducts($dateRange['fromDT'], $dateRange['toDT'], 'units', 10);
 
+		// Batch-load product elements for CP URLs
+		$bestSellerProductIds = array_unique(array_column($bestSellers, 'productId'));
+		$bestSellerElements = [];
+		if (! empty($bestSellerProductIds)) {
+			$productElements = Product::find()->id($bestSellerProductIds)->status(null)->all();
+			foreach ($productElements as $productElement) {
+				$bestSellerElements[$productElement->id] = $productElement;
+			}
+		}
+
 		$cardGroups[] = [
 			'label' => 'Products',
 			'link' => 'best-sellers/products',
@@ -70,7 +81,7 @@ class OverviewController extends BaseReportController
 					'label' => 'Unique Products Sold',
 					'value' => $productSummary['uniqueProducts'],
 					'change' => $this->percentChange($productSummary['uniqueProducts'], $prevProductSummary['uniqueProducts']),
-					'format' => 'text',
+					'format' => 'number',
 				],
 				[
 					'label' => 'Product Revenue',
@@ -115,6 +126,7 @@ class OverviewController extends BaseReportController
 			'prevDailyRevenue' => $prevDailyRevenue,
 			'prevDailyAov' => $prevDailyAov,
 			'bestSellers' => $bestSellers,
+			'bestSellerElements' => $bestSellerElements,
 			'newVsReturning' => $newVsReturning,
 			'ltvDistribution' => $ltvDistribution,
 		]);

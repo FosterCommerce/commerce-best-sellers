@@ -84,13 +84,6 @@ class ReportsController extends Controller
 	 */
 	private function getPeriodMetrics(string $fromDT, string $toDT): array
 	{
-		$dateCondition = [
-			'and',
-			['=', 'isCompleted', true],
-			['>=', 'dateOrdered', $fromDT],
-			['<=', 'dateOrdered', $toDT],
-		];
-
 		$orderStats = (new Query())
 			->select([
 				'totalOrders' => 'COUNT(*)',
@@ -98,7 +91,12 @@ class ReportsController extends Controller
 				'totalCustomers' => 'COUNT(DISTINCT [[customerId]])',
 			])
 			->from('{{%commerce_orders}}')
-			->where($dateCondition)
+			->where([
+				'and',
+				['=', '[[isCompleted]]', true],
+				['>=', '[[dateOrdered]]', $fromDT],
+				['<=', '[[dateOrdered]]', $toDT],
+			])
 			->one();
 
 		$totalOrders = (int) ($orderStats['totalOrders'] ?? 0);
@@ -107,10 +105,15 @@ class ReportsController extends Controller
 		$averageOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0;
 
 		$totalItemsSold = (int) (new Query())
-			->select(['totalItems' => 'COALESCE(SUM(li.[[qty]]), 0)'])
-			->from(['li' => '{{%commerce_lineitems}}'])
-			->innerJoin(['o' => '{{%commerce_orders}}'], 'li.[[orderId]] = o.[[id]]')
-			->where($dateCondition)
+			->select(['totalItems' => 'COALESCE(SUM([[lineItems.qty]]), 0)'])
+			->from(['lineItems' => '{{%commerce_lineitems}}'])
+			->innerJoin(['orders' => '{{%commerce_orders}}'], '[[lineItems.orderId]] = [[orders.id]]')
+			->where([
+				'and',
+				['=', '[[orders.isCompleted]]', true],
+				['>=', '[[orders.dateOrdered]]', $fromDT],
+				['<=', '[[orders.dateOrdered]]', $toDT],
+			])
 			->scalar();
 
 		$avgItemsPerOrder = $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0;
@@ -146,9 +149,9 @@ class ReportsController extends Controller
 			->from('{{%commerce_orders}}')
 			->where([
 				'and',
-				['=', 'isCompleted', true],
-				['>=', 'dateOrdered', $fromDT],
-				['<=', 'dateOrdered', $toDT],
+				['=', '[[isCompleted]]', true],
+				['>=', '[[dateOrdered]]', $fromDT],
+				['<=', '[[dateOrdered]]', $toDT],
 			])
 			->groupBy($dayExpression)
 			->orderBy(['day' => SORT_ASC])

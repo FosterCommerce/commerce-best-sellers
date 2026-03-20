@@ -80,10 +80,10 @@ class KpiCards
 			],
 			'orders' => [
 				'label' => 'Orders',
-				'format' => 'text',
+				'format' => 'number',
 				'sparklineId' => 'sparkOrders',
 				'sparklineColumn' => 'totalOrders',
-				'description' => 'All orders this period',
+
 				'resolve' => fn (array $s) => $s['totalOrders'] ?? 0,
 			],
 			'aov' => [
@@ -91,26 +91,26 @@ class KpiCards
 				'format' => 'currency',
 				'sparklineId' => 'sparkAov',
 				'sparklineColumn' => 'averageOrderValue',
-				'description' => 'Average completed order value',
+
 				'resolve' => fn (array $s) => $s['averageOrderValue'] ?? 0,
 			],
 			'customers' => [
 				'label' => 'Customers',
-				'format' => 'text',
+				'format' => 'number',
 				'sparklineId' => 'sparkCustomers',
 				'sparklineColumn' => 'uniqueCustomers',
 				'resolve' => fn (array $s) => $s['uniqueCustomers'] ?? 0,
 			],
 			'itemsSold' => [
 				'label' => 'Items Sold',
-				'format' => 'text',
+				'format' => 'number',
 				'sparklineId' => 'sparkItemsSold',
 				'sparklineColumn' => 'totalItemsSold',
 				'resolve' => fn (array $s) => $s['totalItemsSold'] ?? 0,
 			],
 			'newCustomers' => [
 				'label' => 'New Customers',
-				'format' => 'text',
+				'format' => 'number',
 				'sparklineId' => 'sparkNewCustomers',
 				'sparklineColumn' => 'newCustomers',
 				'resolve' => fn (array $s) => $s['newCustomers'] ?? 0,
@@ -131,7 +131,7 @@ class KpiCards
 				'format' => 'decimal',
 				'sparklineId' => 'sparkAvgItems',
 				'sparklineColumn' => 'averageItemsPerOrder',
-				'description' => 'Average items per order',
+
 				'resolve' => fn (array $s) => $s['averageItemsPerOrder'] ?? 0,
 			],
 			'totalDiscount' => [
@@ -139,7 +139,7 @@ class KpiCards
 				'format' => 'currency',
 				'sparklineId' => 'sparkDiscount',
 				'sparklineColumn' => 'totalDiscount',
-				'resolve' => fn (array $s) => $s['totalDiscount'] ?? 0,
+				'resolve' => fn (array $s) => abs($s['totalDiscount'] ?? 0),
 			],
 		];
 	}

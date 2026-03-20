@@ -22,9 +22,9 @@ class DailyStats extends Component
 
 		$dateCondition = [
 			'and',
-			['=', 'isCompleted', true],
-			['>=', 'dateOrdered', $dateStart],
-			['<=', 'dateOrdered', $dateEnd],
+			['=', '[[isCompleted]]', true],
+			['>=', '[[dateOrdered]]', $dateStart],
+			['<=', '[[dateOrdered]]', $dateEnd],
 		];
 
 		// Order-level aggregates
@@ -48,12 +48,17 @@ class DailyStats extends Component
 		$totalTax = (float) ($orderStats['totalTax'] ?? 0);
 		$uniqueCustomers = (int) ($orderStats['uniqueCustomers'] ?? 0);
 
-		// Items sold
+		// Items sold (JOIN query — must qualify columns)
 		$totalItemsSold = (int) (new Query())
-			->select(['COALESCE(SUM(li.[[qty]]), 0)'])
-			->from(['li' => '{{%commerce_lineitems}}'])
-			->innerJoin(['o' => '{{%commerce_orders}}'], 'li.[[orderId]] = o.[[id]]')
-			->where($dateCondition)
+			->select(['COALESCE(SUM([[lineItems.qty]]), 0)'])
+			->from(['lineItems' => '{{%commerce_lineitems}}'])
+			->innerJoin(['orders' => '{{%commerce_orders}}'], '[[lineItems.orderId]] = [[orders.id]]')
+			->where([
+				'and',
+				['=', '[[orders.isCompleted]]', true],
+				['>=', '[[orders.dateOrdered]]', $dateStart],
+				['<=', '[[orders.dateOrdered]]', $dateEnd],
+			])
 			->scalar();
 
 		// New vs returning customers
@@ -68,24 +73,9 @@ class DailyStats extends Component
 		$returningCustomers = 0;
 
 		if (! empty($customerIds)) {
-			// A customer is "new" if their earliest completed order is on this date
-			$newCustomers = (int) (new Query())
-				->select('COUNT(DISTINCT [[customerId]])')
-				->from('{{%commerce_orders}}')
-				->where([
-					'and',
-					['=', 'isCompleted', true],
-					['in', 'customerId', $customerIds],
-				])
-				->groupBy('[[customerId]]')
-				->having(['>=', 'MIN([[dateOrdered]])', $dateStart])
-				->andHaving(['<=', 'MIN([[dateOrdered]])', $dateEnd])
-				->count();
-
-			// Actually we need to count how many customers have their min dateOrdered in this day
 			$newCustomers = (int) (new Query())
 				->from([
-					'sub' => (new Query())
+					'firstOrders' => (new Query())
 						->select([
 							'customerId',
 							'firstOrder' => 'MIN([[dateOrdered]])',
@@ -93,8 +83,8 @@ class DailyStats extends Component
 						->from('{{%commerce_orders}}')
 						->where([
 							'and',
-							['=', 'isCompleted', true],
-							['in', 'customerId', $customerIds],
+							['=', '[[isCompleted]]', true],
+							['in', '[[customerId]]', $customerIds],
 						])
 						->groupBy('[[customerId]]'),
 				])
@@ -102,10 +92,7 @@ class DailyStats extends Component
 				->andWhere(['<=', 'firstOrder', $dateEnd])
 				->count();
 
-			$returningCustomers = $uniqueCustomers - $newCustomers;
-			if ($returningCustomers < 0) {
-				$returningCustomers = 0;
-			}
+			$returningCustomers = max(0, $uniqueCustomers - $newCustomers);
 		}
 
 		$averageOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 4) : 0;

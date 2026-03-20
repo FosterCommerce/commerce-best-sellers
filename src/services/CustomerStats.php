@@ -213,6 +213,7 @@ class CustomerStats extends Component
 			->select([
 				'email' => '[[orders.email]]',
 				'customerId' => '[[orders.customerId]]',
+				'userActive' => 'MAX([[users.active]])',
 				'orderCount' => 'COUNT(*)',
 				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'lastOrder' => 'MAX([[orders.dateOrdered]])',
@@ -220,6 +221,12 @@ class CustomerStats extends Component
 			->from([
 				'orders' => '{{%commerce_orders}}',
 			])
+			->leftJoin(
+				[
+					'users' => '{{%users}}',
+				],
+				'[[orders.customerId]] = [[users.id]]',
+			)
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', true],
@@ -234,16 +241,18 @@ class CustomerStats extends Component
 			->all();
 
 		return array_map(function ($row): array {
-			/** @var array{email: string, customerId: ?string, orderCount: string, totalSpent: string, lastOrder: ?string} $row */
+			/** @var array{email: string, customerId: ?string, userActive: ?string, orderCount: string, totalSpent: string, lastOrder: ?string} $row */
 			$orderCount = (int) $row['orderCount'];
 			$totalSpent = (float) $row['totalSpent'];
 			$customerId = $row['customerId'] ? (int) $row['customerId'] : null;
+			$isActive = (bool) ($row['userActive'] ?? false);
+			$isGuest = $customerId === null || ! $isActive;
 
 			return [
 				'email' => $row['email'],
 				'customerId' => $customerId,
-				'isGuest' => empty($row['customerId']),
-				'status' => $customerId !== null && $customerId !== 0 ? 'credentialed' : 'guest',
+				'isGuest' => $isGuest,
+				'status' => $isGuest ? 'guest' : 'credentialed',
 				'orderCount' => $orderCount,
 				'totalSpent' => $totalSpent,
 				'aov' => $orderCount > 0 ? round($totalSpent / $orderCount, 2) : 0,
@@ -305,43 +314,67 @@ class CustomerStats extends Component
 	{
 		$dateCondition = [
 			'and',
-			['=', '[[isCompleted]]', true],
-			['>=', '[[dateOrdered]]', $fromDT],
-			['<=', '[[dateOrdered]]', $toDT],
+			['=', '[[orders.isCompleted]]', true],
+			['>=', '[[orders.dateOrdered]]', $fromDT],
+			['<=', '[[orders.dateOrdered]]', $toDT],
 			[
 				'not', [
-					'[[email]]' => null,
+					'[[orders.email]]' => null,
 				]],
-			['!=', '[[email]]', ''],
+			['!=', '[[orders.email]]', ''],
 		];
 
-		// Credentialed: has a customerId
+		// Credentialed: has an active user account
 		$credentialedRows = (new Query())
 			->select([
-				'totalSpent' => 'COALESCE(SUM([[totalPrice]]), 0)',
+				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'orderCount' => 'COUNT(*)',
 			])
-			->from('{{%commerce_orders}}')
+			->from([
+				'orders' => '{{%commerce_orders}}',
+			])
+			->innerJoin(
+				[
+					'users' => '{{%users}}',
+				],
+				'[[orders.customerId]] = [[users.id]]',
+			)
 			->where($dateCondition)
 			->andWhere([
-				'not', [
-					'[[customerId]]' => null,
-				]])
-			->groupBy('[[email]]')
+				'[[users.active]]' => true,
+			])
+			->groupBy('[[orders.email]]')
 			->all();
 
-		// Guest: no customerId
+		// Guest: no customerId OR inactive user
 		$guestRows = (new Query())
 			->select([
-				'totalSpent' => 'COALESCE(SUM([[totalPrice]]), 0)',
+				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'orderCount' => 'COUNT(*)',
 			])
-			->from('{{%commerce_orders}}')
+			->from([
+				'orders' => '{{%commerce_orders}}',
+			])
+			->leftJoin(
+				[
+					'users' => '{{%users}}',
+				],
+				'[[orders.customerId]] = [[users.id]]',
+			)
 			->where($dateCondition)
 			->andWhere([
-				'[[customerId]]' => null,
+				'or',
+				[
+					'[[orders.customerId]]' => null,
+				],
+				[
+					'[[users.active]]' => false,
+				],
+				[
+					'[[users.id]]' => null,
+				],
 			])
-			->groupBy('[[email]]')
+			->groupBy('[[orders.email]]')
 			->all();
 
 		$credentialedCount = count($credentialedRows);

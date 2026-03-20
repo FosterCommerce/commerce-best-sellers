@@ -91,7 +91,7 @@ abstract class BaseReportController extends Controller
 		/** @var Money $money */
 		$money = MoneyHelper::toMoney([
 			'value' => (string) $amount,
-			'currency' => $this->getStoreCurrencyCode(),
+			'currency' => $this->getStoreCurrency(),
 		]);
 
 		return $money;

@@ -53,7 +53,7 @@ abstract class BaseReportController extends Controller
 
 	protected function getStoreCurrency(): Currency
 	{
-		if ($this->storeCurrency === null) {
+		if (! $this->storeCurrency instanceof Currency) {
 			$store = CommercePlugin::getInstance()?->getStores()->getPrimaryStore();
 			$code = $store?->getCurrency()?->getCode() ?? 'USD';
 			$this->storeCurrency = new Currency($code);

@@ -7,12 +7,6 @@ use yii\base\Component;
 
 class DateRange extends Component
 {
-	private const SESSION_KEY_FROM = 'bestSellers.dateRange.from';
-
-	private const SESSION_KEY_TO = 'bestSellers.dateRange.to';
-
-	private const SESSION_KEY_PRESET = 'bestSellers.dateRange.preset';
-
 	public const PRESET_ALL = 'all';
 
 	public const PRESET_TODAY = 'today';
@@ -33,6 +27,12 @@ class DateRange extends Component
 
 	public const PRESET_CUSTOM = 'custom';
 
+	private const SESSION_KEY_FROM = 'bestSellers.dateRange.from';
+
+	private const SESSION_KEY_TO = 'bestSellers.dateRange.to';
+
+	private const SESSION_KEY_PRESET = 'bestSellers.dateRange.preset';
+
 	/**
 	 * Resolve the date range from query params (priority) or session.
 	 *
@@ -44,18 +44,26 @@ class DateRange extends Component
 		$session = Craft::$app->getSession();
 
 		// Query params take priority
-		$preset = $request->getQueryParam('preset');
-		$from = $request->getQueryParam('from');
-		$to = $request->getQueryParam('to');
+		if ($request instanceof \craft\web\Request) {
+			$preset = $request->getQueryParam('preset');
+			$from = $request->getQueryParam('from');
+			$to = $request->getQueryParam('to');
+		} else {
+			$preset = null;
+			$from = null;
+			$to = null;
+		}
 
 		// If query params present, save to session
 		if ($preset !== null || $from !== null || $to !== null) {
 			if ($preset !== null) {
 				$session->set(self::SESSION_KEY_PRESET, $preset);
 			}
+
 			if ($from !== null) {
 				$session->set(self::SESSION_KEY_FROM, $from);
 			}
+
 			if ($to !== null) {
 				$session->set(self::SESSION_KEY_TO, $to);
 			}
@@ -72,24 +80,24 @@ class DateRange extends Component
 		// Resolve preset to dates (unless custom with explicit dates)
 		if ($preset !== self::PRESET_CUSTOM) {
 			[$from, $to] = $this->resolvePreset($preset);
-		} else {
+		} elseif (! $from || ! $to) {
 			// Custom - use provided dates or fall back to past 30 days
-			if (! $from || ! $to) {
-				[$from, $to] = $this->resolvePreset(self::PRESET_PAST_30_DAYS);
-				$preset = self::PRESET_PAST_30_DAYS;
-			} else {
-				$from = trim($from);
-				$to = trim($to);
-			}
+			[$from, $to] = $this->resolvePreset(self::PRESET_PAST_30_DAYS);
+			$preset = self::PRESET_PAST_30_DAYS;
+		} else {
+			$from = trim((string) $from);
+			$to = trim((string) $to);
 		}
 
 		// Convert to datetime strings for SQL
 		$fromDTObj = new \DateTime($from);
 		$fromDTObj->setTime(0, 0, 0);
+
 		$fromDT = $fromDTObj->format('Y-m-d H:i:s');
 
 		$toDTObj = new \DateTime($to);
 		$toDTObj->setTime(23, 59, 59);
+
 		$toDT = $toDTObj->format('Y-m-d H:i:s');
 
 		// Persist to session

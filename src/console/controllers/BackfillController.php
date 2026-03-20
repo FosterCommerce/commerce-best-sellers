@@ -11,6 +11,9 @@ use fostercommerce\bestsellers\records\VariantSale;
 use yii\console\Controller;
 use yii\console\ExitCode;
 
+/**
+ * @extends Controller<\yii\base\Module>
+ */
 class BackfillController extends Controller
 {
 	/**
@@ -57,6 +60,7 @@ class BackfillController extends Controller
 		}
 
 		// Find the date range of completed orders
+		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
 		$row = (new Query())
 			->select([
 				'minDate' => 'MIN([[dateOrdered]])',
@@ -71,8 +75,8 @@ class BackfillController extends Controller
 			return ExitCode::OK;
 		}
 
-		$startDate = (new \DateTime($row['minDate']))->format('Y-m-d');
-		$endDate = (new \DateTime($row['maxDate']))->format('Y-m-d');
+		$startDate = (new \DateTime((string) $row['minDate']))->format('Y-m-d');
+		$endDate = (new \DateTime((string) $row['maxDate']))->format('Y-m-d');
 
 		$this->stdout("Rebuilding daily stats from {$startDate} to {$endDate}...\n");
 

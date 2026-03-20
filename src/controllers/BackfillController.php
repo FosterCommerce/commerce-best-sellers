@@ -72,6 +72,7 @@ class BackfillController extends Controller
 			return $this->redirectToPostedUrl();
 		}
 
+		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
 		$row = (new Query())
 			->select([
 				'minDate' => 'MIN([[dateOrdered]])',
@@ -86,8 +87,8 @@ class BackfillController extends Controller
 			return $this->redirectToPostedUrl();
 		}
 
-		$startDate = (new \DateTime($row['minDate']))->format('Y-m-d');
-		$endDate = (new \DateTime($row['maxDate']))->format('Y-m-d');
+		$startDate = (new \DateTime((string) $row['minDate']))->format('Y-m-d');
+		$endDate = (new \DateTime((string) $row['maxDate']))->format('Y-m-d');
 
 		$count = $dailyStats->rebuildRange($startDate, $endDate);
 

@@ -34,6 +34,7 @@ class ChartConfig
 	];
 
 	/**
+	 * @param list<float|int|string> $data
 	 * @return array<string, mixed>
 	 */
 	public static function barDefaults(string $label, array $data, int $colorIndex = 0): array
@@ -50,6 +51,7 @@ class ChartConfig
 	}
 
 	/**
+	 * @param list<float|int|string> $data
 	 * @return array<string, mixed>
 	 */
 	public static function lineDefaults(string $label, array $data, int $colorIndex = 1): array
@@ -69,6 +71,8 @@ class ChartConfig
 	}
 
 	/**
+	 * @param list<float|int|string> $data
+	 * @param list<string> $labels
 	 * @return array<string, mixed>
 	 */
 	public static function doughnutDefaults(array $data, array $labels): array

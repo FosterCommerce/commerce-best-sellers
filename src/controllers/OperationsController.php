@@ -15,7 +15,9 @@ class OperationsController extends BaseReportController
 		$view->registerAssetBundle(ReportsAsset::class);
 
 		$dateRange = $this->resolveDateRange();
-		$operationsStats = Plugin::getInstance()->operationsStats;
+		$plugin = Plugin::getInstance();
+		assert($plugin instanceof Plugin);
+		$operationsStats = $plugin->operationsStats;
 
 		$itemsPerOrder = $operationsStats->getItemsPerOrderDistribution($dateRange['fromDT'], $dateRange['toDT']);
 		$shippingMethods = $operationsStats->getShippingMethods($dateRange['fromDT'], $dateRange['toDT']);

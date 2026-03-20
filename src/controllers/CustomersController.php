@@ -17,7 +17,9 @@ class CustomersController extends BaseReportController
 		$view->registerAssetBundle(ReportsAsset::class);
 
 		$dateRange = $this->resolveDateRange();
-		$customerStats = Plugin::getInstance()->customerStats;
+		$plugin = Plugin::getInstance();
+		assert($plugin instanceof Plugin);
+		$customerStats = $plugin->customerStats;
 
 		// Written summary
 		$kpis = $customerStats->getCustomerKpis($dateRange['fromDT'], $dateRange['toDT']);
@@ -42,13 +44,22 @@ class CustomersController extends BaseReportController
 	{
 		$this->requireAcceptsJson();
 
+		/** @var \craft\web\Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$page = max(1, (int) $request->getQueryParam('page', 1));
-		$search = trim((string) $request->getQueryParam('search', ''));
-		$sort = trim((string) $request->getQueryParam('sort', 'totalSpent'));
-		$sortDir = trim((string) $request->getQueryParam('sortDir', 'desc'));
+		$rawPage = $request->getQueryParam('page', 1);
+		$page = max(1, is_numeric($rawPage) ? (int) $rawPage : 1);
+
+		$rawSearch = $request->getQueryParam('search', '');
+		$search = trim(is_string($rawSearch) ? $rawSearch : '');
+
+		$rawSort = $request->getQueryParam('sort', 'totalSpent');
+		$sort = trim(is_string($rawSort) ? $rawSort : 'totalSpent');
+
+		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
+		$sortDir = trim(is_string($rawSortDir) ? $rawSortDir : 'desc');
+
 		$customerTypes = $request->getQueryParam('customerType', []);
 		if (is_string($customerTypes) && $customerTypes !== '') {
 			$customerTypes = [$customerTypes];
@@ -56,39 +67,42 @@ class CustomersController extends BaseReportController
 			$customerTypes = [];
 		}
 
-		$customerStats = Plugin::getInstance()->customerStats;
+		$plugin = Plugin::getInstance();
+		assert($plugin instanceof Plugin);
+		$customerStats = $plugin->customerStats;
+
+		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
 		$allCustomers = $customerStats->getTopCustomers($dateRange['fromDT'], $dateRange['toDT'], 10000);
 
 		// Server-side customer type filter (multi-select)
-		if (! empty($customerTypes) && count($customerTypes) < 2) {
+		if ($customerTypes !== [] && count($customerTypes) < 2) {
 			$wantGuest = in_array('guest', $customerTypes, true);
 			$wantRegistered = in_array('registered', $customerTypes, true);
 			if ($wantGuest && ! $wantRegistered) {
-				$allCustomers = array_values(array_filter($allCustomers, fn ($customer) => $customer['isGuest']));
+				$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => $customer['isGuest']));
 			} elseif ($wantRegistered && ! $wantGuest) {
-				$allCustomers = array_values(array_filter($allCustomers, fn ($customer) => ! $customer['isGuest']));
+				$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => ! $customer['isGuest']));
 			}
 		}
 
 		// Server-side search
 		if ($search !== '') {
 			$searchLower = strtolower($search);
-			$allCustomers = array_values(array_filter($allCustomers, function ($customer) use ($searchLower) {
-				return str_contains(strtolower($customer['email']), $searchLower);
-			}));
+			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => str_contains(strtolower($customer['email']), $searchLower)));
 		}
 
 		// Server-side sort
 		$allowedSortColumns = ['email', 'orderCount', 'totalSpent', 'aov', 'lastOrder'];
 		if (in_array($sort, $allowedSortColumns, true)) {
-			usort($allCustomers, function ($customerA, $customerB) use ($sort, $sortDir) {
+			usort($allCustomers, function (array $customerA, array $customerB) use ($sort, $sortDir): int {
 				$valueA = $customerA[$sort] ?? 0;
 				$valueB = $customerB[$sort] ?? 0;
 				if (is_numeric($valueA) && is_numeric($valueB)) {
 					$comparison = (float) $valueA <=> (float) $valueB;
 				} else {
-					$comparison = strcasecmp((string) $valueA, (string) $valueB);
+					$comparison = strcasecmp(is_string($valueA) ? $valueA : '', is_string($valueB) ? $valueB : '');
 				}
+
 				return $sortDir === 'asc' ? $comparison : -$comparison;
 			});
 		}
@@ -107,17 +121,17 @@ class CustomersController extends BaseReportController
 				'orderCount' => $customer['orderCount'],
 				'totalSpent' => $this->formatCurrency($customer['totalSpent']),
 				'aov' => $this->formatCurrency($customer['aov']),
-				'lastOrder' => $customer['lastOrder'] ? substr($customer['lastOrder'], 0, 10) : '',
-				'cpUrl' => $customer['customerId'] ? Craft::$app->getUrlManager()->createUrl('users/' . $customer['customerId']) : null,
+				'lastOrder' => $customer['lastOrder'] !== null ? substr($customer['lastOrder'], 0, 10) : '',
+				'cpUrl' => $customer['customerId'] !== null ? Craft::$app->getUrlManager()->createUrl('users/' . $customer['customerId']) : null,
 			];
 		}
 
 		// Page totals
 		$totalOrderCount = 0;
-		$totalSpentSum = 0;
-		foreach ($pageItems as $customer) {
-			$totalOrderCount += $customer['orderCount'];
-			$totalSpentSum += $customer['totalSpent'];
+		$totalSpentSum = 0.0;
+		foreach ($pageItems as $pageItem) {
+			$totalOrderCount += $pageItem['orderCount'];
+			$totalSpentSum += $pageItem['totalSpent'];
 		}
 
 		$totals = [
@@ -140,9 +154,13 @@ class CustomersController extends BaseReportController
 	 */
 	public function actionExportCsv(): Response
 	{
+		/** @var \craft\web\Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
-		$search = trim((string) $request->getQueryParam('search', ''));
+
+		$rawSearch = $request->getQueryParam('search', '');
+		$search = trim(is_string($rawSearch) ? $rawSearch : '');
+
 		$customerTypes = $request->getQueryParam('customerType', []);
 		if (is_string($customerTypes) && $customerTypes !== '') {
 			$customerTypes = [$customerTypes];
@@ -150,41 +168,43 @@ class CustomersController extends BaseReportController
 			$customerTypes = [];
 		}
 
-		$customerStats = Plugin::getInstance()->customerStats;
+		$plugin = Plugin::getInstance();
+		assert($plugin instanceof Plugin);
+		$customerStats = $plugin->customerStats;
+
+		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
 		$allCustomers = $customerStats->getTopCustomers($dateRange['fromDT'], $dateRange['toDT'], 10000);
 
-		if (! empty($customerTypes) && count($customerTypes) < 2) {
+		if ($customerTypes !== [] && count($customerTypes) < 2) {
 			$wantGuest = in_array('guest', $customerTypes, true);
 			$wantRegistered = in_array('registered', $customerTypes, true);
 			if ($wantGuest && ! $wantRegistered) {
-				$allCustomers = array_values(array_filter($allCustomers, fn ($customer) => $customer['isGuest']));
+				$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => $customer['isGuest']));
 			} elseif ($wantRegistered && ! $wantGuest) {
-				$allCustomers = array_values(array_filter($allCustomers, fn ($customer) => ! $customer['isGuest']));
+				$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => ! $customer['isGuest']));
 			}
 		}
 
 		if ($search !== '') {
 			$searchLower = strtolower($search);
-			$allCustomers = array_values(array_filter($allCustomers, function ($customer) use ($searchLower) {
-				return str_contains(strtolower($customer['email']), $searchLower);
-			}));
+			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => str_contains(strtolower($customer['email']), $searchLower)));
 		}
 
 		$csvRows = [];
 		$totalOrderCount = 0;
-		$totalSpentSum = 0;
+		$totalSpentSum = 0.0;
 
-		foreach ($allCustomers as $customer) {
-			$totalOrderCount += $customer['orderCount'];
-			$totalSpentSum += $customer['totalSpent'];
+		foreach ($allCustomers as $allCustomer) {
+			$totalOrderCount += $allCustomer['orderCount'];
+			$totalSpentSum += $allCustomer['totalSpent'];
 
 			$csvRows[] = [
-				'email' => $customer['email'],
-				'type' => $customer['isGuest'] ? 'Guest' : 'Registered',
-				'orders' => $customer['orderCount'],
-				'totalSpent' => round($customer['totalSpent'], 2),
-				'aov' => round($customer['aov'], 2),
-				'lastOrder' => $customer['lastOrder'] ? substr($customer['lastOrder'], 0, 10) : '',
+				'email' => $allCustomer['email'],
+				'type' => $allCustomer['isGuest'] ? 'Guest' : 'Registered',
+				'orders' => $allCustomer['orderCount'],
+				'totalSpent' => round($allCustomer['totalSpent'], 2),
+				'aov' => round($allCustomer['aov'], 2),
+				'lastOrder' => $allCustomer['lastOrder'] !== null ? substr($allCustomer['lastOrder'], 0, 10) : '',
 			];
 		}
 

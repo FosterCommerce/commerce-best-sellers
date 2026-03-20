@@ -12,9 +12,6 @@ use fostercommerce\bestsellers\helpers\LineItemHelper;
 use fostercommerce\bestsellers\records\VariantSale;
 use yii\base\Component;
 
-/**
- * Sales service
- */
 class Sales extends Component
 {
 	public function logOrderSales(Order $order): void

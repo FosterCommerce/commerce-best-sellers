@@ -19,11 +19,15 @@ class OrdersController extends BaseReportController
 		$view->registerAssetBundle(ReportsAsset::class);
 
 		$dateRange = $this->resolveDateRange();
-		$dailyStats = Plugin::getInstance()->dailyStats;
+		$plugin = Plugin::getInstance();
+		assert($plugin instanceof Plugin);
+		$dailyStats = $plugin->dailyStats;
 
 		$stats = $dailyStats->getStatsForRange($dateRange['from'], $dateRange['to']);
 		$prevStats = $dailyStats->getStatsForRange($dateRange['prev']['from'], $dateRange['prev']['to']);
 
+		/** @var array{totalRevenue: float, totalOrders: int} $stats */
+		/** @var array{totalRevenue: float, totalOrders: int} $prevStats */
 		$revenueChange = $this->percentChange($stats['totalRevenue'], $prevStats['totalRevenue']);
 		$ordersChange = $this->percentChange($stats['totalOrders'], $prevStats['totalOrders']);
 
@@ -46,10 +50,12 @@ class OrdersController extends BaseReportController
 	{
 		$this->requireAcceptsJson();
 
+		/** @var \craft\web\Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
-		$page = max(1, (int) $request->getQueryParam('page', 1));
+		$pageParam = $request->getQueryParam('page', 1);
+		$page = max(1, is_numeric($pageParam) ? (int) $pageParam : 1);
 		$offset = ($page - 1) * self::PER_PAGE;
 
 		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
@@ -80,6 +86,7 @@ class OrdersController extends BaseReportController
 			$totalShipping += $order->totalShippingCost;
 			$totalPaid += $order->totalPaid;
 		}
+
 		foreach ($rows as $row) {
 			$totalItemsSold += $row['itemsSold'];
 		}
@@ -169,15 +176,21 @@ class OrdersController extends BaseReportController
 
 	/**
 	 * Build the filtered orders query from request params.
+	 *
+	 * @param array{fromDT: string, toDT: string} $dateRange
 	 */
-	private function buildFilteredOrdersQuery(array $dateRange): mixed
+	private function buildFilteredOrdersQuery(array $dateRange): \craft\commerce\elements\db\OrderQuery
 	{
+		/** @var \craft\web\Request $request */
 		$request = Craft::$app->getRequest();
-		$search = trim((string) $request->getQueryParam('search', ''));
-		$sort = trim((string) $request->getQueryParam('sort', 'dateOrdered'));
-		$sortDir = trim((string) $request->getQueryParam('sortDir', 'desc'));
+		$searchParam = $request->getQueryParam('search', '');
+		$search = is_string($searchParam) ? trim($searchParam) : '';
+		$sortParam = $request->getQueryParam('sort', 'dateOrdered');
+		$sort = is_string($sortParam) ? trim($sortParam) : 'dateOrdered';
+		$sortDirParam = $request->getQueryParam('sortDir', 'desc');
+		$sortDir = is_string($sortDirParam) ? trim($sortDirParam) : 'desc';
 		$orderStatuses = $request->getQueryParam('orderStatus', []);
-		$paymentStatuses = $request->getQueryParam('paymentStatus', []);
+		$paidFilters = $request->getQueryParam('paymentStatus', []);
 
 		if (is_string($orderStatuses) && $orderStatuses !== '') {
 			$orderStatuses = [$orderStatuses];
@@ -185,10 +198,10 @@ class OrdersController extends BaseReportController
 			$orderStatuses = [];
 		}
 
-		if (is_string($paymentStatuses) && $paymentStatuses !== '') {
-			$paymentStatuses = [$paymentStatuses];
-		} elseif (! is_array($paymentStatuses)) {
-			$paymentStatuses = [];
+		if (is_string($paidFilters) && $paidFilters !== '') {
+			$paidFilters = [$paidFilters];
+		} elseif (! is_array($paidFilters)) {
+			$paidFilters = [];
 		}
 
 		$ordersQuery = Order::find()
@@ -196,25 +209,31 @@ class OrdersController extends BaseReportController
 			->dateOrdered(['and', '>= ' . $dateRange['fromDT'], '<= ' . $dateRange['toDT']])
 			->orderBy($this->resolveOrderSort($sort, $sortDir));
 
-		if (! empty($orderStatuses)) {
-			$ordersQuery->andWhere(['[[orderStatusId]]' => (new Query())
-				->select('[[id]]')
-				->from('{{%commerce_orderstatuses}}')
-				->where(['[[handle]]' => $orderStatuses]),
+		if ($orderStatuses !== []) {
+			$ordersQuery->andWhere([
+				'[[orderStatusId]]' => (new Query())
+					->select('[[id]]')
+					->from('{{%commerce_orderstatuses}}')
+					->where([
+						'[[handle]]' => $orderStatuses,
+					]),
 			]);
 		}
 
-		if (! empty($paymentStatuses)) {
+		if ($paidFilters !== []) {
 			$paymentConditions = ['or'];
-			foreach ($paymentStatuses as $status) {
-				if ($status === 'paid') {
+			foreach ($paidFilters as $paidFilter) {
+				if ($paidFilter === 'paid') {
 					$paymentConditions[] = '[[totalPaid]] >= [[totalPrice]]';
-				} elseif ($status === 'partial') {
+				} elseif ($paidFilter === 'partial') {
 					$paymentConditions[] = ['and', '[[totalPaid]] > 0', '[[totalPaid]] < [[totalPrice]]'];
-				} elseif ($status === 'unpaid') {
-					$paymentConditions[] = ['[[totalPaid]]' => 0];
+				} elseif ($paidFilter === 'unpaid') {
+					$paymentConditions[] = [
+						'[[totalPaid]]' => 0,
+					];
 				}
 			}
+
 			if (count($paymentConditions) > 1) {
 				$ordersQuery->andWhere($paymentConditions);
 			}
@@ -240,8 +259,8 @@ class OrdersController extends BaseReportController
 	private function buildOrderRows(array $orders): array
 	{
 		$orderItemCounts = [];
-		if (! empty($orders)) {
-			$orderIds = array_map(fn ($order) => $order->id, $orders);
+		if ($orders !== []) {
+			$orderIds = array_map(fn ($order): ?int => $order->id, $orders);
 			$itemCounts = (new Query())
 				->select([
 					'orderId',
@@ -251,19 +270,16 @@ class OrdersController extends BaseReportController
 				->where(['in', 'orderId', $orderIds])
 				->groupBy('orderId')
 				->all();
-			foreach ($itemCounts as $row) {
-				$orderItemCounts[$row['orderId']] = (int) $row['totalItems'];
+			foreach ($itemCounts as $itemCount) {
+				/** @var array{orderId: int, totalItems: string} $itemCount */
+				$orderItemCounts[$itemCount['orderId']] = (int) $itemCount['totalItems'];
 			}
 		}
 
 		$rows = [];
 		foreach ($orders as $order) {
-			$statusColor = 'grey';
-			$statusName = '—';
-			if ($order->orderStatus) {
-				$statusColor = $order->orderStatus->color;
-				$statusName = $order->orderStatus->name;
-			}
+			$statusColor = $order->orderStatus->color;
+			$statusName = $order->orderStatus->name;
 
 			// Use per-order currency for accuracy
 			$currency = $order->currency;
@@ -274,7 +290,7 @@ class OrdersController extends BaseReportController
 				'dateOrdered' => $order->dateOrdered ? $order->dateOrdered->format('m/d/Y g:ia') : '',
 				'statusColor' => $statusColor,
 				'statusName' => $statusName,
-				'statusHandle' => $order->orderStatus ? $order->orderStatus->handle : '',
+				'statusHandle' => $order->orderStatus->handle,
 				'itemSubtotal' => Craft::$app->getFormatter()->asCurrency($order->itemSubtotal, $currency),
 				'totalTax' => Craft::$app->getFormatter()->asCurrency($order->totalTax, $currency),
 				'totalDiscount' => Craft::$app->getFormatter()->asCurrency($order->totalDiscount, $currency),
@@ -305,13 +321,19 @@ class OrdersController extends BaseReportController
 		$direction = strtolower($sortDir) === 'asc' ? SORT_ASC : SORT_DESC;
 
 		if ($sort === 'paidStatus') {
-			return ['totalPaid' => $direction];
+			return [
+				'totalPaid' => $direction,
+			];
 		}
 
 		if (in_array($sort, $allowedColumns, true)) {
-			return [$sort => $direction];
+			return [
+				$sort => $direction,
+			];
 		}
 
-		return ['dateOrdered' => SORT_DESC];
+		return [
+			'dateOrdered' => SORT_DESC,
+		];
 	}
 }

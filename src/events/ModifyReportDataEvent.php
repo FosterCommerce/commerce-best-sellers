@@ -11,5 +11,5 @@ class ModifyReportDataEvent extends Event
 	/**
 	 * @var array<string, mixed>
 	 */
-	public array $data = [];
+	public $data = [];
 }

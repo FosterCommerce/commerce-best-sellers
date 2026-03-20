@@ -35,10 +35,12 @@ class ReportsController extends Controller
 
 		$fromDTObj = new \DateTime($from);
 		$fromDTObj->setTime(0, 0, 0);
+
 		$fromDT = $fromDTObj->format('Y-m-d H:i:s');
 
 		$toDTObj = new \DateTime($to);
 		$toDTObj->setTime(23, 59, 59);
+
 		$toDT = $toDTObj->format('Y-m-d H:i:s');
 
 		$currentMetrics = $this->getPeriodMetrics($fromDT, $toDT);
@@ -99,15 +101,23 @@ class ReportsController extends Controller
 			])
 			->one();
 
+		/** @var array{totalOrders: string, totalRevenue: string, totalCustomers: string}|false $orderStats */
+
 		$totalOrders = (int) ($orderStats['totalOrders'] ?? 0);
 		$totalRevenue = (float) ($orderStats['totalRevenue'] ?? 0);
 		$totalCustomers = (int) ($orderStats['totalCustomers'] ?? 0);
 		$averageOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0;
 
 		$totalItemsSold = (int) (new Query())
-			->select(['totalItems' => 'COALESCE(SUM([[lineItems.qty]]), 0)'])
-			->from(['lineItems' => '{{%commerce_lineitems}}'])
-			->innerJoin(['orders' => '{{%commerce_orders}}'], '[[lineItems.orderId]] = [[orders.id]]')
+			->select([
+				'totalItems' => 'COALESCE(SUM([[lineItems.qty]]), 0)',
+			])
+			->from([
+				'lineItems' => '{{%commerce_lineitems}}',
+			])
+			->innerJoin([
+				'orders' => '{{%commerce_orders}}',
+			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', true],
@@ -154,7 +164,9 @@ class ReportsController extends Controller
 				['<=', '[[dateOrdered]]', $toDT],
 			])
 			->groupBy($dayExpression)
-			->orderBy(['day' => SORT_ASC])
+			->orderBy([
+				'day' => SORT_ASC,
+			])
 			->all();
 
 		$labels = [];
@@ -162,6 +174,7 @@ class ReportsController extends Controller
 		$revenue = [];
 
 		foreach ($rows as $row) {
+			/** @var array{day: string, orderCount: string, revenue: string} $row */
 			$labels[] = $row['day'];
 			$orders[] = (int) $row['orderCount'];
 			$revenue[] = (float) $row['revenue'];

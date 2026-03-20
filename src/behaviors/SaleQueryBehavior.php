@@ -9,14 +9,15 @@ use yii\base\Behavior;
 /**
  * @template TKey of array-key
  * @template TElement of Element
+ * @extends Behavior<\craft\base\Component>
  */
 class SaleQueryBehavior extends Behavior
 {
-	private bool $includeBestSellersData = false;
-
 	public ?\DateTime $bestSellersFrom = null;
 
 	public ?\DateTime $bestSellersTo = null;
+
+	private bool $includeBestSellersData = false;
 
 	public function getIncludeBestSellersData(): bool
 	{

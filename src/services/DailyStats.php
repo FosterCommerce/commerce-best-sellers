@@ -2,7 +2,6 @@
 
 namespace fostercommerce\bestsellers\services;
 
-use Craft;
 use craft\db\Query;
 use fostercommerce\bestsellers\records\DailyStat;
 use yii\base\Component;
@@ -14,9 +13,6 @@ class DailyStats extends Component
 	 */
 	public function aggregateDay(string $date): void
 	{
-		$db = Craft::$app->getDb();
-		$isMysql = $db->getIsMysql();
-
 		$dateStart = $date . ' 00:00:00';
 		$dateEnd = $date . ' 23:59:59';
 
@@ -28,6 +24,7 @@ class DailyStats extends Component
 		];
 
 		// Order-level aggregates
+		/** @var array{totalOrders: string, totalRevenue: string, totalDiscount: string, totalShipping: string, totalTax: string, uniqueCustomers: string}|false $orderStats */
 		$orderStats = (new Query())
 			->select([
 				'totalOrders' => 'COUNT(*)',
@@ -51,8 +48,12 @@ class DailyStats extends Component
 		// Items sold (JOIN query — must qualify columns)
 		$totalItemsSold = (int) (new Query())
 			->select(['COALESCE(SUM([[lineItems.qty]]), 0)'])
-			->from(['lineItems' => '{{%commerce_lineitems}}'])
-			->innerJoin(['orders' => '{{%commerce_orders}}'], '[[lineItems.orderId]] = [[orders.id]]')
+			->from([
+				'lineItems' => '{{%commerce_lineitems}}',
+			])
+			->innerJoin([
+				'orders' => '{{%commerce_orders}}',
+			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', true],
@@ -66,7 +67,10 @@ class DailyStats extends Component
 			->select('[[customerId]]')
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
-			->andWhere(['not', ['customerId' => null]])
+			->andWhere([
+				'not', [
+					'customerId' => null,
+				]])
 			->column();
 
 		$newCustomers = 0;
@@ -114,7 +118,10 @@ class DailyStats extends Component
 		];
 
 		// Idempotent upsert
-		$existing = DailyStat::find()->where(['date' => $date])->one();
+		/** @var DailyStat|null $existing */
+		$existing = DailyStat::find()->where([
+			'date' => $date,
+		])->one();
 
 		if ($existing) {
 			$existing->setAttributes($row, false);
@@ -151,6 +158,7 @@ class DailyStats extends Component
 	 */
 	public function getStatsForRange(string $fromDate, string $toDate): array
 	{
+		/** @var array{totalOrders: string, totalRevenue: string, totalDiscount: string, totalShipping: string, totalTax: string, totalItemsSold: string, uniqueCustomers: string, newCustomers: string, returningCustomers: string}|false $row */
 		$row = (new Query())
 			->select([
 				'totalOrders' => 'COALESCE(SUM([[totalOrders]]), 0)',
@@ -194,12 +202,17 @@ class DailyStats extends Component
 	 */
 	public function getDailyRows(string $fromDate, string $toDate): array
 	{
-		return (new Query())
+		/** @var array<int, array<string, mixed>> $rows */
+		$rows = (new Query())
 			->from(DailyStat::tableName())
 			->where(['>=', 'date', $fromDate])
 			->andWhere(['<=', 'date', $toDate])
-			->orderBy(['date' => SORT_ASC])
+			->orderBy([
+				'date' => SORT_ASC,
+			])
 			->all();
+
+		return $rows;
 	}
 
 	/**
@@ -214,7 +227,9 @@ class DailyStats extends Component
 			->from(DailyStat::tableName())
 			->where(['>=', 'date', $fromDate])
 			->andWhere(['<=', 'date', $toDate])
-			->orderBy(['date' => SORT_ASC])
+			->orderBy([
+				'date' => SORT_ASC,
+			])
 			->column();
 	}
 }

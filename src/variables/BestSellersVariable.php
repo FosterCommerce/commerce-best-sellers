@@ -24,10 +24,10 @@ class BestSellersVariable
 
 		$this->applyDateFilter($query, $startDate, $endDate);
 
-		/** @var int $sum */
+		/** @var string|int|null|false $sum */
 		$sum = $query->sum('qty');
 
-		return $sum;
+		return (int) ($sum ?? 0);
 	}
 
 	/**
@@ -43,7 +43,10 @@ class BestSellersVariable
 
 		$this->applyDateFilter($query, $startDate, $endDate);
 
-		return (float) $query->sum('lineItemTotal');
+		/** @var string|int|null|false $sum */
+		$sum = $query->sum('lineItemTotal');
+
+		return (float) ($sum ?? 0);
 	}
 
 	/**
@@ -63,10 +66,10 @@ class BestSellersVariable
 
 		$this->applyDateFilter($query, $startDate, $endDate);
 
-		/** @var int $sum */
+		/** @var string|int|null|false $sum */
 		$sum = $query->sum('qty');
 
-		return $sum;
+		return (int) ($sum ?? 0);
 	}
 
 	/**
@@ -82,9 +85,15 @@ class BestSellersVariable
 
 		$this->applyDateFilter($query, $startDate, $endDate);
 
-		return (float) $query->sum('lineItemTotal');
+		/** @var string|int|null|false $sum */
+		$sum = $query->sum('lineItemTotal');
+
+		return (float) ($sum ?? 0);
 	}
 
+	/**
+	 * @param Query<array-key, mixed> $query
+	 */
 	private function applyDateFilter(Query $query, ?string $startDate, ?string $endDate): void
 	{
 		if ($startDate !== null) {

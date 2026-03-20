@@ -13,31 +13,37 @@ abstract class BaseReportController extends Controller
 	protected array|bool|int $allowAnonymous = false;
 
 	/**
+	 * Calculate percentage change between two values.
+	 */
+	public function percentChange(float|int $current, float|int $previous): ?float
+	{
+		if ($previous === 0 && $current === 0) {
+			return null;
+		}
+
+		if ($previous === 0) {
+			return null;
+		}
+
+		return round((($current - $previous) / $previous) * 100, 1);
+	}
+
+	/**
 	 * Resolve the current and previous date range.
 	 *
 	 * @return array{from: string, to: string, preset: string, fromDT: string, toDT: string, prev: array{from: string, to: string, fromDT: string, toDT: string}}
 	 */
 	protected function resolveDateRange(): array
 	{
-		$dateRange = Plugin::getInstance()->dateRange;
+		$plugin = Plugin::getInstance();
+		assert($plugin instanceof Plugin);
+		$dateRange = $plugin->dateRange;
 		$current = $dateRange->resolve();
 		$previous = $dateRange->previousPeriod($current['from'], $current['to']);
 
-		return array_merge($current, ['prev' => $previous]);
-	}
-
-	/**
-	 * Calculate percentage change between two values.
-	 */
-	public function percentChange(float|int $current, float|int $previous): ?float
-	{
-		if ($previous == 0 && $current == 0) {
-			return null;
-		}
-		if ($previous == 0) {
-			return null;
-		}
-		return round((($current - $previous) / $previous) * 100, 1);
+		return array_merge($current, [
+			'prev' => $previous,
+		]);
 	}
 
 	/**
@@ -70,20 +76,28 @@ abstract class BaseReportController extends Controller
 		$filename = $siteHandle . '-' . $reportType . '-' . $timestamp . '.csv';
 
 		$output = fopen('php://temp', 'r+');
+		if ($output === false) {
+			throw new \RuntimeException('Failed to open temp stream');
+		}
+
 		fputcsv($output, $headers);
 
 		foreach ($rows as $row) {
-			fputcsv($output, array_values($row));
+			/** @var array<int, bool|float|int|string|null> $values */
+			$values = array_values($row);
+			fputcsv($output, $values);
 		}
 
 		rewind($output);
 		$csv = stream_get_contents($output);
 		fclose($output);
 
+		/** @var \craft\web\Response $response */
 		$response = Craft::$app->getResponse();
 		$response->format = Response::FORMAT_RAW;
 		$response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
 		$response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
+
 		$response->data = $csv;
 
 		return $response;

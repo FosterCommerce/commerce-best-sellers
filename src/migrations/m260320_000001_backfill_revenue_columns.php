@@ -21,15 +21,22 @@ class m260320_000001_backfill_revenue_columns extends Migration
 				'[[lineItems.subtotal]]',
 				'[[lineItems.promotionalAmount]]',
 			])
-			->from(['variantSales' => VariantSale::tableName()])
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
 			->innerJoin(
-				['lineItems' => '{{%commerce_lineitems}}'],
+				[
+					'lineItems' => '{{%commerce_lineitems}}',
+				],
 				'[[lineItems.orderId]] = [[variantSales.orderId]] AND [[lineItems.purchasableId]] = [[variantSales.variantId]]'
 			)
-			->where(['[[variantSales.lineItemTotal]]' => null])
+			->where([
+				'[[variantSales.lineItemTotal]]' => null,
+			])
 			->all();
 
 		foreach ($rows as $row) {
+			/** @var array{id: int, price: string|null, subtotal: string|null, promotionalAmount: string|null} $row */
 			$this->update(
 				VariantSale::tableName(),
 				[
@@ -37,7 +44,9 @@ class m260320_000001_backfill_revenue_columns extends Migration
 					'lineItemTotal' => (float) ($row['subtotal'] ?? 0),
 					'discount' => abs((float) ($row['promotionalAmount'] ?? 0)),
 				],
-				['id' => $row['id']]
+				[
+					'id' => $row['id'],
+				]
 			);
 		}
 

@@ -72,12 +72,6 @@ class Plugin extends BasePlugin
 
 		$this->attachEventHandlers();
 
-		// Any code that creates an element query or loads Twig should be deferred until
-		// after Craft is fully initialized, to avoid conflicts with other plugins/modules
-		Craft::$app->onInit(function (): void {
-			// ...
-		});
-
 		// Register the backfill utility
 		Event::on(
 			Utilities::class,
@@ -87,7 +81,6 @@ class Plugin extends BasePlugin
 			}
 		);
 
-		// Register services if not already done
 		$this->setComponents([
 			'sales' => Sales::class,
 			'dailyStats' => DailyStats::class,
@@ -97,7 +90,6 @@ class Plugin extends BasePlugin
 			'operationsStats' => OperationsStats::class,
 		]);
 
-		// Register the variable so it becomes available as craft.bestsellers
 		Event::on(
 			CraftVariable::class,
 			CraftVariable::EVENT_INIT,

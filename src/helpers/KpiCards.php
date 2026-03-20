@@ -24,8 +24,11 @@ class KpiCards
 			}
 
 			$def = $definitions[$key];
-			$value = $def['resolve']($stats);
-			$prevValue = $def['resolve']($prevStats);
+
+			/** @var callable(array<string, mixed>): (float|int) $resolve */
+			$resolve = $def['resolve'];
+			$value = $resolve($stats);
+			$prevValue = $resolve($prevStats);
 
 			$cards[] = [
 				'label' => $def['label'],
@@ -56,9 +59,14 @@ class KpiCards
 			if (! isset($definitions[$key])) {
 				continue;
 			}
+
 			$def = $definitions[$key];
 			if (! empty($def['sparklineId']) && ! empty($def['sparklineColumn'])) {
-				$columns[$def['sparklineId']] = $def['sparklineColumn'];
+				/** @var string $sparklineId */
+				$sparklineId = $def['sparklineId'];
+				/** @var string $sparklineColumn */
+				$sparklineColumn = $def['sparklineColumn'];
+				$columns[$sparklineId] = $sparklineColumn;
 			}
 		}
 
@@ -120,7 +128,7 @@ class KpiCards
 				'format' => 'percent',
 				'sparklineId' => 'sparkReturning',
 				'sparklineColumn' => 'returningCustomers',
-				'resolve' => function (array $s) {
+				'resolve' => function (array $s): float|int {
 					$unique = $s['uniqueCustomers'] ?? 0;
 					$returning = $s['returningCustomers'] ?? 0;
 					return $unique > 0 ? round(($returning / $unique) * 100, 1) : 0;
@@ -139,7 +147,7 @@ class KpiCards
 				'format' => 'currency',
 				'sparklineId' => 'sparkDiscount',
 				'sparklineColumn' => 'totalDiscount',
-				'resolve' => fn (array $s) => abs($s['totalDiscount'] ?? 0),
+				'resolve' => fn (array $s): float|int => abs($s['totalDiscount'] ?? 0),
 			],
 		];
 	}

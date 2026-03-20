@@ -26,7 +26,10 @@ class CustomerStats extends Component
 			->select('COUNT(DISTINCT [[customerId]])')
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
-			->andWhere(['not', ['customerId' => null]])
+			->andWhere([
+				'not', [
+					'customerId' => null,
+				]])
 			->scalar();
 
 		// Customer IDs who ordered in this period
@@ -34,7 +37,10 @@ class CustomerStats extends Component
 			->select('DISTINCT [[customerId]]')
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
-			->andWhere(['not', ['customerId' => null]])
+			->andWhere([
+				'not', [
+					'customerId' => null,
+				]])
 			->column();
 
 		$new = 0;
@@ -96,12 +102,19 @@ class CustomerStats extends Component
 				['=', '[[isCompleted]]', true],
 				['>=', '[[dateOrdered]]', $fromDT],
 				['<=', '[[dateOrdered]]', $toDT],
-				['not', ['customerId' => null]],
+				[
+					'not', [
+						'customerId' => null,
+					]],
 			])
 			->column();
 
 		if (empty($customerIds)) {
-			return ['labels' => [], 'new' => [], 'returning' => []];
+			return [
+				'labels' => [],
+				'new' => [],
+				'returning' => [],
+			];
 		}
 
 		// Get first order date for these customers
@@ -120,8 +133,9 @@ class CustomerStats extends Component
 			->all();
 
 		$firstOrderMap = [];
-		foreach ($firstOrders as $row) {
-			$firstOrderMap[$row['customerId']] = substr($row['firstOrder'], 0, 10);
+		foreach ($firstOrders as $firstOrder) {
+			/** @var array{customerId: string, firstOrder: string} $firstOrder */
+			$firstOrderMap[$firstOrder['customerId']] = substr($firstOrder['firstOrder'], 0, 10);
 		}
 
 		// Get all orders in the range grouped by day and customer
@@ -136,18 +150,26 @@ class CustomerStats extends Component
 				['=', '[[isCompleted]]', true],
 				['>=', '[[dateOrdered]]', $fromDT],
 				['<=', '[[dateOrdered]]', $toDT],
-				['not', ['customerId' => null]],
+				[
+					'not', [
+						'customerId' => null,
+					]],
 			])
 			->all();
 
 		// Group by day
 		$byDay = [];
-		foreach ($orders as $row) {
-			$day = $row['day'];
-			$customerId = $row['customerId'];
+		/** @var array{day: string, customerId: string} $order */
+		foreach ($orders as $order) {
+			$day = $order['day'];
+			$customerId = $order['customerId'];
 			if (! isset($byDay[$day])) {
-				$byDay[$day] = ['new' => [], 'returning' => []];
+				$byDay[$day] = [
+					'new' => [],
+					'returning' => [],
+				];
 			}
+
 			$isNew = isset($firstOrderMap[$customerId]) && $firstOrderMap[$customerId] === $day;
 			if ($isNew) {
 				$byDay[$day]['new'][$customerId] = true;
@@ -190,7 +212,9 @@ class CustomerStats extends Component
 				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'lastOrder' => 'MAX([[orders.dateOrdered]])',
 			])
-			->from(['orders' => '{{%commerce_orders}}'])
+			->from([
+				'orders' => '{{%commerce_orders}}',
+			])
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', true],
@@ -198,11 +222,14 @@ class CustomerStats extends Component
 				['<=', '[[orders.dateOrdered]]', $toDT],
 			])
 			->groupBy('[[orders.email]], [[orders.customerId]]')
-			->orderBy(['totalSpent' => SORT_DESC])
+			->orderBy([
+				'totalSpent' => SORT_DESC,
+			])
 			->limit($limit)
 			->all();
 
-		return array_map(function ($row) {
+		return array_map(function ($row): array {
+			/** @var array{email: string, customerId: ?string, orderCount: string, totalSpent: string, lastOrder: ?string} $row */
 			$orderCount = (int) $row['orderCount'];
 			$totalSpent = (float) $row['totalSpent'];
 			return [
@@ -224,27 +251,37 @@ class CustomerStats extends Component
 	 */
 	public function getTopShippingLocations(string $fromDT, string $toDT, int $limit = 10): array
 	{
+		/** @var array<int, array{country: string, state: string, count: string}> $rows */
 		$rows = (new Query())
 			->select([
 				'country' => '[[addresses.countryCode]]',
-				'state' => 'COALESCE([[addresses.administrativeArea]], \'\')',
+				'state' => "COALESCE([[addresses.administrativeArea]], '')",
 				'count' => 'COUNT(DISTINCT [[orders.email]])',
 			])
-			->from(['orders' => '{{%commerce_orders}}'])
-			->innerJoin(['addresses' => '{{%addresses}}'], '[[orders.shippingAddressId]] = [[addresses.id]]')
+			->from([
+				'orders' => '{{%commerce_orders}}',
+			])
+			->innerJoin([
+				'addresses' => '{{%addresses}}',
+			], '[[orders.shippingAddressId]] = [[addresses.id]]')
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', true],
 				['>=', '[[orders.dateOrdered]]', $fromDT],
 				['<=', '[[orders.dateOrdered]]', $toDT],
-				['not', ['[[addresses.countryCode]]' => null]],
+				[
+					'not', [
+						'[[addresses.countryCode]]' => null,
+					]],
 			])
 			->groupBy('[[addresses.countryCode]], [[addresses.administrativeArea]]')
-			->orderBy(['count' => SORT_DESC])
+			->orderBy([
+				'count' => SORT_DESC,
+			])
 			->limit($limit)
 			->all();
 
-		return array_map(fn ($row) => [
+		return array_map(fn (array $row): array => [
 			'country' => $row['country'],
 			'state' => $row['state'],
 			'count' => (int) $row['count'],
@@ -268,7 +305,10 @@ class CustomerStats extends Component
 				['=', '[[isCompleted]]', true],
 				['>=', '[[dateOrdered]]', $fromDT],
 				['<=', '[[dateOrdered]]', $toDT],
-				['not', ['customerId' => null]],
+				[
+					'not', [
+						'customerId' => null,
+					]],
 			])
 			->groupBy('[[customerId]]')
 			->column();
@@ -282,17 +322,17 @@ class CustomerStats extends Component
 			'$1000+' => 0,
 		];
 
-		foreach ($customers as $spent) {
-			$spent = (float) $spent;
-			if ($spent < 50) {
+		foreach ($customers as $customer) {
+			$customer = (float) $customer;
+			if ($customer < 50) {
 				$buckets['$0-50']++;
-			} elseif ($spent < 100) {
+			} elseif ($customer < 100) {
 				$buckets['$50-100']++;
-			} elseif ($spent < 250) {
+			} elseif ($customer < 250) {
 				$buckets['$100-250']++;
-			} elseif ($spent < 500) {
+			} elseif ($customer < 500) {
 				$buckets['$250-500']++;
-			} elseif ($spent < 1000) {
+			} elseif ($customer < 1000) {
 				$buckets['$500-1000']++;
 			} else {
 				$buckets['$1000+']++;
@@ -300,7 +340,7 @@ class CustomerStats extends Component
 		}
 
 		return [
-			'labels' => array_keys($buckets),
+			'labels' => array_map('strval', array_keys($buckets)),
 			'counts' => array_values($buckets),
 		];
 	}

@@ -23,10 +23,10 @@ class Query
 			return;
 		}
 
-		/** @var (ElementQuery<TKey, TElement> & SaleQueryBehavior<TKey, TElement>) $query */
+		/** @var SaleQueryBehavior<TKey, TElement> $behavior */
+		$behavior = $query->getBehavior('bestSellers');
 
-		// Behavior types aren't inferred
-		if (! $query->getIncludeBestSellersData()) {
+		if (! $behavior->getIncludeBestSellersData()) {
 			return;
 		}
 
@@ -39,12 +39,12 @@ class Query
 			->from(VariantSale::tableName())
 			->groupBy($id);
 
-		if ($query->bestSellersFrom !== null) {
-			$withQuery->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersFrom)]);
+		if ($behavior->bestSellersFrom !== null) {
+			$withQuery->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($behavior->bestSellersFrom)]);
 		}
 
-		if ($query->bestSellersTo !== null) {
-			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersTo)]);
+		if ($behavior->bestSellersTo !== null) {
+			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($behavior->bestSellersTo)]);
 		}
 
 		// Attach CTE only to subQuery (handles filtering/sorting).

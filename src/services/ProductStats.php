@@ -26,21 +26,34 @@ class ProductStats extends Component
 				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
 				'productType' => '[[productTypes.name]]',
 			])
-			->from(['variantSales' => VariantSale::tableName()])
-			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
+			->innerJoin([
+				'products' => '{{%commerce_products}}',
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => '{{%commerce_producttypes}}',
+			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->groupBy('[[variantSales.productId]], [[variantSales.productTitle]], [[productTypes.name]]');
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
-			$query->andWhere(['[[productTypes.handle]]' => $productTypeHandle]);
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandle,
+			]);
 		}
 
 		$orderColumn = $sortBy === 'units' ? 'unitsSold' : 'revenue';
-		$query->orderBy([$orderColumn => SORT_DESC])->limit($limit);
+		$query->orderBy([
+			$orderColumn => SORT_DESC,
+		])->limit($limit);
 
-		return $query->all();
+		/** @var array<int, array<string, mixed>> $rows */
+		$rows = $query->all();
+
+		return $rows;
 	}
 
 	/**
@@ -63,21 +76,34 @@ class ProductStats extends Component
 				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
 				'productType' => '[[productTypes.name]]',
 			])
-			->from(['variantSales' => VariantSale::tableName()])
-			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
+			->innerJoin([
+				'products' => '{{%commerce_products}}',
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => '{{%commerce_producttypes}}',
+			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->groupBy('[[variantSales.productId]], [[variantSales.variantId]], [[variantSales.variantTitle]], [[variantSales.variantSku]], [[variantSales.productTitle]], [[productTypes.name]]');
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
-			$query->andWhere(['[[productTypes.handle]]' => $productTypeHandle]);
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandle,
+			]);
 		}
 
 		$orderColumn = $sortBy === 'units' ? 'unitsSold' : 'revenue';
-		$query->orderBy([$orderColumn => SORT_DESC])->limit($limit);
+		$query->orderBy([
+			$orderColumn => SORT_DESC,
+		])->limit($limit);
 
-		return $query->all();
+		/** @var array<int, array<string, mixed>> $rows */
+		$rows = $query->all();
+
+		return $rows;
 	}
 
 	/**
@@ -108,26 +134,35 @@ class ProductStats extends Component
 
 		$topItems = (new Query())
 			->select($selectFields)
-			->from(['variantSales' => VariantSale::tableName()])
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->groupBy($groupFields)
-			->orderBy(['SUM([[variantSales.lineItemTotal]])' => SORT_DESC])
+			->orderBy([
+				'SUM([[variantSales.lineItemTotal]])' => SORT_DESC,
+			])
 			->limit($limit)
 			->all();
 
 		if (empty($topItems)) {
-			return ['labels' => [], 'datasets' => []];
+			return [
+				'labels' => [],
+				'datasets' => [],
+			];
 		}
 
 		$itemIds = array_column($topItems, 'itemId');
 		$titleMap = [];
-		foreach ($topItems as $item) {
-			$title = $item['title'];
-			if ($variants && ! empty($item['productTitle'])) {
-				$title = $item['productTitle'] . ': ' . $title;
+		/** @var array{itemId: string, title: string, productTitle?: string} $topItem */
+		foreach ($topItems as $topItem) {
+			$title = $topItem['title'];
+			if ($variants && ! empty($topItem['productTitle'])) {
+				$title = $topItem['productTitle'] . ': ' . $title;
 			}
-			$titleMap[$item['itemId']] = $title;
+
+			$titleMap[$topItem['itemId']] = $title;
 		}
 
 		// Get daily revenue for these items
@@ -137,37 +172,47 @@ class ProductStats extends Component
 				'itemId' => "[[variantSales.{$idCol}]]",
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 			])
-			->from(['variantSales' => VariantSale::tableName()])
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->andWhere(['in', "[[variantSales.{$idCol}]]", $itemIds])
 			->groupBy([$dayExpr, "[[variantSales.{$idCol}]]"])
-			->orderBy(['day' => SORT_ASC])
+			->orderBy([
+				'day' => SORT_ASC,
+			])
 			->all();
 
 		// Collect all unique days
 		$allDays = [];
 		$byItem = [];
+		/** @var array{day: string, itemId: string, revenue: string} $row */
 		foreach ($rows as $row) {
 			$allDays[$row['day']] = true;
 			$byItem[$row['itemId']][$row['day']] = (float) $row['revenue'];
 		}
+
 		ksort($allDays);
 		$labels = array_keys($allDays);
 
 		$datasets = [];
-		foreach ($itemIds as $id) {
+		foreach ($itemIds as $itemId) {
 			$data = [];
-			foreach ($labels as $day) {
-				$data[] = $byItem[$id][$day] ?? 0;
+			foreach ($labels as $label) {
+				$data[] = $byItem[$itemId][$label] ?? 0;
 			}
+
 			$datasets[] = [
-				'label' => $titleMap[$id] ?? "#{$id}",
+				'label' => $titleMap[$itemId] ?? "#{$itemId}",
 				'data' => $data,
 			];
 		}
 
-		return ['labels' => $labels, 'datasets' => $datasets];
+		return [
+			'labels' => $labels,
+			'datasets' => $datasets,
+		];
 	}
 
 	/**
@@ -185,22 +230,36 @@ class ProductStats extends Component
 				'title' => "[[variantSales.{$titleCol}]]",
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 			])
-			->from(['variantSales' => VariantSale::tableName()])
-			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
+			->innerJoin([
+				'products' => '{{%commerce_products}}',
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => '{{%commerce_producttypes}}',
+			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
-			->orderBy(['revenue' => SORT_DESC]);
+			->orderBy([
+				'revenue' => SORT_DESC,
+			]);
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
-			$query->andWhere(['[[productTypes.handle]]' => $productTypeHandle]);
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandle,
+			]);
 		}
 
 		$rows = $query->all();
 
 		if (empty($rows)) {
-			return ['labels' => [], 'values' => [], 'cumulative' => []];
+			return [
+				'labels' => [],
+				'values' => [],
+				'cumulative' => [],
+			];
 		}
 
 		$totalRevenue = array_sum(array_column($rows, 'revenue'));
@@ -209,6 +268,7 @@ class ProductStats extends Component
 		$cumulative = [];
 		$runningTotal = 0;
 
+		/** @var array{title: string, revenue: string} $row */
 		foreach ($rows as $row) {
 			$labels[] = $row['title'];
 			$rev = (float) $row['revenue'];
@@ -217,7 +277,11 @@ class ProductStats extends Component
 			$cumulative[] = $totalRevenue > 0 ? round(($runningTotal / $totalRevenue) * 100, 1) : 0;
 		}
 
-		return ['labels' => $labels, 'values' => $values, 'cumulative' => $cumulative];
+		return [
+			'labels' => $labels,
+			'values' => $values,
+			'cumulative' => $cumulative,
+		];
 	}
 
 	/**
@@ -236,23 +300,36 @@ class ProductStats extends Component
 				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
-			->from(['variantSales' => VariantSale::tableName()])
-			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
+			->innerJoin([
+				'products' => '{{%commerce_products}}',
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => '{{%commerce_producttypes}}',
+			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
-			->orderBy(['unitsSold' => SORT_DESC]);
+			->orderBy([
+				'unitsSold' => SORT_DESC,
+			]);
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
-			$query->andWhere(['[[productTypes.handle]]' => $productTypeHandle]);
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandle,
+			]);
 		}
 
-		return array_map(fn ($row) => [
+		/** @var array<int, array{title: string, avgPrice: string, unitsSold: string}> $queryRows */
+		$queryRows = $query->all();
+
+		return array_map(fn (array $row): array => [
 			'label' => $row['title'],
 			'price' => round((float) $row['avgPrice'], 2),
 			'units' => (int) $row['unitsSold'],
-		], $query->all());
+		], $queryRows);
 	}
 
 	/**
@@ -264,28 +341,37 @@ class ProductStats extends Component
 	{
 		$uniqueProducts = (int) (new Query())
 			->select('COUNT(DISTINCT [[variantSales.productId]])')
-			->from(['variantSales' => VariantSale::tableName()])
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->scalar();
 
+		/** @var array{title: string, unitsSold: string, revenue: string}|false $topProduct */
 		$topProduct = (new Query())
 			->select([
 				'title' => '[[variantSales.productTitle]]',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 				'revenue' => new \yii\db\Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'),
 			])
-			->from(['variantSales' => VariantSale::tableName()])
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->groupBy('[[variantSales.productId]], [[variantSales.productTitle]]')
-			->orderBy(['unitsSold' => SORT_DESC])
+			->orderBy([
+				'unitsSold' => SORT_DESC,
+			])
 			->limit(1)
 			->one();
 
 		$totalProductRevenue = (float) (new Query())
 			->select(new \yii\db\Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'))
-			->from(['variantSales' => VariantSale::tableName()])
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->scalar();
@@ -305,19 +391,30 @@ class ProductStats extends Component
 	 */
 	public function getRevenueByType(string $fromDT, string $toDT): array
 	{
-		return (new Query())
+		/** @var array<int, array{productType: string, revenue: float, unitsSold: int}> $rows */
+		$rows = (new Query())
 			->select([
 				'productType' => '[[productTypes.name]]',
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
-			->from(['variantSales' => VariantSale::tableName()])
-			->innerJoin(['products' => '{{%commerce_products}}'], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin(['productTypes' => '{{%commerce_producttypes}}'], '[[products.typeId]] = [[productTypes.id]]')
+			->from([
+				'variantSales' => VariantSale::tableName(),
+			])
+			->innerJoin([
+				'products' => '{{%commerce_products}}',
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => '{{%commerce_producttypes}}',
+			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->groupBy('[[productTypes.name]]')
-			->orderBy(['revenue' => SORT_DESC])
+			->orderBy([
+				'revenue' => SORT_DESC,
+			])
 			->all();
+
+		return $rows;
 	}
 }

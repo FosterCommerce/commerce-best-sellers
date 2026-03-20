@@ -30,7 +30,9 @@ class OverviewController extends BaseReportController
 		$view->registerAssetBundle(ReportsAsset::class);
 
 		$dateRange = $this->resolveDateRange();
-		$dailyStats = Plugin::getInstance()->dailyStats;
+		$plugin = Plugin::getInstance();
+		assert($plugin instanceof Plugin);
+		$dailyStats = $plugin->dailyStats;
 
 		$stats = $dailyStats->getStatsForRange($dateRange['from'], $dateRange['to']);
 		$prevStats = $dailyStats->getStatsForRange($dateRange['prev']['from'], $dateRange['prev']['to']);
@@ -40,7 +42,7 @@ class OverviewController extends BaseReportController
 		$cardGroups = [];
 		foreach (self::CARD_GROUPS as $groupLabel => $group) {
 			$keys = $group['keys'];
-			$cards = KpiCards::build($stats, $prevStats, $keys, [$this, 'percentChange']);
+			$cards = KpiCards::build($stats, $prevStats, $keys, $this->percentChange(...));
 			$cardGroups[] = [
 				'label' => $groupLabel,
 				'cards' => $cards,
@@ -57,7 +59,7 @@ class OverviewController extends BaseReportController
 		}
 
 		// Products group
-		$productStats = Plugin::getInstance()->productStats;
+		$productStats = $plugin->productStats;
 		$productSummary = $productStats->getSummaryStats($dateRange['fromDT'], $dateRange['toDT']);
 		$prevProductSummary = $productStats->getSummaryStats($dateRange['prev']['fromDT'], $dateRange['prev']['toDT']);
 		$bestSellers = $productStats->getTopProducts($dateRange['fromDT'], $dateRange['toDT'], 'units', 10);
@@ -65,7 +67,7 @@ class OverviewController extends BaseReportController
 		// Batch-load product elements for CP URLs
 		$bestSellerProductIds = array_unique(array_column($bestSellers, 'productId'));
 		$bestSellerElements = [];
-		if (! empty($bestSellerProductIds)) {
+		if ($bestSellerProductIds !== []) {
 			$productElements = Product::find()->id($bestSellerProductIds)->status(null)->all();
 			foreach ($productElements as $productElement) {
 				$bestSellerElements[$productElement->id] = $productElement;
@@ -93,22 +95,34 @@ class OverviewController extends BaseReportController
 		];
 
 		// Customer charts
-		$customerStats = Plugin::getInstance()->customerStats;
+		$customerStats = $plugin->customerStats;
 		$newVsReturning = $customerStats->getNewVsReturningByDay($dateRange['fromDT'], $dateRange['toDT']);
 		$ltvDistribution = $customerStats->getLtvDistribution($dateRange['fromDT'], $dateRange['toDT']);
 
 		// Daily chart data
 		$dailyRows = $dailyStats->getDailyRows($dateRange['from'], $dateRange['to']);
 		$dailyLabels = array_column($dailyRows, 'date');
-		$dailyOrders = array_map('intval', array_column($dailyRows, 'totalOrders'));
-		$dailyRevenue = array_map('floatval', array_column($dailyRows, 'totalRevenue'));
-		$dailyAov = array_map('floatval', array_column($dailyRows, 'averageOrderValue'));
+		/** @var list<string> $rawOrders */
+		$rawOrders = array_column($dailyRows, 'totalOrders');
+		$dailyOrders = array_map(intval(...), $rawOrders);
+		/** @var list<string> $rawRevenue */
+		$rawRevenue = array_column($dailyRows, 'totalRevenue');
+		$dailyRevenue = array_map(floatval(...), $rawRevenue);
+		/** @var list<string> $rawAov */
+		$rawAov = array_column($dailyRows, 'averageOrderValue');
+		$dailyAov = array_map(floatval(...), $rawAov);
 
 		// Previous period
 		$prevDailyRows = $dailyStats->getDailyRows($dateRange['prev']['from'], $dateRange['prev']['to']);
-		$prevDailyOrders = array_map('intval', array_column($prevDailyRows, 'totalOrders'));
-		$prevDailyRevenue = array_map('floatval', array_column($prevDailyRows, 'totalRevenue'));
-		$prevDailyAov = array_map('floatval', array_column($prevDailyRows, 'averageOrderValue'));
+		/** @var list<string> $prevRawOrders */
+		$prevRawOrders = array_column($prevDailyRows, 'totalOrders');
+		$prevDailyOrders = array_map(intval(...), $prevRawOrders);
+		/** @var list<string> $prevRawRevenue */
+		$prevRawRevenue = array_column($prevDailyRows, 'totalRevenue');
+		$prevDailyRevenue = array_map(floatval(...), $prevRawRevenue);
+		/** @var list<string> $prevRawAov */
+		$prevRawAov = array_column($prevDailyRows, 'averageOrderValue');
+		$prevDailyAov = array_map(floatval(...), $prevRawAov);
 
 		return $this->renderTemplate('best-sellers/_overview', [
 			'title' => 'Overview',

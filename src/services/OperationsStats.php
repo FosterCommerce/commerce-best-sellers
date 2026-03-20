@@ -2,7 +2,6 @@
 
 namespace fostercommerce\bestsellers\services;
 
-use Craft;
 use craft\db\Query;
 use fostercommerce\bestsellers\records\DailyStat;
 use yii\base\Component;
@@ -23,11 +22,12 @@ class OperationsStats extends Component
 			['<=', '[[dateOrdered]]', $toDT],
 		];
 
+		/** @var array{totalOrders: string, avgDiscount: string, withCoupon: string}|false $orderStats */
 		$orderStats = (new Query())
 			->select([
 				'totalOrders' => 'COUNT(*)',
 				'avgDiscount' => 'COALESCE(AVG(ABS([[totalDiscount]])), 0)',
-				'withCoupon' => 'SUM(CASE WHEN [[couponCode]] IS NOT NULL AND [[couponCode]] != \'\' THEN 1 ELSE 0 END)',
+				'withCoupon' => "SUM(CASE WHEN [[couponCode]] IS NOT NULL AND [[couponCode]] != '' THEN 1 ELSE 0 END)",
 			])
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
@@ -41,8 +41,12 @@ class OperationsStats extends Component
 		// Total items sold
 		$totalItemsSold = (int) (new Query())
 			->select('COALESCE(SUM([[lineItems.qty]]), 0)')
-			->from(['lineItems' => '{{%commerce_lineitems}}'])
-			->innerJoin(['orders' => '{{%commerce_orders}}'], '[[lineItems.orderId]] = [[orders.id]]')
+			->from([
+				'lineItems' => '{{%commerce_lineitems}}',
+			])
+			->innerJoin([
+				'orders' => '{{%commerce_orders}}',
+			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', true],
@@ -54,15 +58,18 @@ class OperationsStats extends Component
 		$avgItemsPerOrder = $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0;
 
 		// Top shipping method
+		/** @var array{method: string, cnt: string}|false $topShipping */
 		$topShipping = (new Query())
 			->select([
-				'method' => 'COALESCE([[shippingMethodName]], \'None\')',
+				'method' => "COALESCE([[shippingMethodName]], 'None')",
 				'cnt' => 'COUNT(*)',
 			])
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
 			->groupBy('[[shippingMethodName]]')
-			->orderBy(['cnt' => SORT_DESC])
+			->orderBy([
+				'cnt' => SORT_DESC,
+			])
 			->limit(1)
 			->one();
 
@@ -94,8 +101,12 @@ class OperationsStats extends Component
 			->select([
 				'itemCount' => 'SUM([[lineItems.qty]])',
 			])
-			->from(['lineItems' => '{{%commerce_lineitems}}'])
-			->innerJoin(['orders' => '{{%commerce_orders}}'], '[[lineItems.orderId]] = [[orders.id]]')
+			->from([
+				'lineItems' => '{{%commerce_lineitems}}',
+			])
+			->innerJoin([
+				'orders' => '{{%commerce_orders}}',
+			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where($dateCondition)
 			->groupBy('[[orders.id]]')
 			->column();
@@ -109,17 +120,17 @@ class OperationsStats extends Component
 			'11+' => 0,
 		];
 
-		foreach ($orders as $count) {
-			$count = (int) $count;
-			if ($count <= 1) {
+		foreach ($orders as $order) {
+			$order = (int) $order;
+			if ($order <= 1) {
 				$buckets['1']++;
-			} elseif ($count === 2) {
+			} elseif ($order === 2) {
 				$buckets['2']++;
-			} elseif ($count === 3) {
+			} elseif ($order === 3) {
 				$buckets['3']++;
-			} elseif ($count <= 5) {
+			} elseif ($order <= 5) {
 				$buckets['4-5']++;
-			} elseif ($count <= 10) {
+			} elseif ($order <= 10) {
 				$buckets['6-10']++;
 			} else {
 				$buckets['11+']++;
@@ -127,7 +138,7 @@ class OperationsStats extends Component
 		}
 
 		return [
-			'labels' => array_keys($buckets),
+			'labels' => array_map('strval', array_keys($buckets)),
 			'counts' => array_values($buckets),
 		];
 	}
@@ -146,17 +157,22 @@ class OperationsStats extends Component
 			['<=', '[[dateOrdered]]', $toDT],
 		];
 
-		return (new Query())
+		/** @var array<int, array{method: string, count: int, revenue: float}> $rows */
+		$rows = (new Query())
 			->select([
-				'method' => 'COALESCE([[shippingMethodName]], \'None\')',
+				'method' => "COALESCE([[shippingMethodName]], 'None')",
 				'count' => 'COUNT(*)',
 				'revenue' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
 			])
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
 			->groupBy('[[shippingMethodName]]')
-			->orderBy(['count' => SORT_DESC])
+			->orderBy([
+				'count' => SORT_DESC,
+			])
 			->all();
+
+		return $rows;
 	}
 
 	/**
@@ -171,11 +187,15 @@ class OperationsStats extends Component
 			['=', '[[isCompleted]]', true],
 			['>=', '[[dateOrdered]]', $fromDT],
 			['<=', '[[dateOrdered]]', $toDT],
-			['not', ['couponCode' => null]],
+			[
+				'not', [
+					'couponCode' => null,
+				]],
 			['!=', 'couponCode', ''],
 		];
 
-		return (new Query())
+		/** @var array<int, array{code: string, uses: int, totalDiscount: float}> $rows */
+		$rows = (new Query())
 			->select([
 				'code' => '[[couponCode]]',
 				'uses' => 'COUNT(*)',
@@ -184,8 +204,12 @@ class OperationsStats extends Component
 			->from('{{%commerce_orders}}')
 			->where($dateCondition)
 			->groupBy('[[couponCode]]')
-			->orderBy(['uses' => SORT_DESC])
+			->orderBy([
+				'uses' => SORT_DESC,
+			])
 			->all();
+
+		return $rows;
 	}
 
 	/**
@@ -203,7 +227,9 @@ class OperationsStats extends Component
 			->from(DailyStat::tableName())
 			->where(['>=', 'date', substr($fromDT, 0, 10)])
 			->andWhere(['<=', 'date', substr($toDT, 0, 10)])
-			->orderBy(['date' => SORT_ASC])
+			->orderBy([
+				'date' => SORT_ASC,
+			])
 			->all();
 
 		return [

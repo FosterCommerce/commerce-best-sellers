@@ -41,10 +41,10 @@ class BackfillController extends Controller
 				'offset' => $offset,
 				'limit' => $batchSize,
 			]));
-			echo "Queued orders offset {$offset} to " . ($offset + $batchSize - 1) . "\n";
+			$this->stdout("Queued orders offset {$offset} to " . ($offset + $batchSize - 1) . "\n");
 		}
 
-		echo "Queued {$totalOrders} orders for backfill.\n";
+		$this->stdout("Queued {$totalOrders} orders for backfill.\n");
 		return ExitCode::OK;
 	}
 

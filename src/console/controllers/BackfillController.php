@@ -5,6 +5,7 @@ namespace fostercommerce\bestsellers\console\controllers;
 use Craft;
 use craft\commerce\elements\Order;
 use craft\db\Query;
+use DateTime;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
@@ -75,8 +76,8 @@ class BackfillController extends Controller
 			return ExitCode::OK;
 		}
 
-		$startDate = (new \DateTime((string) $row['minDate']))->format('Y-m-d');
-		$endDate = (new \DateTime((string) $row['maxDate']))->format('Y-m-d');
+		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
+		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
 
 		$this->stdout("Rebuilding daily stats from {$startDate} to {$endDate}...\n");
 

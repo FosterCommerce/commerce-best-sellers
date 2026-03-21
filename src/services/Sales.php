@@ -8,6 +8,7 @@ use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
 use craft\commerce\models\LineItem;
 use craft\helpers\Db;
+use DateTime;
 use fostercommerce\bestsellers\helpers\LineItemHelper;
 use fostercommerce\bestsellers\records\VariantSale;
 use yii\base\Component;
@@ -53,7 +54,7 @@ class Sales extends Component
 					'discount' => abs((float) $lineItem->promotionalAmount),
 					'orderId' => $order->id,
 					'dateOrdered' => Db::prepareDateForDb($order->dateOrdered),
-					'dateCreated' => Db::prepareDateForDb(new \DateTime()),
+					'dateCreated' => Db::prepareDateForDb(new DateTime()),
 				];
 			})
 			->filter()

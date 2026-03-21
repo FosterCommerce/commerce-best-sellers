@@ -4,16 +4,18 @@ namespace fostercommerce\bestsellers\services;
 
 use Craft;
 use craft\db\Query;
+use fostercommerce\bestsellers\models\CustomerKpis;
+use fostercommerce\bestsellers\models\CustomerRow;
+use fostercommerce\bestsellers\models\LtvComparison;
+use fostercommerce\bestsellers\models\LtvSegment;
 use yii\base\Component;
 
 class CustomerStats extends Component
 {
 	/**
 	 * Get customer KPIs for a date range.
-	 *
-	 * @return array{total: int, new: int, returning: int, repeatRate: float}
 	 */
-	public function getCustomerKpis(string $fromDT, string $toDT): array
+	public function getCustomerKpis(string $fromDT, string $toDT): CustomerKpis
 	{
 		$dateCondition = [
 			'and',
@@ -74,12 +76,12 @@ class CustomerStats extends Component
 
 		$repeatRate = $total > 0 ? round(($returning / $total) * 100, 1) : 0;
 
-		return [
+		return new CustomerKpis([
 			'total' => $total,
 			'new' => $new,
 			'returning' => $returning,
 			'repeatRate' => $repeatRate,
-		];
+		]);
 	}
 
 	/**
@@ -205,7 +207,7 @@ class CustomerStats extends Component
 	/**
 	 * Get top customers by total spent, with AOV and guest detection.
 	 *
-	 * @return array<int, array<string, mixed>>
+	 * @return list<CustomerRow>
 	 */
 	public function getTopCustomers(string $fromDT, string $toDT, int $limit = 100): array
 	{
@@ -240,7 +242,7 @@ class CustomerStats extends Component
 			->limit($limit)
 			->all();
 
-		return array_map(function ($row): array {
+		return array_map(function ($row): CustomerRow {
 			/** @var array{email: string, customerId: ?string, userActive: ?string, orderCount: string, totalSpent: string, lastOrder: ?string} $row */
 			$orderCount = (int) $row['orderCount'];
 			$totalSpent = (float) $row['totalSpent'];
@@ -248,7 +250,7 @@ class CustomerStats extends Component
 			$isActive = (bool) ($row['userActive'] ?? false);
 			$isGuest = $customerId === null || ! $isActive;
 
-			return [
+			return new CustomerRow([
 				'email' => $row['email'],
 				'customerId' => $customerId,
 				'isGuest' => $isGuest,
@@ -257,7 +259,7 @@ class CustomerStats extends Component
 				'totalSpent' => $totalSpent,
 				'aov' => $orderCount > 0 ? round($totalSpent / $orderCount, 2) : 0,
 				'lastOrder' => $row['lastOrder'],
-			];
+			]);
 		}, $rows);
 	}
 
@@ -307,10 +309,8 @@ class CustomerStats extends Component
 
 	/**
 	 * Get LTV comparison between credentialed and guest customers.
-	 *
-	 * @return array{credentialed: array{count: int, totalRevenue: float, avgLtv: float, avgOrders: float}, guest: array{count: int, totalRevenue: float, avgLtv: float, avgOrders: float}}
 	 */
-	public function getLtvComparison(string $fromDT, string $toDT): array
+	public function getLtvComparison(string $fromDT, string $toDT): LtvComparison
 	{
 		$dateCondition = [
 			'and',
@@ -385,19 +385,19 @@ class CustomerStats extends Component
 		$guestRevenue = array_sum(array_column($guestRows, 'totalSpent'));
 		$guestOrders = array_sum(array_column($guestRows, 'orderCount'));
 
-		return [
-			'credentialed' => [
+		return new LtvComparison([
+			'credentialed' => new LtvSegment([
 				'count' => $credentialedCount,
 				'totalRevenue' => (float) $credentialedRevenue,
 				'avgLtv' => $credentialedCount > 0 ? round($credentialedRevenue / $credentialedCount, 2) : 0,
 				'avgOrders' => $credentialedCount > 0 ? round($credentialedOrders / $credentialedCount, 2) : 0,
-			],
-			'guest' => [
+			]),
+			'guest' => new LtvSegment([
 				'count' => $guestCount,
 				'totalRevenue' => (float) $guestRevenue,
 				'avgLtv' => $guestCount > 0 ? round($guestRevenue / $guestCount, 2) : 0,
 				'avgOrders' => $guestCount > 0 ? round($guestOrders / $guestCount, 2) : 0,
-			],
-		];
+			]),
+		]);
 	}
 }

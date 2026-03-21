@@ -4,15 +4,18 @@ namespace fostercommerce\bestsellers\services;
 
 use Craft;
 use craft\db\Query;
+use fostercommerce\bestsellers\models\ProductRow;
+use fostercommerce\bestsellers\models\ProductSummary;
 use fostercommerce\bestsellers\records\VariantSale;
 use yii\base\Component;
+use yii\db\Expression;
 
 class ProductStats extends Component
 {
 	/**
 	 * Get top products by revenue or units.
 	 *
-	 * @return array<int, array<string, mixed>>
+	 * @return list<ProductRow>
 	 */
 	public function getTopProducts(string $fromDT, string $toDT, string $sortBy = 'revenue', int $limit = 50, ?string $productTypeHandle = null): array
 	{
@@ -50,16 +53,24 @@ class ProductStats extends Component
 			$orderColumn => SORT_DESC,
 		])->limit($limit);
 
-		/** @var array<int, array<string, mixed>> $rows */
+		/** @var list<array{productId: int|string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string}> $rows */
 		$rows = $query->all();
 
-		return $rows;
+		return array_map(fn (array $row): ProductRow => new ProductRow([
+			'productId' => (int) $row['productId'],
+			'productTitle' => $row['productTitle'],
+			'unitsSold' => (int) $row['unitsSold'],
+			'orderCount' => (int) $row['orderCount'],
+			'revenue' => (float) $row['revenue'],
+			'avgPrice' => (float) $row['avgPrice'],
+			'productType' => $row['productType'],
+		]), $rows);
 	}
 
 	/**
 	 * Get top variants by revenue or units.
 	 *
-	 * @return array<int, array<string, mixed>>
+	 * @return list<ProductRow>
 	 */
 	public function getTopVariants(string $fromDT, string $toDT, string $sortBy = 'revenue', int $limit = 50, ?string $productTypeHandle = null): array
 	{
@@ -100,10 +111,21 @@ class ProductStats extends Component
 			$orderColumn => SORT_DESC,
 		])->limit($limit);
 
-		/** @var array<int, array<string, mixed>> $rows */
+		/** @var list<array{productId: int|string, variantId: int|string, variantTitle: string, variantSku: string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string}> $rows */
 		$rows = $query->all();
 
-		return $rows;
+		return array_map(fn (array $row): ProductRow => new ProductRow([
+			'productId' => (int) $row['productId'],
+			'productTitle' => $row['productTitle'],
+			'unitsSold' => (int) $row['unitsSold'],
+			'orderCount' => (int) $row['orderCount'],
+			'revenue' => (float) $row['revenue'],
+			'avgPrice' => (float) $row['avgPrice'],
+			'productType' => $row['productType'],
+			'variantId' => (int) $row['variantId'],
+			'variantTitle' => $row['variantTitle'],
+			'variantSku' => $row['variantSku'],
+		]), $rows);
 	}
 
 	/**
@@ -334,10 +356,8 @@ class ProductStats extends Component
 
 	/**
 	 * Get product summary stats for KPI cards.
-	 *
-	 * @return array{uniqueProducts: int, bestSeller: string, bestSellerUnits: int, totalProductRevenue: float}
 	 */
-	public function getSummaryStats(string $fromDT, string $toDT): array
+	public function getSummaryStats(string $fromDT, string $toDT): ProductSummary
 	{
 		$uniqueProducts = (int) (new Query())
 			->select('COUNT(DISTINCT [[variantSales.productId]])')
@@ -353,7 +373,7 @@ class ProductStats extends Component
 			->select([
 				'title' => '[[variantSales.productTitle]]',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
-				'revenue' => new \yii\db\Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'),
+				'revenue' => new Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'),
 			])
 			->from([
 				'variantSales' => VariantSale::tableName(),
@@ -368,7 +388,7 @@ class ProductStats extends Component
 			->one();
 
 		$totalProductRevenue = (float) (new Query())
-			->select(new \yii\db\Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'))
+			->select(new Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'))
 			->from([
 				'variantSales' => VariantSale::tableName(),
 			])
@@ -376,12 +396,12 @@ class ProductStats extends Component
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
 			->scalar();
 
-		return [
+		return new ProductSummary([
 			'uniqueProducts' => $uniqueProducts,
 			'bestSeller' => $topProduct ? $topProduct['title'] : '-',
 			'bestSellerUnits' => $topProduct ? (int) $topProduct['unitsSold'] : 0,
 			'totalProductRevenue' => $totalProductRevenue,
-		];
+		]);
 	}
 
 	/**

@@ -3,6 +3,8 @@
 namespace fostercommerce\bestsellers\services;
 
 use craft\db\Query;
+use DateTime;
+use fostercommerce\bestsellers\models\PeriodStats;
 use fostercommerce\bestsellers\records\DailyStat;
 use yii\base\Component;
 
@@ -139,8 +141,8 @@ class DailyStats extends Component
 	 */
 	public function rebuildRange(string $startDate, string $endDate): int
 	{
-		$current = new \DateTime($startDate);
-		$end = new \DateTime($endDate);
+		$current = new DateTime($startDate);
+		$end = new DateTime($endDate);
 		$count = 0;
 
 		while ($current <= $end) {
@@ -154,10 +156,8 @@ class DailyStats extends Component
 
 	/**
 	 * Get aggregated stats for a date range from the daily_stats table.
-	 *
-	 * @return array<string, mixed>
 	 */
-	public function getStatsForRange(string $fromDate, string $toDate): array
+	public function getStatsForRange(string $fromDate, string $toDate): PeriodStats
 	{
 		/** @var array{totalOrders: string, totalRevenue: string, totalDiscount: string, totalShipping: string, totalTax: string, totalItemsSold: string, uniqueCustomers: string, newCustomers: string, returningCustomers: string}|false $row */
 		$row = (new Query())
@@ -181,7 +181,7 @@ class DailyStats extends Component
 		$totalRevenue = (float) ($row['totalRevenue'] ?? 0);
 		$totalItemsSold = (int) ($row['totalItemsSold'] ?? 0);
 
-		return [
+		return new PeriodStats([
 			'totalOrders' => $totalOrders,
 			'totalRevenue' => $totalRevenue,
 			'totalDiscount' => (float) ($row['totalDiscount'] ?? 0),
@@ -193,7 +193,7 @@ class DailyStats extends Component
 			'returningCustomers' => (int) ($row['returningCustomers'] ?? 0),
 			'averageOrderValue' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
 			'averageItemsPerOrder' => $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0,
-		];
+		]);
 	}
 
 	/**

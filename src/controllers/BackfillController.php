@@ -7,6 +7,7 @@ use craft\commerce\elements\Order;
 use craft\db\Query;
 use craft\web\Controller;
 use craft\web\Request;
+use DateTime;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
@@ -60,7 +61,7 @@ class BackfillController extends Controller
 			$query->andWhere(['between', 'dateOrdered', $startDate, $endDate]);
 		} else {
 			// Otherwise, default to orders ordered before now.
-			$query->andWhere(['<', 'dateOrdered', (new \DateTime())->format('Y-m-d H:i:s')]);
+			$query->andWhere(['<', 'dateOrdered', (new DateTime())->format('Y-m-d H:i:s')]);
 		}
 
 		$totalOrders = $query->count();
@@ -105,8 +106,8 @@ class BackfillController extends Controller
 			return $this->redirectToPostedUrl();
 		}
 
-		$startDate = (new \DateTime((string) $row['minDate']))->format('Y-m-d');
-		$endDate = (new \DateTime((string) $row['maxDate']))->format('Y-m-d');
+		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
+		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
 
 		$count = $dailyStats->rebuildRange($startDate, $endDate);
 

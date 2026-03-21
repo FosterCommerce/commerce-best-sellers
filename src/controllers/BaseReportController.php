@@ -6,9 +6,11 @@ use Craft;
 use craft\commerce\Plugin as CommercePlugin;
 use craft\helpers\MoneyHelper;
 use craft\web\Controller;
+use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\Plugin;
 use Money\Currency;
 use Money\Money;
+use RuntimeException;
 use yii\web\Response;
 
 abstract class BaseReportController extends Controller
@@ -49,18 +51,21 @@ abstract class BaseReportController extends Controller
 
 	/**
 	 * Resolve the current and previous date range.
-	 *
-	 * @return array{from: string, to: string, preset: string, fromDT: string, toDT: string, prev: array{from: string, to: string, fromDT: string, toDT: string}}
 	 */
-	protected function resolveDateRange(): array
+	protected function resolveDateRange(): DateRangeResult
 	{
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
 		$dateRange = $plugin->dateRange;
 		$current = $dateRange->resolve();
-		$previous = $dateRange->previousPeriod($current['from'], $current['to']);
+		$previous = $dateRange->previousPeriod($current->from, $current->to);
 
-		return array_merge($current, [
+		return new DateRangeResult([
+			'from' => $current->from,
+			'to' => $current->to,
+			'fromDT' => $current->fromDT,
+			'toDT' => $current->toDT,
+			'preset' => $current->preset,
 			'prev' => $previous,
 		]);
 	}
@@ -125,7 +130,7 @@ abstract class BaseReportController extends Controller
 
 		$output = fopen('php://temp', 'r+');
 		if ($output === false) {
-			throw new \RuntimeException('Failed to open temp stream');
+			throw new RuntimeException('Failed to open temp stream');
 		}
 
 		fputcsv($output, $headers);
@@ -140,7 +145,7 @@ abstract class BaseReportController extends Controller
 		$csv = stream_get_contents($output);
 		fclose($output);
 
-		/** @var \craft\web\Response $response */
+		/** @var Response $response */
 		$response = Craft::$app->getResponse();
 		$response->format = Response::FORMAT_RAW;
 		$response->headers->set('Content-Type', 'text/csv; charset=UTF-8');

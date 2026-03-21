@@ -7,9 +7,12 @@ use craft\commerce\elements\Order;
 use craft\commerce\elements\Product;
 use craft\db\Query;
 use craft\helpers\UrlHelper;
+use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
+use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
+use yii\web\BadRequestHttpException;
 use yii\web\Response;
 
 class ProductsController extends BaseReportController
@@ -21,7 +24,7 @@ class ProductsController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
@@ -36,14 +39,14 @@ class ProductsController extends BaseReportController
 		assert($plugin !== null);
 		$productStats = $plugin->productStats;
 
-		$summaryStats = $productStats->getSummaryStats($dateRange['fromDT'], $dateRange['toDT']);
+		$summaryStats = $productStats->getSummaryStats($dateRange->fromDT, $dateRange->toDT);
 
 		return $this->renderTemplate('best-sellers/_products', [
 			'title' => Craft::t('best-sellers', 'Products'),
 			'selectedSubnavItem' => 'products',
-			'from' => $dateRange['from'],
-			'to' => $dateRange['to'],
-			'preset' => $dateRange['preset'],
+			'from' => $dateRange->from,
+			'to' => $dateRange->to,
+			'preset' => $dateRange->preset,
 			'productsOrVariants' => $productsOrVariants,
 			'sortBy' => $sortBy,
 			'productType' => $productType,
@@ -58,7 +61,7 @@ class ProductsController extends BaseReportController
 	{
 		$this->requireAcceptsJson();
 
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
@@ -87,22 +90,26 @@ class ProductsController extends BaseReportController
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
-			$allItems = $productStats->getTopVariants($dateRange['fromDT'], $dateRange['toDT'], $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopVariants($dateRange->fromDT, $dateRange->toDT, $sortBy, 10000, $productType);
 		} else {
-			$allItems = $productStats->getTopProducts($dateRange['fromDT'], $dateRange['toDT'], $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopProducts($dateRange->fromDT, $dateRange->toDT, $sortBy, 10000, $productType);
 		}
 
-		/** @var array<int, array{productId: int, variantId?: int, productTitle: string, variantTitle?: string, variantSku?: string, productType: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string}> $allItems */
+		/** @var list<ProductRow> $allItems */
 
 		$sortKeyMap = [
 			'sku' => $productsOrVariants === 'variants' ? 'variantSku' : 'productTitle',
 		];
 		$effectiveSort = $sortKeyMap[$sort] ?? $sort;
 
-		if ($effectiveSort !== '' && $allItems !== [] && isset($allItems[0][$effectiveSort])) {
-			usort($allItems, function (array $itemA, array $itemB) use ($effectiveSort, $sortDir): int {
-				$valueA = $itemA[$effectiveSort] ?? 0;
-				$valueB = $itemB[$effectiveSort] ?? 0;
+		if ($effectiveSort !== '' && $allItems !== [] && isset($allItems[0]->toArray()[$effectiveSort])) {
+			usort($allItems, function (ProductRow $itemA, ProductRow $itemB) use ($effectiveSort, $sortDir): int {
+				$arrA = $itemA->toArray();
+				$arrB = $itemB->toArray();
+				/** @var string|int|float|null $valueA */
+				$valueA = $arrA[$effectiveSort] ?? 0;
+				/** @var string|int|float|null $valueB */
+				$valueB = $arrB[$effectiveSort] ?? 0;
 				if (is_numeric($valueA) && is_numeric($valueB)) {
 					$comparison = (float) $valueA <=> (float) $valueB;
 				} else {
@@ -115,8 +122,8 @@ class ProductsController extends BaseReportController
 
 		if ($search !== '') {
 			$searchLower = strtolower($search);
-			$allItems = array_values(array_filter($allItems, function (array $item) use ($searchLower): bool {
-				$searchable = strtolower($item['productTitle'] . ' ' . ($item['variantTitle'] ?? '') . ' ' . ($item['variantSku'] ?? '') . ' ' . ($item['productType']));
+			$allItems = array_values(array_filter($allItems, function (ProductRow $item) use ($searchLower): bool {
+				$searchable = strtolower($item->productTitle . ' ' . ($item->variantTitle ?? '') . ' ' . ($item->variantSku ?? '') . ' ' . ($item->productType));
 				return str_contains($searchable, $searchLower);
 			}));
 		}
@@ -126,7 +133,7 @@ class ProductsController extends BaseReportController
 		$offset = ($page - 1) * self::PER_PAGE;
 		$pageItems = array_slice($allItems, $offset, self::PER_PAGE);
 
-		$productIds = array_unique(array_column($pageItems, 'productId'));
+		$productIds = array_unique(array_map(fn (ProductRow $item): int => $item->productId, $pageItems));
 		$productElements = [];
 		if ($productIds !== []) {
 			$products = Product::find()->id($productIds)->status(null)->all();
@@ -137,28 +144,28 @@ class ProductsController extends BaseReportController
 
 		$rows = [];
 		foreach ($pageItems as $item) {
-			$product = $productElements[$item['productId']] ?? null;
+			$product = $productElements[$item->productId] ?? null;
 
 			if ($productsOrVariants === 'variants') {
-				$displayTitle = $item['productTitle'] . ': ' . ($item['variantTitle'] ?? '');
+				$displayTitle = $item->productTitle . ': ' . ($item->variantTitle ?? '');
 			} else {
-				$displayTitle = $item['productTitle'];
+				$displayTitle = $item->productTitle;
 			}
 
 			$ordersUrl = UrlHelper::cpUrl('best-sellers/products/orders', [
-				($productsOrVariants === 'variants' ? 'variantId' : 'productId') => $productsOrVariants === 'variants' ? ($item['variantId'] ?? 0) : $item['productId'],
+				($productsOrVariants === 'variants' ? 'variantId' : 'productId') => $productsOrVariants === 'variants' ? ($item->variantId ?? 0) : $item->productId,
 			]);
 
 			$rows[] = [
 				'displayTitle' => $displayTitle,
 				'cpEditUrl' => $product?->cpEditUrl,
 				'frontEndUrl' => $product?->url,
-				'sku' => $productsOrVariants === 'variants' ? ($item['variantSku'] ?? '') : ($product?->defaultSku ?? ''),
-				'productType' => $item['productType'],
-				'unitsSold' => (int) $item['unitsSold'],
-				'orderCount' => (int) $item['orderCount'],
-				'revenue' => $this->formatCurrency((float) $item['revenue']),
-				'avgPrice' => $this->formatCurrency((float) $item['avgPrice']),
+				'sku' => $productsOrVariants === 'variants' ? ($item->variantSku ?? '') : ($product?->defaultSku ?? ''),
+				'productType' => $item->productType,
+				'unitsSold' => (int) $item->unitsSold,
+				'orderCount' => (int) $item->orderCount,
+				'revenue' => $this->formatCurrency((float) $item->revenue),
+				'avgPrice' => $this->formatCurrency((float) $item->avgPrice),
 				'ordersUrl' => $ordersUrl,
 			];
 		}
@@ -167,9 +174,9 @@ class ProductsController extends BaseReportController
 		$totalOrderCount = 0;
 		$totalRevenue = 0.0;
 		foreach ($pageItems as $pageItem) {
-			$totalUnitsSold += (int) $pageItem['unitsSold'];
-			$totalOrderCount += (int) $pageItem['orderCount'];
-			$totalRevenue += (float) $pageItem['revenue'];
+			$totalUnitsSold += (int) $pageItem->unitsSold;
+			$totalOrderCount += (int) $pageItem->orderCount;
+			$totalRevenue += (float) $pageItem->revenue;
 		}
 
 		$totals = [
@@ -193,7 +200,7 @@ class ProductsController extends BaseReportController
 	 */
 	public function actionExportCsv(): Response
 	{
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
@@ -212,17 +219,17 @@ class ProductsController extends BaseReportController
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
-			$allItems = $productStats->getTopVariants($dateRange['fromDT'], $dateRange['toDT'], $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopVariants($dateRange->fromDT, $dateRange->toDT, $sortBy, 10000, $productType);
 		} else {
-			$allItems = $productStats->getTopProducts($dateRange['fromDT'], $dateRange['toDT'], $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopProducts($dateRange->fromDT, $dateRange->toDT, $sortBy, 10000, $productType);
 		}
 
-		/** @var array<int, array{productId: int, variantId?: int, productTitle: string, variantTitle?: string, variantSku?: string, productType: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string}> $allItems */
+		/** @var list<ProductRow> $allItems */
 
 		if ($search !== '') {
 			$searchLower = strtolower($search);
-			$allItems = array_values(array_filter($allItems, function (array $item) use ($searchLower): bool {
-				$searchable = strtolower($item['productTitle'] . ' ' . ($item['variantTitle'] ?? '') . ' ' . ($item['variantSku'] ?? '') . ' ' . $item['productType']);
+			$allItems = array_values(array_filter($allItems, function (ProductRow $item) use ($searchLower): bool {
+				$searchable = strtolower($item->productTitle . ' ' . ($item->variantTitle ?? '') . ' ' . ($item->variantSku ?? '') . ' ' . $item->productType);
 				return str_contains($searchable, $searchLower);
 			}));
 		}
@@ -234,12 +241,12 @@ class ProductsController extends BaseReportController
 
 		foreach ($allItems as $allItem) {
 			$displayTitle = $productsOrVariants === 'variants'
-				? $allItem['productTitle'] . ': ' . ($allItem['variantTitle'] ?? '')
-				: $allItem['productTitle'];
+				? $allItem->productTitle . ': ' . ($allItem->variantTitle ?? '')
+				: $allItem->productTitle;
 
-			$unitsSold = (int) $allItem['unitsSold'];
-			$orderCount = (int) $allItem['orderCount'];
-			$revenue = (float) $allItem['revenue'];
+			$unitsSold = (int) $allItem->unitsSold;
+			$orderCount = (int) $allItem->orderCount;
+			$revenue = (float) $allItem->revenue;
 
 			$totalUnitsSold += $unitsSold;
 			$totalOrderCount += $orderCount;
@@ -247,12 +254,12 @@ class ProductsController extends BaseReportController
 
 			$csvRows[] = [
 				'product' => $displayTitle,
-				'sku' => $allItem['variantSku'] ?? '',
-				'type' => $allItem['productType'],
+				'sku' => $allItem->variantSku ?? '',
+				'type' => $allItem->productType,
 				'unitsSold' => $unitsSold,
 				'orders' => $orderCount,
 				'revenue' => $revenue,
-				'avgPrice' => (float) $allItem['avgPrice'],
+				'avgPrice' => (float) $allItem->avgPrice,
 			];
 		}
 
@@ -285,7 +292,7 @@ class ProductsController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
@@ -298,7 +305,7 @@ class ProductsController extends BaseReportController
 		$variantId = (int) $variantId;
 
 		if ($productId === 0 && $variantId === 0) {
-			throw new \yii\web\BadRequestHttpException(Craft::t('best-sellers', 'productId or variantId is required.'));
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'productId or variantId is required.'));
 		}
 
 		/** @var array{productTitle: string, variantTitle: string}|null $titleRow */
@@ -322,9 +329,9 @@ class ProductsController extends BaseReportController
 		return $this->renderTemplate('best-sellers/_product-orders', [
 			'title' => $itemTitle,
 			'selectedSubnavItem' => 'products',
-			'from' => $dateRange['from'],
-			'to' => $dateRange['to'],
-			'preset' => $dateRange['preset'],
+			'from' => $dateRange->from,
+			'to' => $dateRange->to,
+			'preset' => $dateRange->preset,
 			'itemTitle' => $itemTitle,
 			'productId' => $productId,
 			'variantId' => $variantId,
@@ -338,7 +345,7 @@ class ProductsController extends BaseReportController
 	{
 		$this->requireAcceptsJson();
 
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
@@ -366,8 +373,8 @@ class ProductsController extends BaseReportController
 			->from([
 				'variantSales' => VariantSale::tableName(),
 			])
-			->where(['>=', '[[variantSales.dateOrdered]]', $dateRange['fromDT']])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $dateRange['toDT']]);
+			->where(['>=', '[[variantSales.dateOrdered]]', $dateRange->fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $dateRange->toDT]);
 
 		if ($variantId !== 0) {
 			$query->andWhere([

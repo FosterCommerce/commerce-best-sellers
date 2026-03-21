@@ -6,6 +6,7 @@ use Craft;
 use craft\db\Query;
 use craft\web\Controller;
 use craft\web\Request;
+use DateTime;
 use fostercommerce\bestsellers\Plugin;
 use yii\base\InvalidConfigException;
 use yii\web\Response;
@@ -36,8 +37,8 @@ class ReportsController extends Controller
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
-		$defaultFromDT = new \DateTime('-1 month');
-		$defaultToDT = new \DateTime('now');
+		$defaultFromDT = new DateTime('-1 month');
+		$defaultToDT = new DateTime('now');
 
 		$preset = $request->getQueryParam('preset', '');
 		/** @var string $fromInput */
@@ -48,12 +49,12 @@ class ReportsController extends Controller
 		$from = trim($fromInput);
 		$to = trim($toInput);
 
-		$fromDTObj = new \DateTime($from);
+		$fromDTObj = new DateTime($from);
 		$fromDTObj->setTime(0, 0, 0);
 
 		$fromDT = $fromDTObj->format('Y-m-d H:i:s');
 
-		$toDTObj = new \DateTime($to);
+		$toDTObj = new DateTime($to);
 		$toDTObj->setTime(23, 59, 59);
 
 		$toDT = $toDTObj->format('Y-m-d H:i:s');
@@ -62,8 +63,8 @@ class ReportsController extends Controller
 		$dailyChart = $this->getDailyChart($fromDT, $toDT);
 
 		// Previous period: same duration, immediately preceding
-		$currentFrom = new \DateTime($from);
-		$currentTo = new \DateTime($to);
+		$currentFrom = new DateTime($from);
+		$currentTo = new DateTime($to);
 		$interval = $currentFrom->diff($currentTo);
 
 		$previousToDTObj = (clone $currentFrom)->modify('-1 second');

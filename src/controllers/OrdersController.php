@@ -3,10 +3,13 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\commerce\elements\db\OrderQuery;
 use craft\commerce\elements\Order;
 use craft\db\Query;
 use craft\helpers\MoneyHelper;
+use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
+use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\Plugin;
 use Money\Money;
 use yii\web\Response;
@@ -25,20 +28,18 @@ class OrdersController extends BaseReportController
 		assert($plugin instanceof Plugin);
 		$dailyStats = $plugin->dailyStats;
 
-		$stats = $dailyStats->getStatsForRange($dateRange['from'], $dateRange['to']);
-		$prevStats = $dailyStats->getStatsForRange($dateRange['prev']['from'], $dateRange['prev']['to']);
+		$stats = $dailyStats->getStatsForRange($dateRange->from, $dateRange->to);
+		$prevStats = $dailyStats->getStatsForRange($dateRange->getPrev()->from, $dateRange->getPrev()->to);
 
-		/** @var array{totalRevenue: float, totalOrders: int} $stats */
-		/** @var array{totalRevenue: float, totalOrders: int} $prevStats */
-		$revenueChange = $this->percentChange($stats['totalRevenue'], $prevStats['totalRevenue']);
-		$ordersChange = $this->percentChange($stats['totalOrders'], $prevStats['totalOrders']);
+		$revenueChange = $this->percentChange($stats->totalRevenue, $prevStats->totalRevenue);
+		$ordersChange = $this->percentChange($stats->totalOrders, $prevStats->totalOrders);
 
 		return $this->renderTemplate('best-sellers/_sales', [
 			'title' => Craft::t('best-sellers', 'Orders'),
 			'selectedSubnavItem' => 'orders',
-			'from' => $dateRange['from'],
-			'to' => $dateRange['to'],
-			'preset' => $dateRange['preset'],
+			'from' => $dateRange->from,
+			'to' => $dateRange->to,
+			'preset' => $dateRange->preset,
 			'stats' => $stats,
 			'revenueChange' => $revenueChange,
 			'ordersChange' => $ordersChange,
@@ -52,7 +53,7 @@ class OrdersController extends BaseReportController
 	{
 		$this->requireAcceptsJson();
 
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 		$dateRange = $this->resolveDateRange();
 
@@ -186,12 +187,9 @@ class OrdersController extends BaseReportController
 		], 'orders');
 	}
 
-	/**
-	 * @param array{fromDT: string, toDT: string} $dateRange
-	 */
-	private function buildFilteredOrdersQuery(array $dateRange): \craft\commerce\elements\db\OrderQuery
+	private function buildFilteredOrdersQuery(DateRangeResult $dateRange): OrderQuery
 	{
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
 		/** @var string $rawSearch */
@@ -221,7 +219,7 @@ class OrdersController extends BaseReportController
 
 		$ordersQuery = Order::find()
 			->isCompleted(true)
-			->dateOrdered(['and', '>= ' . $dateRange['fromDT'], '<= ' . $dateRange['toDT']])
+			->dateOrdered(['and', '>= ' . $dateRange->fromDT, '<= ' . $dateRange->toDT])
 			->orderBy($this->resolveOrderSort($sort, $sortDir));
 
 		if ($orderStatuses !== []) {

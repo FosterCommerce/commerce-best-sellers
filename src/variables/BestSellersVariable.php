@@ -7,6 +7,7 @@ use craft\commerce\elements\Order;
 use craft\commerce\elements\Variant;
 use craft\db\Query;
 use craft\elements\User;
+use DateTime;
 use fostercommerce\bestsellers\records\VariantSale;
 
 class BestSellersVariable
@@ -171,12 +172,12 @@ class BestSellersVariable
 	private function applyDateFilter(Query $query, ?string $startDate, ?string $endDate): void
 	{
 		if ($startDate !== null) {
-			$start = (new \DateTime($startDate))->format('Y-m-d H:i:s');
+			$start = (new DateTime($startDate))->format('Y-m-d H:i:s');
 			$query->andWhere(['>=', 'dateOrdered', $start]);
 		}
 
 		if ($endDate !== null) {
-			$end = (new \DateTime($endDate))->format('Y-m-d H:i:s');
+			$end = (new DateTime($endDate))->format('Y-m-d H:i:s');
 			$query->andWhere(['<=', 'dateOrdered', $end]);
 		}
 	}

@@ -5,6 +5,7 @@ namespace fostercommerce\bestsellers\controllers;
 use Craft;
 use craft\commerce\elements\Product;
 use craft\commerce\Plugin as CommercePlugin;
+use craft\helpers\DateTimeHelper;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\helpers\KpiCards;
 use fostercommerce\bestsellers\Plugin;
@@ -22,8 +23,8 @@ class OverviewController extends BaseReportController
 		assert($plugin instanceof Plugin);
 		$dailyStats = $plugin->dailyStats;
 
-		$stats = $dailyStats->getStatsForRange($dateRange['from'], $dateRange['to']);
-		$prevStats = $dailyStats->getStatsForRange($dateRange['prev']['from'], $dateRange['prev']['to']);
+		$stats = $dailyStats->getStatsForRange($dateRange->from, $dateRange->to);
+		$prevStats = $dailyStats->getStatsForRange($dateRange->getPrev()->from, $dateRange->getPrev()->to);
 
 		// Build grouped cards
 		$allKeys = [];
@@ -43,14 +44,14 @@ class OverviewController extends BaseReportController
 		// Sparkline data for all cards
 		$sparklines = [];
 		foreach (KpiCards::sparklineColumns($allKeys) as $id => $column) {
-			$sparklines[$id] = $dailyStats->getSparklineData($column, $dateRange['from'], $dateRange['to']);
+			$sparklines[$id] = $dailyStats->getSparklineData($column, $dateRange->from, $dateRange->to);
 		}
 
 		// Products group
 		$productStats = $plugin->productStats;
-		$productSummary = $productStats->getSummaryStats($dateRange['fromDT'], $dateRange['toDT']);
-		$prevProductSummary = $productStats->getSummaryStats($dateRange['prev']['fromDT'], $dateRange['prev']['toDT']);
-		$bestSellers = $productStats->getTopProducts($dateRange['fromDT'], $dateRange['toDT'], 'units', 10);
+		$productSummary = $productStats->getSummaryStats($dateRange->fromDT, $dateRange->toDT);
+		$prevProductSummary = $productStats->getSummaryStats($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
+		$bestSellers = $productStats->getTopProducts($dateRange->fromDT, $dateRange->toDT, 'units', 10);
 
 		// Batch-load product elements for CP URLs
 		$bestSellerProductIds = array_unique(array_column($bestSellers, 'productId'));
@@ -69,14 +70,14 @@ class OverviewController extends BaseReportController
 			'cards' => [
 				[
 					'label' => Craft::t('best-sellers', 'Unique Products Sold'),
-					'value' => $productSummary['uniqueProducts'],
-					'change' => $this->percentChange($productSummary['uniqueProducts'], $prevProductSummary['uniqueProducts']),
+					'value' => $productSummary->uniqueProducts,
+					'change' => $this->percentChange($productSummary->uniqueProducts, $prevProductSummary->uniqueProducts),
 					'format' => 'number',
 				],
 				[
 					'label' => Craft::t('best-sellers', 'Product Revenue'),
-					'value' => $productSummary['totalProductRevenue'],
-					'change' => $this->percentChange($productSummary['totalProductRevenue'], $prevProductSummary['totalProductRevenue']),
+					'value' => $productSummary->totalProductRevenue,
+					'change' => $this->percentChange($productSummary->totalProductRevenue, $prevProductSummary->totalProductRevenue),
 					'format' => 'currency',
 				],
 			],
@@ -84,20 +85,20 @@ class OverviewController extends BaseReportController
 
 		// Customer charts
 		$customerStats = $plugin->customerStats;
-		$newVsReturning = $customerStats->getNewVsReturningByDay($dateRange['fromDT'], $dateRange['toDT']);
-		$ltvComparison = $customerStats->getLtvComparison($dateRange['fromDT'], $dateRange['toDT']);
+		$newVsReturning = $customerStats->getNewVsReturningByDay($dateRange->fromDT, $dateRange->toDT);
+		$ltvComparison = $customerStats->getLtvComparison($dateRange->fromDT, $dateRange->toDT);
 
 		// Cart abandonment
-		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($dateRange['fromDT'], $dateRange['toDT']);
+		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($dateRange->fromDT, $dateRange->toDT);
 
 		// Commerce cart settings
 		$commerceSettings = CommercePlugin::getInstance()?->getSettings();
-		$activeCartDuration = $commerceSettings ? \craft\helpers\DateTimeHelper::humanDuration($commerceSettings->activeCartDuration) : '1 hour';
+		$activeCartDuration = $commerceSettings ? DateTimeHelper::humanDuration($commerceSettings->activeCartDuration) : '1 hour';
 		$purgeEnabled = $commerceSettings ? $commerceSettings->purgeInactiveCarts : true;
-		$purgeDuration = ($commerceSettings && $purgeEnabled) ? \craft\helpers\DateTimeHelper::humanDuration($commerceSettings->purgeInactiveCartsDuration) : null;
+		$purgeDuration = ($commerceSettings && $purgeEnabled) ? DateTimeHelper::humanDuration($commerceSettings->purgeInactiveCartsDuration) : null;
 
 		// Daily chart data
-		$dailyRows = $dailyStats->getDailyRows($dateRange['from'], $dateRange['to']);
+		$dailyRows = $dailyStats->getDailyRows($dateRange->from, $dateRange->to);
 		$dailyLabels = array_column($dailyRows, 'date');
 		/** @var list<string> $rawOrders */
 		$rawOrders = array_column($dailyRows, 'totalOrders');
@@ -110,7 +111,7 @@ class OverviewController extends BaseReportController
 		$dailyAov = array_map(floatval(...), $rawAov);
 
 		// Previous period
-		$prevDailyRows = $dailyStats->getDailyRows($dateRange['prev']['from'], $dateRange['prev']['to']);
+		$prevDailyRows = $dailyStats->getDailyRows($dateRange->getPrev()->from, $dateRange->getPrev()->to);
 		/** @var list<string> $prevRawOrders */
 		$prevRawOrders = array_column($prevDailyRows, 'totalOrders');
 		$prevDailyOrders = array_map(intval(...), $prevRawOrders);
@@ -124,9 +125,9 @@ class OverviewController extends BaseReportController
 		return $this->renderTemplate('best-sellers/_overview', [
 			'title' => Craft::t('best-sellers', 'Overview'),
 			'selectedSubnavItem' => 'overview',
-			'from' => $dateRange['from'],
-			'to' => $dateRange['to'],
-			'preset' => $dateRange['preset'],
+			'from' => $dateRange->from,
+			'to' => $dateRange->to,
+			'preset' => $dateRange->preset,
 			'cardGroups' => $cardGroups,
 			'sparklines' => $sparklines,
 			'dailyLabels' => $dailyLabels,

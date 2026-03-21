@@ -3,7 +3,11 @@
 namespace fostercommerce\bestsellers\services;
 
 use craft\db\Query;
+use DateTime;
+use fostercommerce\bestsellers\models\AbandonmentStats;
+use fostercommerce\bestsellers\models\AgeBucket;
 use yii\base\Component;
+use yii\db\Expression;
 
 class CartAbandonment extends Component
 {
@@ -29,21 +33,10 @@ class CartAbandonment extends Component
 	 * Get cart abandonment stats for the Overview widget.
 	 *
 	 * An abandoned cart is any incomplete order with line items, older than 4 hours.
-	 *
-	 * @return array{
-	 *   totalAbandoned: int,
-	 *   totalCompleted: int,
-	 *   abandonmentRate: float,
-	 *   abandonedValue: float,
-	 *   withCustomer: int,
-	 *   withoutCustomer: int,
-	 *   byAge: array<string, array{count: int, value: float, withCustomer: int}>,
-	 *   completedValue: float
-	 * }
 	 */
-	public function getAbandonmentStats(string $fromDT, string $toDT): array
+	public function getAbandonmentStats(string $fromDT, string $toDT): AbandonmentStats
 	{
-		$cutoff = (new \DateTime())->modify('-4 hours')->format('Y-m-d H:i:s');
+		$cutoff = (new DateTime())->modify('-4 hours')->format('Y-m-d H:i:s');
 
 		// Abandoned carts: incomplete orders with line items, older than 4 hours
 		$abandonedCarts = (new Query())
@@ -87,7 +80,7 @@ class CartAbandonment extends Component
 			->scalar();
 
 		$completedValue = (float) (new Query())
-			->select(new \yii\db\Expression('COALESCE(SUM([[totalPrice]]), 0)'))
+			->select(new Expression('COALESCE(SUM([[totalPrice]]), 0)'))
 			->from('{{%commerce_orders}}')
 			->where([
 				'and',
@@ -103,10 +96,10 @@ class CartAbandonment extends Component
 		$withCustomer = 0;
 		$withoutCustomer = 0;
 
-		$now = new \DateTime();
-		$byAge = [];
+		$now = new DateTime();
+		$byAgeData = [];
 		foreach (self::AGE_BUCKETS as $label => $bucket) {
-			$byAge[$label] = [
+			$byAgeData[$label] = [
 				'count' => 0,
 				'value' => 0.0,
 				'withCustomer' => 0,
@@ -127,7 +120,7 @@ class CartAbandonment extends Component
 				$withoutCustomer++;
 			}
 
-			$updatedAt = new \DateTime($abandonedCart['dateUpdated']);
+			$updatedAt = new DateTime($abandonedCart['dateUpdated']);
 			$hoursOld = ($now->getTimestamp() - $updatedAt->getTimestamp()) / 3600;
 
 			foreach (self::AGE_BUCKETS as $label => $bucket) {
@@ -135,11 +128,11 @@ class CartAbandonment extends Component
 				$maxHours = $bucket['maxHours'];
 
 				if ($hoursOld >= $minHours && ($maxHours === null || $hoursOld < $maxHours)) {
-					$byAge[$label]['count']++;
-					$byAge[$label]['value'] += $cartValue;
+					$byAgeData[$label]['count']++;
+					$byAgeData[$label]['value'] += $cartValue;
 					if ($hasCustomer) {
-						$byAge[$label]['withCustomer']++;
-						$byAge[$label]['valueWithEmail'] += $cartValue;
+						$byAgeData[$label]['withCustomer']++;
+						$byAgeData[$label]['valueWithEmail'] += $cartValue;
 					}
 
 					break;
@@ -147,12 +140,22 @@ class CartAbandonment extends Component
 			}
 		}
 
+		$byAgeBuckets = [];
+		foreach ($byAgeData as $label => $data) {
+			$byAgeBuckets[$label] = new AgeBucket([
+				'count' => $data['count'],
+				'value' => $data['value'],
+				'withCustomer' => $data['withCustomer'],
+				'valueWithEmail' => $data['valueWithEmail'],
+			]);
+		}
+
 		$totalCartsCreated = $totalCompleted + $totalAbandoned;
 		$abandonmentRate = $totalCartsCreated > 0
 			? round(($totalAbandoned / $totalCartsCreated) * 100, 1)
 			: 0;
 
-		return [
+		return new AbandonmentStats([
 			'totalAbandoned' => $totalAbandoned,
 			'totalCompleted' => $totalCompleted,
 			'abandonmentRate' => $abandonmentRate,
@@ -161,7 +164,7 @@ class CartAbandonment extends Component
 			'completedValue' => $completedValue,
 			'withCustomer' => $withCustomer,
 			'withoutCustomer' => $withoutCustomer,
-			'byAge' => $byAge,
-		];
+			'byAge' => $byAgeBuckets,
+		]);
 	}
 }

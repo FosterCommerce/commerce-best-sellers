@@ -13,6 +13,7 @@ use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\Plugin;
 use Money\Money;
+use yii\db\Expression;
 use yii\web\Response;
 
 class OrdersController extends BaseReportController
@@ -297,10 +298,8 @@ class OrdersController extends BaseReportController
 	 */
 	private function buildFilteredTotals(DateRangeResult $dateRange): array
 	{
-		$totalsQuery = $this->buildFilteredTotalsQuery($dateRange);
-
 		/** @var array{itemSubtotal: string, totalTax: string, totalDiscount: string, totalShippingCost: string, totalPaid: string}|false $sums */
-		$sums = (clone $totalsQuery)
+		$sums = $this->buildFilteredTotalsQuery($dateRange)
 			->select([
 				'itemSubtotal' => 'COALESCE(SUM([[itemSubtotal]]), 0)',
 				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
@@ -321,10 +320,11 @@ class OrdersController extends BaseReportController
 			];
 		}
 
-		$idSubquery = (clone $totalsQuery)->select(['[[id]]']);
+		$idSubquery = $this->buildFilteredTotalsQuery($dateRange)
+			->select(['[[id]]']);
 
 		$totalItemsSold = (int) (new Query())
-			->select('COALESCE(SUM([[qty]]), 0)')
+			->select(new Expression('COALESCE(SUM([[qty]]), 0)'))
 			->from(CommerceTable::LINEITEMS)
 			->where(['in', '[[orderId]]', $idSubquery])
 			->scalar();

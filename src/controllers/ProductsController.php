@@ -143,29 +143,29 @@ class ProductsController extends BaseReportController
 		}
 
 		$rows = [];
-		foreach ($pageItems as $item) {
-			$product = $productElements[$item->productId] ?? null;
+		foreach ($pageItems as $pageItem) {
+			$product = $productElements[$pageItem->productId] ?? null;
 
 			if ($productsOrVariants === 'variants') {
-				$displayTitle = $item->productTitle . ': ' . ($item->variantTitle ?? '');
+				$displayTitle = $pageItem->productTitle . ': ' . ($pageItem->variantTitle ?? '');
 			} else {
-				$displayTitle = $item->productTitle;
+				$displayTitle = $pageItem->productTitle;
 			}
 
 			$ordersUrl = UrlHelper::cpUrl('best-sellers/products/orders', [
-				($productsOrVariants === 'variants' ? 'variantId' : 'productId') => $productsOrVariants === 'variants' ? ($item->variantId ?? 0) : $item->productId,
+				($productsOrVariants === 'variants' ? 'variantId' : 'productId') => $productsOrVariants === 'variants' ? ($pageItem->variantId ?? 0) : $pageItem->productId,
 			]);
 
 			$rows[] = [
 				'displayTitle' => $displayTitle,
 				'cpEditUrl' => $product?->cpEditUrl,
 				'frontEndUrl' => $product?->url,
-				'sku' => $productsOrVariants === 'variants' ? ($item->variantSku ?? '') : ($product?->defaultSku ?? ''),
-				'productType' => $item->productType,
-				'unitsSold' => (int) $item->unitsSold,
-				'orderCount' => (int) $item->orderCount,
-				'revenue' => $this->formatCurrency((float) $item->revenue),
-				'avgPrice' => $this->formatCurrency((float) $item->avgPrice),
+				'sku' => $productsOrVariants === 'variants' ? ($pageItem->variantSku ?? '') : ($product?->defaultSku ?? ''),
+				'productType' => $pageItem->productType,
+				'unitsSold' => (int) $pageItem->unitsSold,
+				'orderCount' => (int) $pageItem->orderCount,
+				'revenue' => $this->formatCurrency((float) $pageItem->revenue),
+				'avgPrice' => $this->formatCurrency((float) $pageItem->avgPrice),
 				'ordersUrl' => $ordersUrl,
 			];
 		}
@@ -173,10 +173,10 @@ class ProductsController extends BaseReportController
 		$totalUnitsSold = 0;
 		$totalOrderCount = 0;
 		$totalRevenue = 0.0;
-		foreach ($pageItems as $pageItem) {
-			$totalUnitsSold += (int) $pageItem->unitsSold;
-			$totalOrderCount += (int) $pageItem->orderCount;
-			$totalRevenue += (float) $pageItem->revenue;
+		foreach ($allItems as $allItem) {
+			$totalUnitsSold += (int) $allItem->unitsSold;
+			$totalOrderCount += (int) $allItem->orderCount;
+			$totalRevenue += (float) $allItem->revenue;
 		}
 
 		$totals = [

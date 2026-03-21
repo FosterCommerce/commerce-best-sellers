@@ -111,25 +111,25 @@ class CustomersController extends BaseReportController
 		$pageItems = array_slice($allCustomers, $offset, self::PER_PAGE);
 
 		$rows = [];
-		foreach ($pageItems as $customer) {
+		foreach ($pageItems as $pageItem) {
 			$rows[] = [
-				'email' => $customer->email,
-				'customerId' => $customer->customerId,
-				'isGuest' => $customer->isGuest,
-				'status' => $customer->status,
-				'orderCount' => $customer->orderCount,
-				'totalSpent' => $this->formatCurrency($customer->totalSpent),
-				'aov' => $this->formatCurrency($customer->aov),
-				'lastOrder' => $customer->lastOrder !== null ? substr($customer->lastOrder, 0, 10) : '',
-				'cpUrl' => $customer->customerId !== null ? Craft::$app->getUrlManager()->createUrl('users/' . $customer->customerId) : null,
+				'email' => $pageItem->email,
+				'customerId' => $pageItem->customerId,
+				'isGuest' => $pageItem->isGuest,
+				'status' => $pageItem->status,
+				'orderCount' => $pageItem->orderCount,
+				'totalSpent' => $this->formatCurrency($pageItem->totalSpent),
+				'aov' => $this->formatCurrency($pageItem->aov),
+				'lastOrder' => $pageItem->lastOrder !== null ? substr($pageItem->lastOrder, 0, 10) : '',
+				'cpUrl' => $pageItem->customerId !== null ? Craft::$app->getUrlManager()->createUrl('users/' . $pageItem->customerId) : null,
 			];
 		}
 
 		$totalOrderCount = 0;
 		$totalSpentSum = 0.0;
-		foreach ($pageItems as $pageItem) {
-			$totalOrderCount += $pageItem->orderCount;
-			$totalSpentSum += $pageItem->totalSpent;
+		foreach ($allCustomers as $allCustomer) {
+			$totalOrderCount += $allCustomer->orderCount;
+			$totalSpentSum += $allCustomer->totalSpent;
 		}
 
 		$totals = [

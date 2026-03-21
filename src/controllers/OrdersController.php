@@ -68,41 +68,15 @@ class OrdersController extends BaseReportController
 		$totalOrders = (int) $ordersQuery->count();
 		$totalPages = max(1, (int) ceil($totalOrders / self::PER_PAGE));
 
+		// Aggregate totals across all filtered results (before pagination)
+		$totals = $this->buildFilteredTotals($dateRange);
+
 		$orders = $ordersQuery
 			->offset($offset)
 			->limit(self::PER_PAGE)
 			->all();
 
 		$rows = $this->buildOrderRows($orders);
-
-		$currency = $this->getStoreCurrency();
-		$totalItemSubtotal = new Money(0, $currency);
-		$totalTax = new Money(0, $currency);
-		$totalDiscount = new Money(0, $currency);
-		$totalShipping = new Money(0, $currency);
-		$totalPaid = new Money(0, $currency);
-		$totalItemsSold = 0;
-
-		foreach ($orders as $order) {
-			$totalItemSubtotal = $totalItemSubtotal->add($this->toMoney($order->itemSubtotal));
-			$totalTax = $totalTax->add($this->toMoney($order->totalTax));
-			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount));
-			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost));
-			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid));
-		}
-
-		foreach ($rows as $row) {
-			$totalItemsSold += $row['itemsSold'];
-		}
-
-		$totals = [
-			'itemSubtotal' => $this->formatMoney($totalItemSubtotal),
-			'totalTax' => $this->formatMoney($totalTax),
-			'totalDiscount' => $this->formatMoney($totalDiscount),
-			'totalShippingCost' => $this->formatMoney($totalShipping),
-			'totalPaid' => $this->formatMoney($totalPaid),
-			'itemsSold' => number_format($totalItemsSold),
-		];
 
 		return $this->asJson([
 			'orders' => $rows,
@@ -313,6 +287,56 @@ class OrdersController extends BaseReportController
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * Aggregate totals across all filtered orders (not just the current page).
+	 *
+	 * @return array<string, string>
+	 */
+	private function buildFilteredTotals(DateRangeResult $dateRange): array
+	{
+		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
+		$orderIds = $ordersQuery->ids();
+
+		if ($orderIds === []) {
+			return [
+				'itemSubtotal' => $this->formatCurrency(0),
+				'totalTax' => $this->formatCurrency(0),
+				'totalDiscount' => $this->formatCurrency(0),
+				'totalShippingCost' => $this->formatCurrency(0),
+				'totalPaid' => $this->formatCurrency(0),
+				'itemsSold' => '0',
+			];
+		}
+
+		/** @var array{itemSubtotal: string, totalTax: string, totalDiscount: string, totalShippingCost: string, totalPaid: string} $sums */
+		$sums = (new Query())
+			->select([
+				'itemSubtotal' => 'COALESCE(SUM([[itemSubtotal]]), 0)',
+				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
+				'totalDiscount' => 'COALESCE(SUM([[totalDiscount]]), 0)',
+				'totalShippingCost' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
+				'totalPaid' => 'COALESCE(SUM([[totalPaid]]), 0)',
+			])
+			->from('{{%commerce_orders}}')
+			->where(['in', '[[id]]', $orderIds])
+			->one();
+
+		$totalItemsSold = (int) (new Query())
+			->select('COALESCE(SUM([[qty]]), 0)')
+			->from('{{%commerce_lineitems}}')
+			->where(['in', '[[orderId]]', $orderIds])
+			->scalar();
+
+		return [
+			'itemSubtotal' => $this->formatCurrency((float) $sums['itemSubtotal']),
+			'totalTax' => $this->formatCurrency((float) $sums['totalTax']),
+			'totalDiscount' => $this->formatCurrency((float) $sums['totalDiscount']),
+			'totalShippingCost' => $this->formatCurrency((float) $sums['totalShippingCost']),
+			'totalPaid' => $this->formatCurrency((float) $sums['totalPaid']),
+			'itemsSold' => number_format($totalItemsSold),
+		];
 	}
 
 	/**

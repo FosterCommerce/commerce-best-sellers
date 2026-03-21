@@ -168,9 +168,6 @@ class OrdersController extends BaseReportController
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
-		/** @var string $rawSearch */
-		$rawSearch = $request->getQueryParam('search', '');
-		$search = trim($rawSearch);
 		/** @var string $rawSort */
 		$rawSort = $request->getQueryParam('sort', 'dateOrdered');
 		$sort = trim($rawSort);
@@ -178,63 +175,12 @@ class OrdersController extends BaseReportController
 		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
 		$sortDir = trim($rawSortDir);
 
-		$orderStatuses = $request->getQueryParam('orderStatus', []);
-		$paidFilters = $request->getQueryParam('paymentStatus', []);
-
-		if (is_string($orderStatuses) && $orderStatuses !== '') {
-			$orderStatuses = [$orderStatuses];
-		} elseif (! is_array($orderStatuses)) {
-			$orderStatuses = [];
-		}
-
-		if (is_string($paidFilters) && $paidFilters !== '') {
-			$paidFilters = [$paidFilters];
-		} elseif (! is_array($paidFilters)) {
-			$paidFilters = [];
-		}
-
 		$ordersQuery = Order::find()
 			->isCompleted(true)
 			->dateOrdered(['and', '>= ' . $dateRange->fromDT, '<= ' . $dateRange->toDT])
 			->orderBy($this->resolveOrderSort($sort, $sortDir));
 
-		if ($orderStatuses !== []) {
-			$ordersQuery->andWhere([
-				'[[orderStatusId]]' => (new Query())
-					->select('[[id]]')
-					->from(CommerceTable::ORDERSTATUSES)
-					->where([
-						'[[handle]]' => $orderStatuses,
-					]),
-			]);
-		}
-
-		if ($paidFilters !== []) {
-			$paymentConditions = ['or'];
-			foreach ($paidFilters as $paidFilter) {
-				if ($paidFilter === 'paid') {
-					$paymentConditions[] = '[[totalPaid]] >= [[totalPrice]]';
-				} elseif ($paidFilter === 'partial') {
-					$paymentConditions[] = ['and', '[[totalPaid]] > 0', '[[totalPaid]] < [[totalPrice]]'];
-				} elseif ($paidFilter === 'unpaid') {
-					$paymentConditions[] = [
-						'[[totalPaid]]' => 0,
-					];
-				}
-			}
-
-			if (count($paymentConditions) > 1) {
-				$ordersQuery->andWhere($paymentConditions);
-			}
-		}
-
-		if ($search !== '') {
-			$ordersQuery->andWhere(['or',
-				['like', '[[reference]]', $search],
-				['like', '[[email]]', $search],
-				['like', '[[number]]', $search],
-			]);
-		}
+		$this->applyOrderFilters($ordersQuery);
 
 		return $ordersQuery;
 	}
@@ -346,6 +292,30 @@ class OrdersController extends BaseReportController
 	 */
 	private function buildFilteredTotalsQuery(DateRangeResult $dateRange): Query
 	{
+		$query = (new Query())
+			->from(CommerceTable::ORDERS)
+			->where([
+				'and',
+				[
+					'[[isCompleted]]' => true,
+				],
+				['>=', '[[dateOrdered]]', $dateRange->fromDT],
+				['<=', '[[dateOrdered]]', $dateRange->toDT],
+			]);
+
+		$this->applyOrderFilters($query);
+
+		return $query;
+	}
+
+	/**
+	 * Apply shared order filters (status, payment, search) to a query.
+	 *
+	 * @template TQuery of OrderQuery|Query<array-key, mixed>
+	 * @param TQuery $query
+	 */
+	private function applyOrderFilters(OrderQuery|Query $query): void
+	{
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
@@ -367,17 +337,6 @@ class OrdersController extends BaseReportController
 		} elseif (! is_array($paidFilters)) {
 			$paidFilters = [];
 		}
-
-		$query = (new Query())
-			->from(CommerceTable::ORDERS)
-			->where([
-				'and',
-				[
-					'[[isCompleted]]' => true,
-				],
-				['>=', '[[dateOrdered]]', $dateRange->fromDT],
-				['<=', '[[dateOrdered]]', $dateRange->toDT],
-			]);
 
 		if ($orderStatuses !== []) {
 			$query->andWhere([
@@ -417,8 +376,6 @@ class OrdersController extends BaseReportController
 				['like', '[[number]]', $search],
 			]);
 		}
-
-		return $query;
 	}
 
 	/**

@@ -18,21 +18,23 @@ class CustomersController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		$dateRange = $this->resolveDateRange();
+		$scope = $this->resolveScope();
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
 		$customerStats = $plugin->customerStats;
 
-		$kpis = $customerStats->getCustomerKpis($dateRange->fromDT, $dateRange->toDT);
-		$prevKpis = $customerStats->getCustomerKpis($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
+		$kpis = $customerStats->getCustomerKpis($scope);
+		$prevScope = $scope->forDates($scope->getPrev()->from, $scope->getPrev()->to);
+		$prevKpis = $customerStats->getCustomerKpis($prevScope);
 		$newCustomersChange = $this->percentChange($kpis->new, $prevKpis->new);
 
 		return $this->renderTemplate('best-sellers/_customers', [
 			'title' => Craft::t('best-sellers', 'Customers'),
 			'selectedSubnavItem' => 'customers',
-			'from' => $dateRange->from,
-			'to' => $dateRange->to,
-			'preset' => $dateRange->preset,
+			'from' => $scope->from,
+			'to' => $scope->to,
+			'preset' => $scope->preset,
+			'scope' => $scope,
 			'kpis' => $kpis,
 			'newCustomersChange' => $newCustomersChange,
 		]);
@@ -47,7 +49,7 @@ class CustomersController extends BaseReportController
 
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var int|string $page */
 		$page = $request->getQueryParam('page', 1);
@@ -75,7 +77,7 @@ class CustomersController extends BaseReportController
 		$customerStats = $plugin->customerStats;
 
 		/** @var list<CustomerRow> $allCustomers */
-		$allCustomers = $customerStats->getTopCustomers($dateRange->fromDT, $dateRange->toDT, 10000);
+		$allCustomers = $customerStats->getTopCustomers($dateRange, 10000);
 
 		if ($customerTypes !== []) {
 			$allCustomers = array_values(array_filter($allCustomers, fn (CustomerRow $customer): bool => in_array($customer->status, $customerTypes, true)));
@@ -154,7 +156,7 @@ class CustomersController extends BaseReportController
 	{
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var string $rawSearch */
 		$rawSearch = $request->getQueryParam('search', '');
@@ -172,7 +174,7 @@ class CustomersController extends BaseReportController
 		$customerStats = $plugin->customerStats;
 
 		/** @var list<CustomerRow> $allCustomers */
-		$allCustomers = $customerStats->getTopCustomers($dateRange->fromDT, $dateRange->toDT, 10000);
+		$allCustomers = $customerStats->getTopCustomers($dateRange, 10000);
 
 		if ($customerTypes !== []) {
 			$allCustomers = array_values(array_filter($allCustomers, fn (CustomerRow $customer): bool => in_array($customer->status, $customerTypes, true)));

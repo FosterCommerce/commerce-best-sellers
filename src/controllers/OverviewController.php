@@ -18,13 +18,14 @@ class OverviewController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		$dateRange = $this->resolveDateRange();
+		$scope = $this->resolveScope();
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
 		$dailyStats = $plugin->dailyStats;
 
-		$stats = $dailyStats->getStatsForRange($dateRange->from, $dateRange->to);
-		$prevStats = $dailyStats->getStatsForRange($dateRange->getPrev()->from, $dateRange->getPrev()->to);
+		// DailyStats uses pre-aggregated data (does not filter by status)
+		$stats = $dailyStats->getStatsForRange($scope->from, $scope->to);
+		$prevStats = $dailyStats->getStatsForRange($scope->getPrev()->from, $scope->getPrev()->to);
 
 		// Health Check hero row
 		$healthCheckKeys = ['revenue', 'orders', 'aov', 'repeatRate'];
@@ -36,10 +37,10 @@ class OverviewController extends BaseReportController
 
 		// Discount & order composition widgets
 		$operationsStats = $plugin->operationsStats;
-		$discountedVsFullPrice = $operationsStats->getDiscountedVsFullPrice($dateRange->fromDT, $dateRange->toDT);
-		$topDiscounts = $operationsStats->getTopDiscounts($dateRange->fromDT, $dateRange->toDT);
-		$itemsPerOrder = $operationsStats->getItemsPerOrderDistribution($dateRange->fromDT, $dateRange->toDT);
-		$shippingMethods = $operationsStats->getShippingMethods($dateRange->fromDT, $dateRange->toDT);
+		$discountedVsFullPrice = $operationsStats->getDiscountedVsFullPrice($scope);
+		$topDiscounts = $operationsStats->getTopDiscounts($scope);
+		$itemsPerOrder = $operationsStats->getItemsPerOrderDistribution($scope);
+		$shippingMethods = $operationsStats->getShippingMethods($scope);
 
 		// Customers & Retention section
 		$customerKeys = ['customers', 'newCustomers'];
@@ -47,8 +48,9 @@ class OverviewController extends BaseReportController
 
 		// LTV card (built manually since it comes from LtvComparison, not PeriodStats)
 		$customerStats = $plugin->customerStats;
-		$ltvComparison = $customerStats->getLtvComparison($dateRange->fromDT, $dateRange->toDT);
-		$prevLtvComparison = $customerStats->getLtvComparison($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
+		$ltvComparison = $customerStats->getLtvComparison($scope);
+		$prevScope = $scope->forDates($scope->getPrev()->from, $scope->getPrev()->to);
+		$prevLtvComparison = $customerStats->getLtvComparison($prevScope);
 
 		$totalCustomers = ($ltvComparison->credentialed->count ?? 0) + ($ltvComparison->guest->count ?? 0);
 		$totalRevenueLtv = ($ltvComparison->credentialed->totalRevenue ?? 0) + ($ltvComparison->guest->totalRevenue ?? 0);
@@ -69,14 +71,17 @@ class OverviewController extends BaseReportController
 		$allKeys = array_merge($healthCheckKeys, $discountKeys, $customerKeys);
 		$sparklines = [];
 		foreach (KpiCards::sparklineColumns($allKeys) as $id => $column) {
-			$sparklines[$id] = $dailyStats->getSparklineData($column, $dateRange->from, $dateRange->to);
+			$sparklines[$id] = $dailyStats->getSparklineData($column, $scope->from, $scope->to);
 		}
 
+		// Top customers
+		$topCustomers = $customerStats->getTopCustomers($scope, 5);
+
 		// Customer charts
-		$newVsReturning = $customerStats->getNewVsReturningByDay($dateRange->fromDT, $dateRange->toDT);
+		$newVsReturning = $customerStats->getNewVsReturningByDay($scope);
 
 		// Cart abandonment
-		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($dateRange->fromDT, $dateRange->toDT);
+		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($scope);
 
 		// Commerce cart settings
 		$commerceSettings = CommercePlugin::getInstance()?->getSettings();
@@ -86,9 +91,9 @@ class OverviewController extends BaseReportController
 
 		// Products section
 		$productStats = $plugin->productStats;
-		$productSummary = $productStats->getSummaryStats($dateRange->fromDT, $dateRange->toDT);
-		$prevProductSummary = $productStats->getSummaryStats($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
-		$bestSellers = $productStats->getTopProducts($dateRange->fromDT, $dateRange->toDT, 'units', 10);
+		$productSummary = $productStats->getSummaryStats($scope);
+		$prevProductSummary = $productStats->getSummaryStats($prevScope);
+		$bestSellers = $productStats->getTopProducts($scope, 'units', 10);
 
 		// Batch-load product elements for CP URLs
 		$bestSellerProductIds = array_unique(array_column($bestSellers, 'productId'));
@@ -116,10 +121,10 @@ class OverviewController extends BaseReportController
 		];
 
 		// Summaries
-		$summaryResult = $plugin->summaryEngine->generate($dateRange);
+		$summaryResult = $plugin->summaryEngine->generate($scope);
 
 		// Daily chart data
-		$dailyRows = $dailyStats->getDailyRows($dateRange->from, $dateRange->to);
+		$dailyRows = $dailyStats->getDailyRows($scope->from, $scope->to);
 		$dailyLabels = array_column($dailyRows, 'date');
 		/** @var list<string> $rawOrders */
 		$rawOrders = array_column($dailyRows, 'totalOrders');
@@ -132,7 +137,7 @@ class OverviewController extends BaseReportController
 		$dailyAov = array_map(floatval(...), $rawAov);
 
 		// Previous period
-		$prevDailyRows = $dailyStats->getDailyRows($dateRange->getPrev()->from, $dateRange->getPrev()->to);
+		$prevDailyRows = $dailyStats->getDailyRows($scope->getPrev()->from, $scope->getPrev()->to);
 		/** @var list<string> $prevRawOrders */
 		$prevRawOrders = array_column($prevDailyRows, 'totalOrders');
 		$prevDailyOrders = array_map(intval(...), $prevRawOrders);
@@ -146,9 +151,10 @@ class OverviewController extends BaseReportController
 		return $this->renderTemplate('best-sellers/_overview', [
 			'title' => Craft::t('best-sellers', 'Dashboard'),
 			'selectedSubnavItem' => 'overview',
-			'from' => $dateRange->from,
-			'to' => $dateRange->to,
-			'preset' => $dateRange->preset,
+			'from' => $scope->from,
+			'to' => $scope->to,
+			'preset' => $scope->preset,
+			'scope' => $scope,
 			// Section cards
 			'healthCheckCards' => $healthCheckCards,
 			'discountCards' => $discountCards,
@@ -171,6 +177,7 @@ class OverviewController extends BaseReportController
 			// Widgets
 			'bestSellers' => $bestSellers,
 			'bestSellerElements' => $bestSellerElements,
+			'topCustomers' => $topCustomers,
 			'newVsReturning' => $newVsReturning,
 			'ltvComparison' => $ltvComparison,
 			'cartAbandonment' => $cartAbandonment,

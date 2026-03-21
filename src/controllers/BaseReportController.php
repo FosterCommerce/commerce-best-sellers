@@ -6,7 +6,7 @@ use Craft;
 use craft\commerce\Plugin as CommercePlugin;
 use craft\helpers\MoneyHelper;
 use craft\web\Controller;
-use fostercommerce\bestsellers\models\DateRangeResult;
+use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\Plugin;
 use Money\Currency;
 use Money\Money;
@@ -50,24 +50,14 @@ abstract class BaseReportController extends Controller
 	}
 
 	/**
-	 * Resolve the current and previous date range.
+	 * Resolve the full report scope (date range + order status filter).
 	 */
-	protected function resolveDateRange(): DateRangeResult
+	protected function resolveScope(): ReportScope
 	{
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
-		$dateRange = $plugin->dateRange;
-		$current = $dateRange->resolve();
-		$previous = $dateRange->previousPeriod($current->from, $current->to);
 
-		return new DateRangeResult([
-			'from' => $current->from,
-			'to' => $current->to,
-			'fromDT' => $current->fromDT,
-			'toDT' => $current->toDT,
-			'preset' => $current->preset,
-			'prev' => $previous,
-		]);
+		return $plugin->dateRange->resolveScope();
 	}
 
 	protected function getStoreCurrency(): Currency

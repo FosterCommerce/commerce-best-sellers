@@ -7,6 +7,7 @@ use craft\db\Query;
 use DateTime;
 use fostercommerce\bestsellers\models\AbandonmentStats;
 use fostercommerce\bestsellers\models\AgeBucket;
+use fostercommerce\bestsellers\models\ReportScope;
 use yii\base\Component;
 use yii\db\Expression;
 
@@ -35,11 +36,12 @@ class CartAbandonment extends Component
 	 *
 	 * An abandoned cart is any incomplete order with line items, older than 4 hours.
 	 */
-	public function getAbandonmentStats(string $fromDT, string $toDT): AbandonmentStats
+	public function getAbandonmentStats(ReportScope $scope): AbandonmentStats
 	{
 		$cutoff = (new DateTime())->modify('-4 hours')->format('Y-m-d H:i:s');
 
 		// Abandoned carts: incomplete orders with line items, older than 4 hours
+		// Note: status filter does NOT apply to abandoned carts (they are incomplete)
 		$abandonedCarts = (new Query())
 			->select([
 				'orders.[[id]]',
@@ -62,33 +64,35 @@ class CartAbandonment extends Component
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', false],
-				['>=', '[[orders.dateUpdated]]', $fromDT],
-				['<=', '[[orders.dateUpdated]]', $toDT],
+				['>=', '[[orders.dateUpdated]]', $scope->fromDT],
+				['<=', '[[orders.dateUpdated]]', $scope->toDT],
 				['<=', '[[orders.dateUpdated]]', $cutoff],
 			])
 			->all();
 
 		// Completed orders in the same period (for rate calculation)
+		// Status filter applies here
+		$completedCondition = [
+			'and',
+			['=', '[[isCompleted]]', true],
+			['>=', '[[dateOrdered]]', $scope->fromDT],
+			['<=', '[[dateOrdered]]', $scope->toDT],
+		];
+		$statusCondition = $scope->statusCondition();
+		if ($statusCondition !== null) {
+			$completedCondition[] = $statusCondition;
+		}
+
 		$totalCompleted = (int) (new Query())
 			->select('COUNT(*)')
 			->from(CommerceTable::ORDERS)
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
-			])
+			->where($completedCondition)
 			->scalar();
 
 		$completedValue = (float) (new Query())
 			->select(new Expression('COALESCE(SUM([[totalPrice]]), 0)'))
 			->from(CommerceTable::ORDERS)
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
-			])
+			->where($completedCondition)
 			->scalar();
 
 		$totalAbandoned = count($abandonedCarts);

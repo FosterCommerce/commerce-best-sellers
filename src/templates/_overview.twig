@@ -51,7 +51,10 @@
 				{{ kpi.card(card) }}
 			{% endfor %}
 		</div>
-		{% include 'best-sellers/_includes/widgets/ltv-table' %}
+		<div class="bs-columns">
+			{% include 'best-sellers/_includes/widgets/top-customers' %}
+			{% include 'best-sellers/_includes/widgets/ltv-table' %}
+		</div>
 		{% include 'best-sellers/_includes/widgets/new-vs-returning-chart' %}
 	</div>
 
@@ -357,12 +360,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	renderAbandonment();
 
-	// Items per order chart
+	// Items per order chart (with clickable bars)
 	{% if itemsPerOrder.counts|length > 0 %}
-	new Chart(document.getElementById('itemsPerOrderChart').getContext('2d'), {
+	var ipoLabels = {{ itemsPerOrder.labels|json_encode|raw }};
+	var ipoChart = new Chart(document.getElementById('itemsPerOrderChart').getContext('2d'), {
 		type: 'bar',
 		data: {
-			labels: {{ itemsPerOrder.labels|json_encode|raw }},
+			labels: ipoLabels,
 			datasets: [{
 				label: '{{ "Orders"|t("best-sellers") }}',
 				data: {{ itemsPerOrder.counts|json_encode|raw }},
@@ -378,6 +382,16 @@ document.addEventListener('DOMContentLoaded', function () {
 			scales: {
 				x: { title: { display: true, text: '{{ "Items"|t("best-sellers") }}' } },
 				y: { beginAtZero: true, title: { display: true, text: '{{ "Orders"|t("best-sellers") }}' } }
+			},
+			onClick: function (evt) {
+				var points = ipoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+				if (points.length > 0) {
+					var bucket = ipoLabels[points[0].index];
+					window.location.href = '{{ cpUrl("best-sellers/orders") }}' + '?itemsPerOrder=' + encodeURIComponent(bucket);
+				}
+			},
+			onHover: function (evt, elements) {
+				evt.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
 			}
 		}
 	});

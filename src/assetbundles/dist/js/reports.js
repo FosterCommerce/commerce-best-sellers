@@ -253,7 +253,7 @@
 			var urlFilterLabel = '';
 			try {
 				var urlParams = new URLSearchParams(window.location.search);
-				['shippingMethod', 'discountStatus', 'discountName'].forEach(function (key) {
+				['shippingMethod', 'discountStatus', 'discountId', 'itemsPerOrder'].forEach(function (key) {
 					var val = urlParams.get(key);
 					if (val) { urlFilters[key] = val; }
 				});
@@ -263,8 +263,10 @@
 					urlFilterLabel = urlFilters.discountStatus === 'discounted'
 						? Craft.t('best-sellers', 'Discounted orders')
 						: Craft.t('best-sellers', 'Full-price orders');
-				} else if (urlFilters.discountName) {
-					urlFilterLabel = Craft.t('best-sellers', 'Discount: {name}', { name: urlFilters.discountName });
+				} else if (urlFilters.discountId) {
+					urlFilterLabel = Craft.t('best-sellers', 'Discount ID: {id}', { id: urlFilters.discountId });
+				} else if (urlFilters.itemsPerOrder) {
+					urlFilterLabel = Craft.t('best-sellers', 'Items per order: {bucket}', { bucket: urlFilters.itemsPerOrder });
 				}
 			} catch (err) {
 				// URLSearchParams not supported or other error

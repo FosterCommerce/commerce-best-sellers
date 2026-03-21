@@ -26,7 +26,7 @@ class ProductsController extends BaseReportController
 
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var string $productsOrVariants */
 		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
@@ -39,7 +39,7 @@ class ProductsController extends BaseReportController
 		assert($plugin !== null);
 		$productStats = $plugin->productStats;
 
-		$summaryStats = $productStats->getSummaryStats($dateRange->fromDT, $dateRange->toDT);
+		$summaryStats = $productStats->getSummaryStats($dateRange);
 
 		return $this->renderTemplate('best-sellers/_products', [
 			'title' => Craft::t('best-sellers', 'Products'),
@@ -47,6 +47,7 @@ class ProductsController extends BaseReportController
 			'from' => $dateRange->from,
 			'to' => $dateRange->to,
 			'preset' => $dateRange->preset,
+			'scope' => $dateRange,
 			'productsOrVariants' => $productsOrVariants,
 			'sortBy' => $sortBy,
 			'productType' => $productType,
@@ -63,7 +64,7 @@ class ProductsController extends BaseReportController
 
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var int|string $page */
 		$page = $request->getQueryParam('page', 1);
@@ -90,9 +91,9 @@ class ProductsController extends BaseReportController
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
-			$allItems = $productStats->getTopVariants($dateRange->fromDT, $dateRange->toDT, $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productType);
 		} else {
-			$allItems = $productStats->getTopProducts($dateRange->fromDT, $dateRange->toDT, $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productType);
 		}
 
 		/** @var list<ProductRow> $allItems */
@@ -202,7 +203,7 @@ class ProductsController extends BaseReportController
 	{
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var string $productsOrVariants */
 		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
@@ -219,9 +220,9 @@ class ProductsController extends BaseReportController
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
-			$allItems = $productStats->getTopVariants($dateRange->fromDT, $dateRange->toDT, $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productType);
 		} else {
-			$allItems = $productStats->getTopProducts($dateRange->fromDT, $dateRange->toDT, $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productType);
 		}
 
 		/** @var list<ProductRow> $allItems */
@@ -294,7 +295,7 @@ class ProductsController extends BaseReportController
 
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var int|string $productId */
 		$productId = $request->getQueryParam('productId', 0);
@@ -347,7 +348,7 @@ class ProductsController extends BaseReportController
 
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var int|string $productId */
 		$productId = $request->getQueryParam('productId', 0);

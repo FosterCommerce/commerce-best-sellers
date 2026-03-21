@@ -20,7 +20,11 @@
 							<span style="position: relative; font-weight: 600;">{{ discount.name }}</span>
 						</td>
 						<td style="padding: 0.5rem; text-align: right;">
-							<a href="{{ cpUrl('best-sellers/orders', {discountName: discount.name}) }}">{{ discount.uses|number_format }}</a>
+							{% if discount.discountId %}
+								<a href="{{ cpUrl('best-sellers/orders', {discountId: discount.discountId}) }}">{{ discount.uses|number_format }}</a>
+							{% else %}
+								{{ discount.uses|number_format }}
+							{% endif %}
 						</td>
 						<td style="padding: 0.5rem; text-align: right;">{{ discount.totalDiscount|commerceCurrency }}</td>
 					</tr>

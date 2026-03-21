@@ -14,12 +14,12 @@ class OperationsController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
 		$operationsStats = $plugin->operationsStats;
 
-		$couponUsage = $operationsStats->getCouponUsage($dateRange->fromDT, $dateRange->toDT);
+		$couponUsage = $operationsStats->getCouponUsage($dateRange);
 
 		return $this->renderTemplate('best-sellers/_operations', [
 			'title' => Craft::t('best-sellers', 'Operations'),
@@ -27,6 +27,7 @@ class OperationsController extends BaseReportController
 			'from' => $dateRange->from,
 			'to' => $dateRange->to,
 			'preset' => $dateRange->preset,
+			'scope' => $dateRange,
 			'couponUsage' => $couponUsage,
 		]);
 	}

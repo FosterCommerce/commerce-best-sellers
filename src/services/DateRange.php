@@ -3,9 +3,11 @@
 namespace fostercommerce\bestsellers\services;
 
 use Craft;
+use craft\commerce\Plugin as CommercePlugin;
 use craft\web\Request;
 use DateTime;
 use fostercommerce\bestsellers\models\DateRangeResult;
+use fostercommerce\bestsellers\models\ReportScope;
 use yii\base\Component;
 
 class DateRange extends Component
@@ -35,6 +37,8 @@ class DateRange extends Component
 	private const SESSION_KEY_TO = 'bestSellers.dateRange.to';
 
 	private const SESSION_KEY_PRESET = 'bestSellers.dateRange.preset';
+
+	private const SESSION_KEY_ORDER_STATUSES = 'bestSellers.scope.orderStatusIds';
 
 	/**
 	 * Resolve the date range from query params (priority) or session.
@@ -116,6 +120,51 @@ class DateRange extends Component
 	}
 
 	/**
+	 * Resolve a full report scope including date range and order status filter.
+	 */
+	public function resolveScope(): ReportScope
+	{
+		$dateRange = $this->resolve();
+		$previous = $this->previousPeriod($dateRange->from, $dateRange->to);
+
+		$request = Craft::$app->getRequest();
+		$session = Craft::$app->getSession();
+
+		// Read order statuses from query params (priority) or session
+		$statusHandles = null;
+		if ($request instanceof Request) {
+			$statusHandles = $request->getQueryParam('orderStatuses');
+		}
+
+		if ($statusHandles !== null) {
+			if (is_string($statusHandles)) {
+				// Empty string means "clear filter" (from hidden input fallback)
+				$statusHandles = $statusHandles !== '' ? [$statusHandles] : [];
+			} elseif (! is_array($statusHandles)) {
+				$statusHandles = [];
+			}
+
+			// Convert handles to IDs
+			$statusIds = $this->resolveStatusIds($statusHandles);
+			$session->set(self::SESSION_KEY_ORDER_STATUSES, $statusIds);
+		} else {
+			$sessionValue = $session->get(self::SESSION_KEY_ORDER_STATUSES, []);
+			/** @var list<int> $statusIds */
+			$statusIds = is_array($sessionValue) ? $sessionValue : [];
+		}
+
+		return new ReportScope([
+			'from' => $dateRange->from,
+			'to' => $dateRange->to,
+			'fromDT' => $dateRange->fromDT,
+			'toDT' => $dateRange->toDT,
+			'preset' => $dateRange->preset,
+			'prev' => $previous,
+			'orderStatusIds' => $statusIds,
+		]);
+	}
+
+	/**
 	 * Calculate the previous period of the same duration.
 	 */
 	public function previousPeriod(string $from, string $to): DateRangeResult
@@ -133,6 +182,30 @@ class DateRange extends Component
 			'fromDT' => $previousFromDTObj->format('Y-m-d H:i:s'),
 			'toDT' => $previousToDTObj->format('Y-m-d H:i:s'),
 		]);
+	}
+
+	/**
+	 * Convert order status handles to IDs.
+	 *
+	 * @param list<string> $handles
+	 * @return list<int>
+	 */
+	private function resolveStatusIds(array $handles): array
+	{
+		if ($handles === []) {
+			return [];
+		}
+
+		$allStatuses = CommercePlugin::getInstance()?->getOrderStatuses()->getAllOrderStatuses() ?? [];
+		$ids = [];
+
+		foreach ($allStatuses as $status) {
+			if (in_array($status->handle, $handles, true)) {
+				$ids[] = (int) $status->id;
+			}
+		}
+
+		return $ids;
 	}
 
 	/**

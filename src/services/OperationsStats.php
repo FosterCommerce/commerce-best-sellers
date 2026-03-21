@@ -2,9 +2,12 @@
 
 namespace fostercommerce\bestsellers\services;
 
+use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use fostercommerce\bestsellers\models\ReportScope;
 use yii\base\Component;
+use yii\db\Expression;
 
 class OperationsStats extends Component
 {
@@ -13,14 +16,9 @@ class OperationsStats extends Component
 	 *
 	 * @return array{avgItemsPerOrder: float, avgDiscount: float, pctWithCoupon: float, topShippingMethod: string}
 	 */
-	public function getOperationsKpis(string $fromDT, string $toDT): array
+	public function getOperationsKpis(ReportScope $scope): array
 	{
-		$dateCondition = [
-			'and',
-			['=', '[[isCompleted]]', true],
-			['>=', '[[dateOrdered]]', $fromDT],
-			['<=', '[[dateOrdered]]', $toDT],
-		];
+		$dateCondition = $this->buildDateCondition($scope);
 
 		/** @var array{totalOrders: string, avgDiscount: string, withCoupon: string}|false $orderStats */
 		$orderStats = (new Query())
@@ -39,6 +37,7 @@ class OperationsStats extends Component
 		$pctWithCoupon = $totalOrders > 0 ? round(($withCoupon / $totalOrders) * 100, 1) : 0;
 
 		// Total items sold
+		$itemsDateCondition = $this->buildDateCondition($scope, 'orders');
 		$totalItemsSold = (int) (new Query())
 			->select('COALESCE(SUM([[lineItems.qty]]), 0)')
 			->from([
@@ -47,12 +46,7 @@ class OperationsStats extends Component
 			->innerJoin([
 				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
-			->where([
-				'and',
-				['=', '[[orders.isCompleted]]', true],
-				['>=', '[[orders.dateOrdered]]', $fromDT],
-				['<=', '[[orders.dateOrdered]]', $toDT],
-			])
+			->where($itemsDateCondition)
 			->scalar();
 
 		$avgItemsPerOrder = $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0;
@@ -88,14 +82,9 @@ class OperationsStats extends Component
 	 *
 	 * @return array{labels: list<string>, counts: list<int>}
 	 */
-	public function getItemsPerOrderDistribution(string $fromDT, string $toDT): array
+	public function getItemsPerOrderDistribution(ReportScope $scope): array
 	{
-		$dateCondition = [
-			'and',
-			['=', '[[orders.isCompleted]]', true],
-			['>=', '[[orders.dateOrdered]]', $fromDT],
-			['<=', '[[orders.dateOrdered]]', $toDT],
-		];
+		$dateCondition = $this->buildDateCondition($scope, 'orders');
 
 		$orders = (new Query())
 			->select([
@@ -148,14 +137,9 @@ class OperationsStats extends Component
 	 *
 	 * @return array<int, array{method: string, count: int, revenue: float}>
 	 */
-	public function getShippingMethods(string $fromDT, string $toDT): array
+	public function getShippingMethods(ReportScope $scope): array
 	{
-		$dateCondition = [
-			'and',
-			['=', '[[isCompleted]]', true],
-			['>=', '[[dateOrdered]]', $fromDT],
-			['<=', '[[dateOrdered]]', $toDT],
-		];
+		$dateCondition = $this->buildDateCondition($scope);
 
 		/** @var array<int, array{method: string, count: int, revenue: float}> $rows */
 		$rows = (new Query())
@@ -180,19 +164,14 @@ class OperationsStats extends Component
 	 *
 	 * @return array<int, array{code: string, uses: int, totalDiscount: float}>
 	 */
-	public function getCouponUsage(string $fromDT, string $toDT): array
+	public function getCouponUsage(ReportScope $scope): array
 	{
-		$dateCondition = [
-			'and',
-			['=', '[[isCompleted]]', true],
-			['>=', '[[dateOrdered]]', $fromDT],
-			['<=', '[[dateOrdered]]', $toDT],
-			[
-				'not', [
-					'couponCode' => null,
-				]],
-			['!=', 'couponCode', ''],
-		];
+		$dateCondition = $this->buildDateCondition($scope);
+		$dateCondition[] = [
+			'not', [
+				'couponCode' => null,
+			]];
+		$dateCondition[] = ['!=', 'couponCode', ''];
 
 		/** @var array<int, array{code: string, uses: int, totalDiscount: float}> $rows */
 		$rows = (new Query())
@@ -217,8 +196,10 @@ class OperationsStats extends Component
 	 *
 	 * @return array{discounted: array{orders: int, revenue: float, aov: float}, fullPrice: array{orders: int, revenue: float, aov: float}}
 	 */
-	public function getDiscountedVsFullPrice(string $fromDT, string $toDT): array
+	public function getDiscountedVsFullPrice(ReportScope $scope): array
 	{
+		$dateCondition = $this->buildDateCondition($scope);
+
 		/** @var array{discountedOrders: string, discountedRevenue: string, fullPriceOrders: string, fullPriceRevenue: string}|false $row */
 		$row = (new Query())
 			->select([
@@ -228,12 +209,7 @@ class OperationsStats extends Component
 				'fullPriceRevenue' => 'COALESCE(SUM(CASE WHEN [[totalDiscount]] >= 0 OR [[totalDiscount]] IS NULL THEN [[totalPrice]] ELSE 0 END), 0)',
 			])
 			->from(CommerceTable::ORDERS)
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
-			])
+			->where($dateCondition)
 			->one();
 
 		$discountedOrders = (int) ($row['discountedOrders'] ?? 0);
@@ -258,13 +234,21 @@ class OperationsStats extends Component
 	/**
 	 * Get the most used discounts (from order adjustments).
 	 *
-	 * @return list<array{name: string, uses: int, totalDiscount: float}>
+	 * @return list<array{discountId: int|null, name: string, uses: int, totalDiscount: float}>
 	 */
-	public function getTopDiscounts(string $fromDT, string $toDT, int $limit = 5): array
+	public function getTopDiscounts(ReportScope $scope, int $limit = 5): array
 	{
-		/** @var list<array{name: string, uses: int, totalDiscount: float}> $rows */
+		$dateCondition = $this->buildDateCondition($scope, 'orders');
+
+		$isMysql = Craft::$app->getDb()->getIsMysql();
+		$idExprSql = $isMysql
+			? "JSON_EXTRACT([[adj.sourceSnapshot]], '$.id')"
+			: "(([[adj.sourceSnapshot]])::json->>'id')::int";
+
+		/** @var list<array{discountId: string|null, name: string, uses: string, totalDiscount: string}> $rows */
 		$rows = (new Query())
 			->select([
+				'discountId' => new Expression($idExprSql),
 				'name' => '[[adj.name]]',
 				'uses' => 'COUNT(DISTINCT [[adj.orderId]])',
 				'totalDiscount' => 'COALESCE(SUM(ABS([[adj.amount]])), 0)',
@@ -275,20 +259,44 @@ class OperationsStats extends Component
 			->innerJoin([
 				'orders' => CommerceTable::ORDERS,
 			], '[[adj.orderId]] = [[orders.id]]')
-			->where([
-				'and',
-				['=', '[[orders.isCompleted]]', true],
-				['>=', '[[orders.dateOrdered]]', $fromDT],
-				['<=', '[[orders.dateOrdered]]', $toDT],
-				['=', '[[adj.type]]', 'discount'],
-			])
-			->groupBy('[[adj.name]]')
+			->where($dateCondition)
+			->andWhere(['=', '[[adj.type]]', 'discount'])
+			->groupBy([new Expression($idExprSql), '[[adj.name]]'])
 			->orderBy([
 				'uses' => SORT_DESC,
 			])
 			->limit($limit)
 			->all();
 
-		return $rows;
+		return array_map(fn (array $row): array => [
+			'discountId' => $row['discountId'] !== null ? (int) $row['discountId'] : null,
+			'name' => $row['name'],
+			'uses' => (int) $row['uses'],
+			'totalDiscount' => (float) $row['totalDiscount'],
+		], $rows);
+	}
+
+	/**
+	 * Build a standard date + status condition for commerce_orders queries.
+	 *
+	 * @return list<mixed>
+	 */
+	private function buildDateCondition(ReportScope $scope, string $tableAlias = ''): array
+	{
+		$prefix = $tableAlias !== '' ? $tableAlias . '.' : '';
+
+		$condition = [
+			'and',
+			['=', "[[{$prefix}isCompleted]]", true],
+			['>=', "[[{$prefix}dateOrdered]]", $scope->fromDT],
+			['<=', "[[{$prefix}dateOrdered]]", $scope->toDT],
+		];
+
+		$statusCondition = $scope->statusCondition($tableAlias);
+		if ($statusCondition !== null) {
+			$condition[] = $statusCondition;
+		}
+
+		return $condition;
 	}
 }

@@ -12,10 +12,10 @@ use fostercommerce\bestsellers\helpers\summary\SignalClassifier;
 use fostercommerce\bestsellers\helpers\summary\TemplateResolver;
 use fostercommerce\bestsellers\helpers\summary\WarningGenerator;
 use fostercommerce\bestsellers\models\AbandonmentStats;
-use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\models\GroupSummary;
 use fostercommerce\bestsellers\models\PeriodStats;
 use fostercommerce\bestsellers\models\ProductSummary;
+use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\models\SummaryResult;
 use fostercommerce\bestsellers\Plugin;
 use yii\base\Component;
@@ -27,45 +27,45 @@ class SummaryEngine extends Component
 	/**
 	 * Generate summaries for all metric groups.
 	 */
-	public function generate(DateRangeResult $dateRange): SummaryResult
+	public function generate(ReportScope $scope): SummaryResult
 	{
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
 
-		$days = RangeLabelBuilder::dayCount($dateRange->from, $dateRange->to);
-		$isPartial = RangeLabelBuilder::isPartial($dateRange->preset, $dateRange->to);
-		$elapsedDays = $isPartial ? RangeLabelBuilder::elapsedDays($dateRange->from) : $days;
-		$rangeLabel = RangeLabelBuilder::rangeLabel($dateRange->preset, $dateRange->from, $dateRange->to);
-		$compLabel = RangeLabelBuilder::comparisonLabel($dateRange->preset, $dateRange->from, $dateRange->to, $days);
+		$days = RangeLabelBuilder::dayCount($scope->from, $scope->to);
+		$isPartial = RangeLabelBuilder::isPartial($scope->preset, $scope->to);
+		$elapsedDays = $isPartial ? RangeLabelBuilder::elapsedDays($scope->from) : $days;
+		$rangeLabel = RangeLabelBuilder::rangeLabel($scope->preset, $scope->from, $scope->to);
+		$compLabel = RangeLabelBuilder::comparisonLabel($scope->preset, $scope->from, $scope->to, $days);
 
 		$earliestOrderDate = $this->getEarliestOrderDate();
-		$yoyDates = $this->getYoyDates($dateRange->from, $dateRange->to);
+		$yoyDates = $this->getYoyDates($scope->from, $scope->to);
 		$yoyAvailable = $earliestOrderDate !== null && $earliestOrderDate <= $yoyDates['from'];
 
 		$warningContext = [
 			'is_partial' => $isPartial,
 			'days' => $days,
-			'from' => $dateRange->from,
-			'to' => $dateRange->to,
+			'from' => $scope->from,
+			'to' => $scope->to,
 			'elapsed_days' => $elapsedDays,
 			'earliest_order_date' => $earliestOrderDate,
 			'yoy_available' => $yoyAvailable,
 			'trailing_chunk_count' => null,
 			'trailing_prorated' => false,
-			'prev_from' => $dateRange->getPrev()->from,
-			'prev_to' => $dateRange->getPrev()->to,
+			'prev_from' => $scope->getPrev()->from,
+			'prev_to' => $scope->getPrev()->to,
 		];
 
-		// Fetch baseline data
+		// DailyStats uses pre-aggregated data (does not filter by status)
 		$dailyStats = $plugin->dailyStats;
-		$currentStats = $dailyStats->getStatsForRange($dateRange->from, $dateRange->to);
-		$prevStats = $dailyStats->getStatsForRange($dateRange->getPrev()->from, $dateRange->getPrev()->to);
+		$currentStats = $dailyStats->getStatsForRange($scope->from, $scope->to);
+		$prevStats = $dailyStats->getStatsForRange($scope->getPrev()->from, $scope->getPrev()->to);
 
 		$yoyStats = $yoyAvailable
 			? $dailyStats->getStatsForRange($yoyDates['from'], $yoyDates['to'])
 			: null;
 
-		$trailing = $this->computeTrailingAverage($dailyStats, $dateRange->from, $days, $isPartial, $elapsedDays, $earliestOrderDate);
+		$trailing = $this->computeTrailingAverage($dailyStats, $scope->from, $days, $isPartial, $elapsedDays, $earliestOrderDate);
 		$warningContext['trailing_chunk_count'] = $trailing['chunk_count'] ?? null;
 		$warningContext['trailing_prorated'] = $trailing['prorated'];
 
@@ -84,8 +84,9 @@ class SummaryEngine extends Component
 
 		// -- Discounts group --
 		$operationsStats = $plugin->operationsStats;
-		$discountedVsFullPrice = $operationsStats->getDiscountedVsFullPrice($dateRange->fromDT, $dateRange->toDT);
-		$prevDiscountedVsFullPrice = $operationsStats->getDiscountedVsFullPrice($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
+		$prevScope = $scope->forDates($scope->getPrev()->from, $scope->getPrev()->to);
+		$discountedVsFullPrice = $operationsStats->getDiscountedVsFullPrice($scope);
+		$prevDiscountedVsFullPrice = $operationsStats->getDiscountedVsFullPrice($prevScope);
 		$discountsSummary = $this->buildDiscountsSummary($discountedVsFullPrice, $prevDiscountedVsFullPrice);
 
 		// -- Customers group --
@@ -101,15 +102,12 @@ class SummaryEngine extends Component
 
 		// -- Products group --
 		$productStats = $plugin->productStats;
-		$currentProductSummary = $productStats->getSummaryStats($dateRange->fromDT, $dateRange->toDT);
-		$prevProductSummary = $productStats->getSummaryStats($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
+		$currentProductSummary = $productStats->getSummaryStats($scope);
+		$prevProductSummary = $productStats->getSummaryStats($prevScope);
 
 		$yoyProductSummary = null;
 		if ($yoyAvailable) {
-			$yoyProductSummary = $productStats->getSummaryStats(
-				$yoyDates['from'] . ' 00:00:00',
-				$yoyDates['to'] . ' 23:59:59',
-			);
+			$yoyProductSummary = $productStats->getSummaryStats($scope->forDates($yoyDates['from'], $yoyDates['to']));
 		}
 
 		$productsSummary = $this->buildProductsSummary(
@@ -123,8 +121,8 @@ class SummaryEngine extends Component
 
 		// -- Abandonment group --
 		$cartAbandonment = $plugin->cartAbandonment;
-		$currentAbandonment = $cartAbandonment->getAbandonmentStats($dateRange->fromDT, $dateRange->toDT);
-		$prevAbandonment = $cartAbandonment->getAbandonmentStats($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
+		$currentAbandonment = $cartAbandonment->getAbandonmentStats($scope);
+		$prevAbandonment = $cartAbandonment->getAbandonmentStats($prevScope);
 
 		$abandonmentSummary = $this->buildAbandonmentSummary(
 			$currentAbandonment,

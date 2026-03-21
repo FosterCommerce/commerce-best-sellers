@@ -25,26 +25,33 @@ class OrdersController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		$dateRange = $this->resolveDateRange();
+		$scope = $this->resolveScope();
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
 		$dailyStats = $plugin->dailyStats;
 
-		$stats = $dailyStats->getStatsForRange($dateRange->from, $dateRange->to);
-		$prevStats = $dailyStats->getStatsForRange($dateRange->getPrev()->from, $dateRange->getPrev()->to);
+		$stats = $dailyStats->getStatsForRange($scope->from, $scope->to);
+		$prevStats = $dailyStats->getStatsForRange($scope->getPrev()->from, $scope->getPrev()->to);
 
 		$revenueChange = $this->percentChange($stats->totalRevenue, $prevStats->totalRevenue);
 		$ordersChange = $this->percentChange($stats->totalOrders, $prevStats->totalOrders);
 
+		$operationsStats = $plugin->operationsStats;
+		$shippingMethods = $operationsStats->getShippingMethods($scope);
+		$topDiscounts = $operationsStats->getTopDiscounts($scope, 20);
+
 		return $this->renderTemplate('best-sellers/_sales', [
 			'title' => Craft::t('best-sellers', 'Orders'),
 			'selectedSubnavItem' => 'orders',
-			'from' => $dateRange->from,
-			'to' => $dateRange->to,
-			'preset' => $dateRange->preset,
+			'from' => $scope->from,
+			'to' => $scope->to,
+			'preset' => $scope->preset,
+			'scope' => $scope,
 			'stats' => $stats,
 			'revenueChange' => $revenueChange,
 			'ordersChange' => $ordersChange,
+			'shippingMethods' => $shippingMethods,
+			'topDiscounts' => $topDiscounts,
 		]);
 	}
 
@@ -57,7 +64,7 @@ class OrdersController extends BaseReportController
 
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var int|string $page */
 		$page = $request->getQueryParam('page', 1);
@@ -95,7 +102,7 @@ class OrdersController extends BaseReportController
 	 */
 	public function actionExportCsv(): Response
 	{
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
 
 		$orders = $ordersQuery->all();
@@ -316,6 +323,10 @@ class OrdersController extends BaseReportController
 	 */
 	private function applyOrderFilters(OrderQuery|Query $query): void
 	{
+		// Element queries join multiple tables; plain queries have a single table
+		$idCol = $query instanceof OrderQuery ? '[[commerce_orders.id]]' : '[[id]]';
+		$statusIdCol = $query instanceof OrderQuery ? '[[commerce_orders.orderStatusId]]' : '[[orderStatusId]]';
+
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
@@ -340,7 +351,7 @@ class OrdersController extends BaseReportController
 
 		if ($orderStatuses !== []) {
 			$query->andWhere([
-				'[[orderStatusId]]' => (new Query())
+				$statusIdCol => (new Query())
 					->select('[[id]]')
 					->from(CommerceTable::ORDERSTATUSES)
 					->where([
@@ -413,19 +424,62 @@ class OrdersController extends BaseReportController
 			]);
 		}
 
-		// Discount name filter (orders using a specific discount)
-		/** @var string $discountName */
-		$discountName = $request->getQueryParam('discountName', '');
-		if ($discountName !== '') {
+		// Discount ID filter (orders using a specific discount)
+		/** @var string $rawDiscountId */
+		$rawDiscountId = $request->getQueryParam('discountId', '');
+		if ($rawDiscountId !== '') {
+			$discountId = (int) $rawDiscountId;
+			$isMysql = Craft::$app->getDb()->getIsMysql();
+			$idExpr = $isMysql
+				? new Expression("JSON_EXTRACT([[sourceSnapshot]], '$.id') = :discountId", [
+					':discountId' => $discountId,
+				])
+				: new Expression("(([[sourceSnapshot]])::json->>'id')::int = :discountId", [
+					':discountId' => $discountId,
+				]);
+
 			$query->andWhere([
-				'[[id]]' => (new Query())
+				$idCol => (new Query())
 					->select('DISTINCT [[orderId]]')
 					->from(CommerceTable::ORDERADJUSTMENTS)
 					->where([
 						'[[type]]' => 'discount',
-						'[[name]]' => $discountName,
-					]),
+					])
+					->andWhere($idExpr),
 			]);
+		}
+
+		// Items per order bucket filter
+		/** @var string $itemsBucket */
+		$itemsBucket = $request->getQueryParam('itemsPerOrder', '');
+		if ($itemsBucket !== '') {
+			$itemCountSubquery = (new Query())
+				->select('[[lineItems.orderId]]')
+				->from([
+					'lineItems' => CommerceTable::LINEITEMS,
+				])
+				->groupBy('[[lineItems.orderId]]');
+
+			$bucketRanges = [
+				'1' => [1, 1],
+				'2' => [2, 2],
+				'3' => [3, 3],
+				'4-5' => [4, 5],
+				'6-10' => [6, 10],
+				'11+' => [11, null],
+			];
+
+			if (isset($bucketRanges[$itemsBucket])) {
+				[$min, $max] = $bucketRanges[$itemsBucket];
+				$itemCountSubquery->having(['>=', 'SUM([[lineItems.qty]])', $min]);
+				if ($max !== null) {
+					$itemCountSubquery->andHaving(['<=', 'SUM([[lineItems.qty]])', $max]);
+				}
+
+				$query->andWhere([
+					$idCol => $itemCountSubquery,
+				]);
+			}
 		}
 	}
 

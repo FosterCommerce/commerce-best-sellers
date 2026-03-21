@@ -297,10 +297,20 @@ class OrdersController extends BaseReportController
 	 */
 	private function buildFilteredTotals(DateRangeResult $dateRange): array
 	{
-		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
-		$orderIds = $ordersQuery->ids();
+		$totalsQuery = $this->buildFilteredTotalsQuery($dateRange);
 
-		if ($orderIds === []) {
+		/** @var array{itemSubtotal: string, totalTax: string, totalDiscount: string, totalShippingCost: string, totalPaid: string}|false $sums */
+		$sums = (clone $totalsQuery)
+			->select([
+				'itemSubtotal' => 'COALESCE(SUM([[itemSubtotal]]), 0)',
+				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
+				'totalDiscount' => 'COALESCE(SUM([[totalDiscount]]), 0)',
+				'totalShippingCost' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
+				'totalPaid' => 'COALESCE(SUM([[totalPaid]]), 0)',
+			])
+			->one();
+
+		if (! $sums) {
 			return [
 				'itemSubtotal' => $this->formatCurrency(0),
 				'totalTax' => $this->formatCurrency(0),
@@ -311,23 +321,12 @@ class OrdersController extends BaseReportController
 			];
 		}
 
-		/** @var array{itemSubtotal: string, totalTax: string, totalDiscount: string, totalShippingCost: string, totalPaid: string} $sums */
-		$sums = (new Query())
-			->select([
-				'itemSubtotal' => 'COALESCE(SUM([[itemSubtotal]]), 0)',
-				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
-				'totalDiscount' => 'COALESCE(SUM([[totalDiscount]]), 0)',
-				'totalShippingCost' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
-				'totalPaid' => 'COALESCE(SUM([[totalPaid]]), 0)',
-			])
-			->from(CommerceTable::ORDERS)
-			->where(['in', '[[id]]', $orderIds])
-			->one();
+		$idSubquery = (clone $totalsQuery)->select(['[[id]]']);
 
 		$totalItemsSold = (int) (new Query())
 			->select('COALESCE(SUM([[qty]]), 0)')
 			->from(CommerceTable::LINEITEMS)
-			->where(['in', '[[orderId]]', $orderIds])
+			->where(['in', '[[orderId]]', $idSubquery])
 			->scalar();
 
 		return [
@@ -338,6 +337,88 @@ class OrdersController extends BaseReportController
 			'totalPaid' => $this->formatCurrency((float) $sums['totalPaid']),
 			'itemsSold' => number_format($totalItemsSold),
 		];
+	}
+
+	/**
+	 * Build a raw query on the orders table with the same filters as the element query.
+	 *
+	 * @return Query<array-key, mixed>
+	 */
+	private function buildFilteredTotalsQuery(DateRangeResult $dateRange): Query
+	{
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+
+		/** @var string $rawSearch */
+		$rawSearch = $request->getQueryParam('search', '');
+		$search = trim($rawSearch);
+
+		$orderStatuses = $request->getQueryParam('orderStatus', []);
+		$paidFilters = $request->getQueryParam('paymentStatus', []);
+
+		if (is_string($orderStatuses) && $orderStatuses !== '') {
+			$orderStatuses = [$orderStatuses];
+		} elseif (! is_array($orderStatuses)) {
+			$orderStatuses = [];
+		}
+
+		if (is_string($paidFilters) && $paidFilters !== '') {
+			$paidFilters = [$paidFilters];
+		} elseif (! is_array($paidFilters)) {
+			$paidFilters = [];
+		}
+
+		$query = (new Query())
+			->from(CommerceTable::ORDERS)
+			->where([
+				'and',
+				[
+					'[[isCompleted]]' => true,
+				],
+				['>=', '[[dateOrdered]]', $dateRange->fromDT],
+				['<=', '[[dateOrdered]]', $dateRange->toDT],
+			]);
+
+		if ($orderStatuses !== []) {
+			$query->andWhere([
+				'[[orderStatusId]]' => (new Query())
+					->select('[[id]]')
+					->from(CommerceTable::ORDERSTATUSES)
+					->where([
+						'[[handle]]' => $orderStatuses,
+					]),
+			]);
+		}
+
+		if ($paidFilters !== []) {
+			$paymentConditions = ['or'];
+			foreach ($paidFilters as $paidFilter) {
+				if ($paidFilter === 'paid') {
+					$paymentConditions[] = '[[totalPaid]] >= [[totalPrice]]';
+				} elseif ($paidFilter === 'partial') {
+					$paymentConditions[] = ['and', '[[totalPaid]] > 0', '[[totalPaid]] < [[totalPrice]]'];
+				} elseif ($paidFilter === 'unpaid') {
+					$paymentConditions[] = [
+						'[[totalPaid]]' => 0,
+					];
+				}
+			}
+
+			if (count($paymentConditions) > 1) {
+				$query->andWhere($paymentConditions);
+			}
+		}
+
+		if ($search !== '') {
+			$query->andWhere([
+				'or',
+				['like', '[[reference]]', $search],
+				['like', '[[email]]', $search],
+				['like', '[[number]]', $search],
+			]);
+		}
+
+		return $query;
 	}
 
 	/**

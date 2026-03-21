@@ -125,7 +125,12 @@ class DateRange extends Component
 	public function resolveScope(): ReportScope
 	{
 		$dateRange = $this->resolve();
-		$previous = $this->previousPeriod($dateRange->from, $dateRange->to);
+
+		// For partial periods (thisMonth, thisYear, thisWeek), clamp the comparison
+		// to the elapsed portion so we compare apples to apples
+		$today = (new DateTime('now'))->format('Y-m-d');
+		$effectiveTo = $dateRange->to > $today ? $today : $dateRange->to;
+		$previous = $this->previousPeriod($dateRange->from, $effectiveTo);
 
 		$request = Craft::$app->getRequest();
 		$session = Craft::$app->getSession();
@@ -234,19 +239,19 @@ class DateRange extends Component
 			],
 			self::PRESET_PAST_7_DAYS => [
 				(new DateTime('-7 days'))->format('Y-m-d'),
-				$today,
+				(new DateTime('-1 day'))->format('Y-m-d'),
 			],
 			self::PRESET_PAST_30_DAYS => [
 				(new DateTime('-30 days'))->format('Y-m-d'),
-				$today,
+				(new DateTime('-1 day'))->format('Y-m-d'),
 			],
 			self::PRESET_PAST_90_DAYS => [
 				(new DateTime('-90 days'))->format('Y-m-d'),
-				$today,
+				(new DateTime('-1 day'))->format('Y-m-d'),
 			],
 			self::PRESET_PAST_YEAR => [
 				(new DateTime('-1 year'))->format('Y-m-d'),
-				$today,
+				(new DateTime('-1 day'))->format('Y-m-d'),
 			],
 			self::PRESET_ALL => [
 				'2000-01-01',

@@ -45,9 +45,7 @@ abstract class WarningGenerator
 		}
 
 		if ($context['days'] >= 90) {
-			$warnings[] = Craft::t('best-sellers', 'This is a {days}-day view. Short-term changes may not be visible.', [
-				'days' => $context['days'],
-			]);
+			$warnings[] = Craft::t('best-sellers', 'This is a long date range. Short-term changes may not be visible.');
 		}
 
 		if (! $context['yoy_available'] && $context['earliest_order_date'] !== null) {

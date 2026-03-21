@@ -32,6 +32,65 @@ class CartAbandonment extends Component
 	];
 
 	/**
+	 * Get the highest-value abandoned carts.
+	 *
+	 * @return list<array{id: int, number: string, email: string, totalPrice: float, dateUpdated: string, hoursOld: float}>
+	 */
+	public function getTopAbandonedCarts(ReportScope $scope, int $limit = 5): array
+	{
+		$cutoff = (new DateTime())->modify('-4 hours')->format('Y-m-d H:i:s');
+
+		/** @var list<array{id: string, number: string, email: string|null, totalPrice: string, dateUpdated: string}> $rows */
+		$rows = (new Query())
+			->select([
+				'orders.[[id]]',
+				'orders.[[number]]',
+				'orders.[[email]]',
+				'orders.[[totalPrice]]',
+				'orders.[[dateUpdated]]',
+			])
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->innerJoin(
+				[
+					'lineItemCheck' => (new Query())
+						->select('DISTINCT [[orderId]]')
+						->from(CommerceTable::LINEITEMS),
+				],
+				'[[lineItemCheck.orderId]] = [[orders.id]]'
+			)
+			->where([
+				'and',
+				['=', '[[orders.isCompleted]]', false],
+				['>=', '[[orders.dateUpdated]]', $scope->fromDT],
+				['<=', '[[orders.dateUpdated]]', $scope->toDT],
+				['<=', '[[orders.dateUpdated]]', $cutoff],
+			])
+			->orderBy([
+				'orders.[[totalPrice]]' => SORT_DESC,
+			])
+			->limit($limit)
+			->all();
+
+		$now = new DateTime();
+
+		return array_map(function (array $row) use ($now): array {
+			$updatedAt = new DateTime($row['dateUpdated']);
+			$hoursOld = ($now->getTimestamp() - $updatedAt->getTimestamp()) / 3600;
+
+			return [
+				'id' => (int) $row['id'],
+				'number' => $row['number'],
+				'email' => $row['email'] ?? '',
+				'totalPrice' => (float) $row['totalPrice'],
+				'dateUpdated' => $row['dateUpdated'],
+				'hoursOld' => round($hoursOld, 1),
+			];
+		}, $rows);
+	}
+
+	/**
 	 * Get cart abandonment stats for the Overview widget.
 	 *
 	 * An abandoned cart is any incomplete order with line items, older than 4 hours.

@@ -35,12 +35,6 @@ class ProductsController extends BaseReportController
 		/** @var string $productType */
 		$productType = $request->getQueryParam('productType', 'all');
 
-		$plugin = Plugin::getInstance();
-		assert($plugin !== null);
-		$productStats = $plugin->productStats;
-
-		$summaryStats = $productStats->getSummaryStats($dateRange);
-
 		return $this->renderTemplate('best-sellers/_products', [
 			'title' => Craft::t('best-sellers', 'Products'),
 			'selectedSubnavItem' => 'products',
@@ -51,7 +45,6 @@ class ProductsController extends BaseReportController
 			'productsOrVariants' => $productsOrVariants,
 			'sortBy' => $sortBy,
 			'productType' => $productType,
-			'summaryStats' => $summaryStats,
 		]);
 	}
 

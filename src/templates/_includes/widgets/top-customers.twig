@@ -24,6 +24,19 @@
 					</tr>
 				{% endfor %}
 			</tbody>
+			<tfoot>
+				<tr>
+					<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ "Top"|t('best-sellers') }} {{ topCustomers|length }}</td>
+					<td style="padding: 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0;">
+						{% set totalOrders = 0 %}{% for c in topCustomers %}{% set totalOrders = totalOrders + c.orderCount %}{% endfor %}
+						{{ totalOrders|number_format }}
+					</td>
+					<td style="padding: 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0;">
+						{% set totalSpent = 0 %}{% for c in topCustomers %}{% set totalSpent = totalSpent + c.totalSpent %}{% endfor %}
+						{{ totalSpent|commerceCurrency }}
+					</td>
+				</tr>
+			</tfoot>
 		</table>
 	{% else %}
 		<p style="color: #999; font-size: 0.9rem;">{{ "No customer data available."|t('best-sellers') }}</p>

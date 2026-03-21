@@ -28,13 +28,6 @@ class OrdersController extends BaseReportController
 		$scope = $this->resolveScope();
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
-		$dailyStats = $plugin->dailyStats;
-
-		$stats = $dailyStats->getStatsForRange($scope->from, $scope->to);
-		$prevStats = $dailyStats->getStatsForRange($scope->getPrev()->from, $scope->getPrev()->to);
-
-		$revenueChange = $this->percentChange($stats->totalRevenue, $prevStats->totalRevenue);
-		$ordersChange = $this->percentChange($stats->totalOrders, $prevStats->totalOrders);
 
 		$operationsStats = $plugin->operationsStats;
 		$shippingMethods = $operationsStats->getShippingMethods($scope);
@@ -47,9 +40,6 @@ class OrdersController extends BaseReportController
 			'to' => $scope->to,
 			'preset' => $scope->preset,
 			'scope' => $scope,
-			'stats' => $stats,
-			'revenueChange' => $revenueChange,
-			'ordersChange' => $ordersChange,
 			'shippingMethods' => $shippingMethods,
 			'topDiscounts' => $topDiscounts,
 		]);

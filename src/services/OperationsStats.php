@@ -160,38 +160,6 @@ class OperationsStats extends Component
 	}
 
 	/**
-	 * Get coupon usage statistics.
-	 *
-	 * @return array<int, array{code: string, uses: int, totalDiscount: float}>
-	 */
-	public function getCouponUsage(ReportScope $scope): array
-	{
-		$dateCondition = $this->buildDateCondition($scope);
-		$dateCondition[] = [
-			'not', [
-				'couponCode' => null,
-			]];
-		$dateCondition[] = ['!=', 'couponCode', ''];
-
-		/** @var array<int, array{code: string, uses: int, totalDiscount: float}> $rows */
-		$rows = (new Query())
-			->select([
-				'code' => '[[couponCode]]',
-				'uses' => 'COUNT(*)',
-				'totalDiscount' => 'COALESCE(SUM(ABS([[totalDiscount]])), 0)',
-			])
-			->from(CommerceTable::ORDERS)
-			->where($dateCondition)
-			->groupBy('[[couponCode]]')
-			->orderBy([
-				'uses' => SORT_DESC,
-			])
-			->all();
-
-		return $rows;
-	}
-
-	/**
 	 * Get discounted vs. full-price order breakdown.
 	 *
 	 * @return array{discounted: array{orders: int, revenue: float, aov: float}, fullPrice: array{orders: int, revenue: float, aov: float}}

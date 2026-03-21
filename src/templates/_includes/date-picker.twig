@@ -24,8 +24,8 @@
 
 	{% set allOrderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
 	{% if allOrderStatuses|length > 0 %}
-		<button type="button" class="btn" id="bs-scope-status-btn" style="margin-left: 0.5rem;">
-			{{ "Order Status"|t('best-sellers') }}
+		<button type="button" class="btn menubtn" id="bs-scope-status-btn" style="margin-left: 0.5rem;">
+			{{ "Order statuses"|t('best-sellers') }}
 			{% if scope is defined and scope and scope.hasStatusFilter() %}
 				<span class="bs-multiselect__badge">{{ scope.orderStatusIds|length }}</span>
 			{% endif %}

@@ -19,14 +19,6 @@ class CustomersController extends BaseReportController
 		$view->registerAssetBundle(ReportsAsset::class);
 
 		$scope = $this->resolveScope();
-		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
-		$customerStats = $plugin->customerStats;
-
-		$kpis = $customerStats->getCustomerKpis($scope);
-		$prevScope = $scope->forDates($scope->getPrev()->from, $scope->getPrev()->to);
-		$prevKpis = $customerStats->getCustomerKpis($prevScope);
-		$newCustomersChange = $this->percentChange($kpis->new, $prevKpis->new);
 
 		return $this->renderTemplate('best-sellers/_customers', [
 			'title' => Craft::t('best-sellers', 'Customers'),
@@ -35,8 +27,6 @@ class CustomersController extends BaseReportController
 			'to' => $scope->to,
 			'preset' => $scope->preset,
 			'scope' => $scope,
-			'kpis' => $kpis,
-			'newCustomersChange' => $newCustomersChange,
 		]);
 	}
 

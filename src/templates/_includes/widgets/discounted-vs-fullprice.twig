@@ -1,5 +1,5 @@
 {# Discounted vs Full-Price Orders #}
-<div class="bs-chart-container" style="margin-top: 1.5rem;">
+<div class="bs-chart-container">
 	<h3 class="bs-chart-container__title">{{ "Discounted vs. Full-Price Orders"|t('best-sellers') }}</h3>
 	{% set totalOrders = discountedVsFullPrice.discounted.orders + discountedVsFullPrice.fullPrice.orders %}
 	{% if totalOrders > 0 %}

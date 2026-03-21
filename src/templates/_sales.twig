@@ -13,25 +13,6 @@
 {% set selectedSubnavItem = 'orders' %}
 
 {% block reportContent %}
-	{# Written Summary #}
-	<div class="bs-chart-container" style="margin-bottom: 2rem;">
-		<p style="font-size: 1.1rem; margin: 0;">
-			{{ "Revenue is"|t('best-sellers') }}
-			{% if revenueChange is not null %}
-				{% if revenueChange >= 0 %}
-					<strong style="color: #27ae60;">{{ "up"|t('best-sellers') }} {{ revenueChange|abs|number_format(2) }}%</strong>
-				{% else %}
-					<strong style="color: #e74c3c;">{{ "down"|t('best-sellers') }} {{ revenueChange|abs|number_format(2) }}%</strong>
-				{% endif %}
-			{% else %}
-				<strong>---</strong>
-			{% endif %}
-			{{ "for the selected date range compared to the previous period."|t('best-sellers') }}
-			{{ "You also have"|t('best-sellers') }}
-			<strong{% if ordersChange is not null and ordersChange < 0 %} style="color: #e74c3c;"{% elseif ordersChange is not null and ordersChange >= 0 %} style="color: #27ae60;"{% endif %}>{{ stats.totalOrders|number_format }} {{ "orders"|t('best-sellers') }}{% if ordersChange is not null %} ({{ ordersChange >= 0 ? 'up'|t('best-sellers') : 'down'|t('best-sellers') }} {{ "by"|t('best-sellers') }} {{ ordersChange|abs|number_format(2) }}%){% endif %}</strong>.
-		</p>
-	</div>
-
 	{# Filters #}
 	{% set orderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
 	<div class="bs-section">
@@ -80,6 +61,7 @@
 			<div class="bs-filter-bar__item">
 				<input type="text" id="orders-search" class="text fullwidth" placeholder="{{ 'Search orders...'|t('best-sellers') }}" autocomplete="off">
 			</div>
+			<span id="orders-export"></span>
 		</div>
 
 		{# Loading State #}
@@ -147,6 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		paginationEl: document.getElementById('orders-pagination'),
 		actionUrl: 'best-sellers/orders/orders-data',
 		exportUrl: 'best-sellers/orders/export-csv',
+		exportContainerEl: document.getElementById('orders-export'),
 		baseParams: { from: '{{ from }}', to: '{{ to }}', preset: '{{ preset }}' },
 		defaultSort: 'dateOrdered',
 		defaultSortDir: 'desc',

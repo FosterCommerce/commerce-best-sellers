@@ -397,23 +397,28 @@
 
 				// Export CSV button
 				if (options.exportUrl && totalItems > 0) {
-					var exportBtn = document.createElement('a');
-					exportBtn.className = 'btn';
-					exportBtn.textContent = 'Export CSV';
-					exportBtn.style.marginLeft = 'auto';
-					exportBtn.addEventListener('click', function (event) {
-						event.preventDefault();
-						var exportParams = Object.assign({}, options.baseParams);
-						if (options.getFilterParams) {
-							Object.assign(exportParams, options.getFilterParams());
+					var exportTarget = options.exportContainerEl || paginationEl;
+					if (!exportTarget.querySelector('.bs-export-btn')) {
+						var exportBtn = document.createElement('a');
+						exportBtn.className = 'btn bs-export-btn';
+						exportBtn.textContent = 'Export CSV';
+						if (!options.exportContainerEl) {
+							exportBtn.style.marginLeft = 'auto';
 						}
-						if (currentSort) {
-							exportParams.sort = currentSort;
-							exportParams.sortDir = currentSortDir;
-						}
-						window.location.href = Craft.getActionUrl(options.exportUrl, exportParams);
-					});
-					paginationEl.appendChild(exportBtn);
+						exportBtn.addEventListener('click', function (event) {
+							event.preventDefault();
+							var exportParams = Object.assign({}, options.baseParams);
+							if (options.getFilterParams) {
+								Object.assign(exportParams, options.getFilterParams());
+							}
+							if (currentSort) {
+								exportParams.sort = currentSort;
+								exportParams.sortDir = currentSortDir;
+							}
+							window.location.href = Craft.getActionUrl(options.exportUrl, exportParams);
+						});
+						exportTarget.appendChild(exportBtn);
+					}
 				}
 
 				hideLoading();

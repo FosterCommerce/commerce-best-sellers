@@ -333,6 +333,24 @@
 	height: 16px;
 }
 
+/* Section accent borders */
+.bs-section--discounts,
+.bs-section--customers,
+.bs-section--products,
+.bs-section--carts {
+	border-left: 4px solid;
+	padding-left: 1.5rem;
+}
+
+.bs-section--discounts { border-left-color: #f39c12; }
+.bs-section--customers { border-left-color: #27ae60; }
+.bs-section--products { border-left-color: #8e44ad; }
+.bs-section--carts { border-left-color: #e74c3c; }
+
+.bs-section > :last-child {
+	margin-bottom: 0;
+}
+
 /* Hero row (Health Check) */
 .bs-section--hero {
 	margin-bottom: 3rem;
@@ -341,7 +359,7 @@
 }
 
 .bs-section--hero .bs-kpi-card__value {
-	font-size: 1.75rem;
+	font-size: 1.5rem;
 }
 
 /* Two-column layout */
@@ -349,6 +367,11 @@
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: 2rem;
+	margin-bottom: 2rem;
+}
+
+.bs-columns .bs-chart-container {
+	margin-bottom: 0;
 }
 
 @media (max-width: 900px) {

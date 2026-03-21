@@ -82,6 +82,7 @@ class OverviewController extends BaseReportController
 
 		// Cart abandonment
 		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($scope);
+		$topAbandonedCarts = $plugin->cartAbandonment->getTopAbandonedCarts($scope, 100);
 
 		// Commerce cart settings
 		$commerceSettings = CommercePlugin::getInstance()?->getSettings();
@@ -181,6 +182,7 @@ class OverviewController extends BaseReportController
 			'newVsReturning' => $newVsReturning,
 			'ltvComparison' => $ltvComparison,
 			'cartAbandonment' => $cartAbandonment,
+			'topAbandonedCarts' => $topAbandonedCarts,
 			'activeCartDuration' => $activeCartDuration,
 			'purgeEnabled' => $purgeEnabled,
 			'purgeDuration' => $purgeDuration,

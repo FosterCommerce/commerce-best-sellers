@@ -18,7 +18,7 @@
 	</div>
 
 	{# 2. Discounts & Order Composition #}
-	<div class="bs-section">
+	<div class="bs-section bs-section--discounts">
 		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
 			<h3 class="bs-section__title" style="margin: 0;">{{ "Discounts & Order Composition"|t('best-sellers') }}</h3>
 			<a href="{{ cpUrl('best-sellers/orders') }}" class="go" style="font-size: 0.85rem;">{{ "See all orders"|t('best-sellers') }}</a>
@@ -40,7 +40,7 @@
 	</div>
 
 	{# 3. Customers & Retention #}
-	<div class="bs-section">
+	<div class="bs-section bs-section--customers">
 		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
 			<h3 class="bs-section__title" style="margin: 0;">{{ "Customers & Retention"|t('best-sellers') }}</h3>
 			<a href="{{ cpUrl('best-sellers/customers') }}" class="go" style="font-size: 0.85rem;">{{ "See all customers"|t('best-sellers') }}</a>
@@ -58,14 +58,8 @@
 		{% include 'best-sellers/_includes/widgets/new-vs-returning-chart' %}
 	</div>
 
-	{# 4. Cart Abandonment #}
-	<div class="bs-section">
-		{{ summaryBlock.render(summaries.abandonment) }}
-		{% include 'best-sellers/_includes/widgets/cart-abandonment' %}
-	</div>
-
-	{# 5. Product Performance #}
-	<div class="bs-section">
+	{# 4. Product Performance #}
+	<div class="bs-section bs-section--products">
 		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
 			<h3 class="bs-section__title" style="margin: 0;">{{ "Product Performance"|t('best-sellers') }}</h3>
 			<a href="{{ cpUrl('best-sellers/products') }}" class="go" style="font-size: 0.85rem;">{{ "See all products"|t('best-sellers') }}</a>
@@ -79,6 +73,14 @@
 		{% if bestSellers|length > 0 %}
 			{% include 'best-sellers/_includes/widgets/best-sellers-table' %}
 		{% endif %}
+	</div>
+
+	{# 5. Carts #}
+	<div class="bs-section bs-section--carts">
+		<h3 class="bs-section__title">{{ "Carts"|t('best-sellers') }}</h3>
+		{{ summaryBlock.render(summaries.abandonment) }}
+		{% include 'best-sellers/_includes/widgets/cart-abandonment' %}
+		{% include 'best-sellers/_includes/widgets/top-abandoned-carts' %}
 	</div>
 {% endblock %}
 
@@ -397,5 +399,51 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 	{% endif %}
 
+	// Copy-to-clipboard for cart restore links
+	document.querySelectorAll('.bs-copy-link').forEach(function (link) {
+		link.addEventListener('click', function (e) {
+			e.preventDefault();
+			var url = this.getAttribute('data-url');
+			var el = this;
+			navigator.clipboard.writeText(url).then(function () {
+				var original = el.textContent;
+				el.textContent = '{{ "Copied!"|t("best-sellers") }}';
+				setTimeout(function () { el.textContent = original; }, 1500);
+			});
+		});
+	});
+
+	// Anonymous cart toggle for abandoned carts table
+	var anonToggle = document.getElementById('include-anonymous-abandoned');
+	if (anonToggle) {
+		// Default: hide anonymous rows
+		function filterAbandonedRows() {
+			var rows = document.querySelectorAll('#abandoned-carts-table tbody tr');
+			var showAnon = anonToggle.checked;
+			var visibleCount = 0;
+			var visibleTotal = 0;
+			var maxVisible = 5;
+			rows.forEach(function (row) {
+				var isAnon = row.getAttribute('data-anonymous') === 'true';
+				if ((isAnon && !showAnon) || visibleCount >= maxVisible) {
+					row.style.display = 'none';
+				} else {
+					row.style.display = '';
+					visibleCount++;
+					visibleTotal += parseFloat(row.getAttribute('data-value') || '0');
+				}
+			});
+			var countEl = document.getElementById('abandoned-carts-count');
+			if (countEl) {
+				countEl.textContent = visibleCount + ' {{ "carts"|t("best-sellers") }}';
+			}
+			var totalEl = document.getElementById('abandoned-carts-total');
+			if (totalEl) {
+				totalEl.textContent = BestSellersReports.formatCurrency(visibleTotal);
+			}
+		}
+		anonToggle.addEventListener('change', filterAbandonedRows);
+		filterAbandonedRows();
+	}
 });
 {% endjs %}

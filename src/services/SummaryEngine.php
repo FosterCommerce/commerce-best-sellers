@@ -456,7 +456,7 @@ class SummaryEngine extends Component
 			$annotations[] = Craft::t('best-sellers', 'This period last year: roughly flat ({delta}), suggesting seasonal patterns', [
 				'delta' => $coloredPct,
 			]);
-		} elseif ($yoySignal !== null && $yoySignal !== $prevSignal) {
+		} elseif ($yoySignal !== null) {
 			$direction = SignalClassifier::directionWord($yoySignal);
 			$coloredPct = $this->markedDelta($yoyDelta);
 			$annotations[] = Craft::t('best-sellers', 'This period last year: {direction} {delta}', [
@@ -465,7 +465,7 @@ class SummaryEngine extends Component
 			]);
 		}
 
-		if ($trailingSignal !== null && $trailingSignal !== $prevSignal) {
+		if ($trailingSignal !== null) {
 			$direction = SignalClassifier::directionWord($trailingSignal);
 			$coloredPct = $this->markedDelta($trailingDelta);
 			$annotations[] = Craft::t('best-sellers', 'Trailing 12-month avg: {direction} {delta}', [

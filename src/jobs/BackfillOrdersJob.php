@@ -41,12 +41,12 @@ class BackfillOrdersJob extends BaseJob
 		}
 
 		$orders = $ordersQuery->all();
+		$total = count($orders);
 
-		foreach ($orders as $order) {
+		foreach ($orders as $i => $order) {
 			Plugin::getInstance()?->sales->logOrderSales($order);
+			$this->setProgress($queue, ($i + 1) / $total);
 		}
-
-		$this->setProgress($queue, 1);
 	}
 
 	protected function defaultDescription(): string

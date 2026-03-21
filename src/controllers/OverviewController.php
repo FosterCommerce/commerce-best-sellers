@@ -12,19 +12,6 @@ use yii\web\Response;
 
 class OverviewController extends BaseReportController
 {
-	private const CARD_GROUPS = [
-		'Orders' => [
-			'keys' => ['revenue', 'orders', 'aov', 'totalDiscount', 'itemsSold', 'avgItemsPerOrder'],
-			'link' => 'best-sellers/orders',
-			'linkLabel' => 'See all orders',
-		],
-		'Customers' => [
-			'keys' => ['customers', 'newCustomers', 'repeatRate'],
-			'link' => 'best-sellers/customers',
-			'linkLabel' => 'See all customers',
-		],
-	];
-
 	public function actionIndex(): Response
 	{
 		$view = Craft::$app->getView();
@@ -41,7 +28,7 @@ class OverviewController extends BaseReportController
 		// Build grouped cards
 		$allKeys = [];
 		$cardGroups = [];
-		foreach (self::CARD_GROUPS as $groupLabel => $group) {
+		foreach ($this->cardGroups() as $groupLabel => $group) {
 			$keys = $group['keys'];
 			$cards = KpiCards::build($stats, $prevStats, $keys, $this->percentChange(...));
 			$cardGroups[] = [
@@ -76,18 +63,18 @@ class OverviewController extends BaseReportController
 		}
 
 		$cardGroups[] = [
-			'label' => 'Products',
+			'label' => Craft::t('best-sellers', 'Products'),
 			'link' => 'best-sellers/products',
-			'linkLabel' => 'See all products',
+			'linkLabel' => Craft::t('best-sellers', 'See all products'),
 			'cards' => [
 				[
-					'label' => 'Unique Products Sold',
+					'label' => Craft::t('best-sellers', 'Unique Products Sold'),
 					'value' => $productSummary['uniqueProducts'],
 					'change' => $this->percentChange($productSummary['uniqueProducts'], $prevProductSummary['uniqueProducts']),
 					'format' => 'number',
 				],
 				[
-					'label' => 'Product Revenue',
+					'label' => Craft::t('best-sellers', 'Product Revenue'),
 					'value' => $productSummary['totalProductRevenue'],
 					'change' => $this->percentChange($productSummary['totalProductRevenue'], $prevProductSummary['totalProductRevenue']),
 					'format' => 'currency',
@@ -135,7 +122,7 @@ class OverviewController extends BaseReportController
 		$prevDailyAov = array_map(floatval(...), $prevRawAov);
 
 		return $this->renderTemplate('best-sellers/_overview', [
-			'title' => 'Overview',
+			'title' => Craft::t('best-sellers', 'Overview'),
 			'selectedSubnavItem' => 'overview',
 			'from' => $dateRange['from'],
 			'to' => $dateRange['to'],
@@ -158,5 +145,24 @@ class OverviewController extends BaseReportController
 			'purgeEnabled' => $purgeEnabled,
 			'purgeDuration' => $purgeDuration,
 		]);
+	}
+
+	/**
+	 * @return array<string, array{keys: list<string>, link: string, linkLabel: string}>
+	 */
+	private function cardGroups(): array
+	{
+		return [
+			Craft::t('best-sellers', 'Orders') => [
+				'keys' => ['revenue', 'orders', 'aov', 'totalDiscount', 'itemsSold', 'avgItemsPerOrder'],
+				'link' => 'best-sellers/orders',
+				'linkLabel' => Craft::t('best-sellers', 'See all orders'),
+			],
+			Craft::t('best-sellers', 'Customers') => [
+				'keys' => ['customers', 'newCustomers', 'repeatRate'],
+				'link' => 'best-sellers/customers',
+				'linkLabel' => Craft::t('best-sellers', 'See all customers'),
+			],
+		];
 	}
 }

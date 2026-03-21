@@ -6,12 +6,27 @@ use Craft;
 use craft\db\Query;
 use craft\web\Controller;
 use craft\web\Request;
+use fostercommerce\bestsellers\Plugin;
 use yii\base\InvalidConfigException;
 use yii\web\Response;
 
 class ReportsController extends Controller
 {
 	protected array|bool|int $allowAnonymous = false;
+
+	/**
+	 * @param \yii\base\Action<static> $action
+	 */
+	public function beforeAction($action): bool
+	{
+		if (! parent::beforeAction($action)) {
+			return false;
+		}
+
+		$this->requirePermission(Plugin::PERMISSION_VIEW_REPORTS);
+
+		return true;
+	}
 
 	/**
 	 * @throws InvalidConfigException

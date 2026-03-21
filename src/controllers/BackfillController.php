@@ -21,8 +21,23 @@ class BackfillController extends Controller
 
 	protected array|int|bool $allowAnonymous = false;
 
+	/**
+	 * @param \yii\base\Action<static> $action
+	 */
+	public function beforeAction($action): bool
+	{
+		if (! parent::beforeAction($action)) {
+			return false;
+		}
+
+		$this->requirePermission(Plugin::PERMISSION_BACKFILL);
+
+		return true;
+	}
+
 	public function actionIndex(): Response
 	{
+		$this->requirePostRequest();
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
@@ -60,15 +75,18 @@ class BackfillController extends Controller
 			]));
 		}
 
-		Craft::$app->session->setNotice('Backfill queued for ' . $totalOrders . ' orders.');
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Backfill queued for {count} orders.', [
+			'count' => $totalOrders,
+		]));
 		return $this->redirectToPostedUrl();
 	}
 
 	public function actionRebuildDailyStats(): Response
 	{
+		$this->requirePostRequest();
 		$dailyStats = Plugin::getInstance()?->dailyStats;
 		if (! $dailyStats) {
-			Craft::$app->session->setError('DailyStats service not available.');
+			Craft::$app->session->setError(Craft::t('best-sellers', 'DailyStats service not available.'));
 			return $this->redirectToPostedUrl();
 		}
 
@@ -83,7 +101,7 @@ class BackfillController extends Controller
 			->one();
 
 		if (! $row || ! $row['minDate']) {
-			Craft::$app->session->setNotice('No completed orders found.');
+			Craft::$app->session->setNotice(Craft::t('best-sellers', 'No completed orders found.'));
 			return $this->redirectToPostedUrl();
 		}
 
@@ -92,7 +110,9 @@ class BackfillController extends Controller
 
 		$count = $dailyStats->rebuildRange($startDate, $endDate);
 
-		Craft::$app->session->setNotice("Rebuilt {$count} daily stat records.");
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Rebuilt {count} daily stat records.', [
+			'count' => $count,
+		]));
 		return $this->redirectToPostedUrl();
 	}
 }

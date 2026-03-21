@@ -15,6 +15,8 @@ use craft\events\CancelableEvent;
 use craft\events\DefineBehaviorsEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterUrlRulesEvent;
+use craft\events\RegisterUserPermissionsEvent;
+use craft\services\UserPermissions;
 use craft\services\Utilities;
 use craft\web\twig\variables\CraftVariable;
 use craft\web\UrlManager;
@@ -45,6 +47,10 @@ use yii\base\Event;
  */
 class Plugin extends BasePlugin
 {
+	public const PERMISSION_VIEW_REPORTS = 'best-sellers:viewReports';
+
+	public const PERMISSION_BACKFILL = 'best-sellers:backfill';
+
 	public string $schemaVersion = '1.1.0';
 
 	public bool $hasCpSettings = false;
@@ -64,6 +70,7 @@ class Plugin extends BasePlugin
 				'productStats' => ProductStats::class,
 				'customerStats' => CustomerStats::class,
 				'operationsStats' => OperationsStats::class,
+				'cartAbandonment' => CartAbandonment::class,
 			],
 		];
 	}
@@ -83,16 +90,6 @@ class Plugin extends BasePlugin
 			}
 		);
 
-		$this->setComponents([
-			'sales' => Sales::class,
-			'dailyStats' => DailyStats::class,
-			'dateRange' => DateRange::class,
-			'productStats' => ProductStats::class,
-			'customerStats' => CustomerStats::class,
-			'operationsStats' => OperationsStats::class,
-			'cartAbandonment' => CartAbandonment::class,
-		]);
-
 		Event::on(
 			CraftVariable::class,
 			CraftVariable::EVENT_INIT,
@@ -102,6 +99,24 @@ class Plugin extends BasePlugin
 				$variable->set('bestsellers', BestSellersVariable::class);
 			}
 		);
+
+		Event::on(
+			UserPermissions::class,
+			UserPermissions::EVENT_REGISTER_PERMISSIONS,
+			static function (RegisterUserPermissionsEvent $event): void {
+				$event->permissions[] = [
+					'heading' => Craft::t('best-sellers', 'Best Sellers'),
+					'permissions' => [
+						self::PERMISSION_VIEW_REPORTS => [
+							'label' => Craft::t('best-sellers', 'View reports'),
+						],
+						self::PERMISSION_BACKFILL => [
+							'label' => Craft::t('best-sellers', 'Backfill order data'),
+						],
+					],
+				];
+			}
+		);
 	}
 
 	/**
@@ -109,28 +124,32 @@ class Plugin extends BasePlugin
 	 */
 	public function getCpNavItem(): ?array
 	{
+		if (! Craft::$app->getUser()->checkPermission(self::PERMISSION_VIEW_REPORTS)) {
+			return null;
+		}
+
 		$navItem = parent::getCpNavItem();
-		$navItem['label'] = 'Best Sellers';
+		$navItem['label'] = Craft::t('best-sellers', 'Best Sellers');
 		$navItem['url'] = 'best-sellers';
 		$navItem['subnav'] = [
 			'overview' => [
-				'label' => 'Overview',
+				'label' => Craft::t('best-sellers', 'Overview'),
 				'url' => 'best-sellers/',
 			],
 			'orders' => [
-				'label' => 'Orders',
+				'label' => Craft::t('best-sellers', 'Orders'),
 				'url' => 'best-sellers/orders',
 			],
 			'products' => [
-				'label' => 'Products',
+				'label' => Craft::t('best-sellers', 'Products'),
 				'url' => 'best-sellers/products',
 			],
 			'customers' => [
-				'label' => 'Customers',
+				'label' => Craft::t('best-sellers', 'Customers'),
 				'url' => 'best-sellers/customers',
 			],
 			'operations' => [
-				'label' => 'Operations',
+				'label' => Craft::t('best-sellers', 'Operations'),
 				'url' => 'best-sellers/operations',
 			],
 		];

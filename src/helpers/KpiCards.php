@@ -2,6 +2,8 @@
 
 namespace fostercommerce\bestsellers\helpers;
 
+use Craft;
+
 class KpiCards
 {
 	/**
@@ -80,51 +82,49 @@ class KpiCards
 	{
 		return [
 			'revenue' => [
-				'label' => 'Revenue',
+				'label' => Craft::t('best-sellers', 'Revenue'),
 				'format' => 'currency',
 				'sparklineId' => 'sparkRevenue',
 				'sparklineColumn' => 'totalRevenue',
 				'resolve' => fn (array $s) => $s['totalRevenue'] ?? 0,
 			],
 			'orders' => [
-				'label' => 'Orders',
+				'label' => Craft::t('best-sellers', 'Orders'),
 				'format' => 'number',
 				'sparklineId' => 'sparkOrders',
 				'sparklineColumn' => 'totalOrders',
-
 				'resolve' => fn (array $s) => $s['totalOrders'] ?? 0,
 			],
 			'aov' => [
-				'label' => 'Avg. Order Value',
+				'label' => Craft::t('best-sellers', 'Avg. Order Value'),
 				'format' => 'currency',
 				'sparklineId' => 'sparkAov',
 				'sparklineColumn' => 'averageOrderValue',
-
 				'resolve' => fn (array $s) => $s['averageOrderValue'] ?? 0,
 			],
 			'customers' => [
-				'label' => 'Customers',
+				'label' => Craft::t('best-sellers', 'Customers'),
 				'format' => 'number',
 				'sparklineId' => 'sparkCustomers',
 				'sparklineColumn' => 'uniqueCustomers',
 				'resolve' => fn (array $s) => $s['uniqueCustomers'] ?? 0,
 			],
 			'itemsSold' => [
-				'label' => 'Items Sold',
+				'label' => Craft::t('best-sellers', 'Items Sold'),
 				'format' => 'number',
 				'sparklineId' => 'sparkItemsSold',
 				'sparklineColumn' => 'totalItemsSold',
 				'resolve' => fn (array $s) => $s['totalItemsSold'] ?? 0,
 			],
 			'newCustomers' => [
-				'label' => 'New Customers',
+				'label' => Craft::t('best-sellers', 'New Customers'),
 				'format' => 'number',
 				'sparklineId' => 'sparkNewCustomers',
 				'sparklineColumn' => 'newCustomers',
 				'resolve' => fn (array $s) => $s['newCustomers'] ?? 0,
 			],
 			'repeatRate' => [
-				'label' => 'Repeat Rate',
+				'label' => Craft::t('best-sellers', 'Repeat Rate'),
 				'format' => 'percent',
 				'sparklineId' => 'sparkReturning',
 				'sparklineColumn' => 'returningCustomers',
@@ -135,15 +135,14 @@ class KpiCards
 				},
 			],
 			'avgItemsPerOrder' => [
-				'label' => 'Avg Items / Order',
+				'label' => Craft::t('best-sellers', 'Avg Items / Order'),
 				'format' => 'decimal',
 				'sparklineId' => 'sparkAvgItems',
 				'sparklineColumn' => 'averageItemsPerOrder',
-
 				'resolve' => fn (array $s) => $s['averageItemsPerOrder'] ?? 0,
 			],
 			'totalDiscount' => [
-				'label' => 'Total Discount',
+				'label' => Craft::t('best-sellers', 'Total Discount'),
 				'format' => 'currency',
 				'sparklineId' => 'sparkDiscount',
 				'sparklineColumn' => 'totalDiscount',

@@ -5,67 +5,12 @@
 
 {% block reportContent %}
 	<div class="bs-columns">
-		{# Items Per Order Histogram #}
-		<div class="bs-chart-container">
-			<h3 class="bs-chart-container__title">{{ "Items Per Order"|t('best-sellers') }}</h3>
-			{% if itemsPerOrder.counts|length > 0 %}
-				<div style="position: relative; height: 300px;">
-					<canvas id="itemsPerOrderChart"></canvas>
-				</div>
-			{% else %}
-				<p>{{ "No data available"|t('best-sellers') }}</p>
-			{% endif %}
-		</div>
-
-		{# Shipping Methods Pie #}
-		<div class="bs-chart-container">
-			<h3 class="bs-chart-container__title">{{ "Shipping Methods"|t('best-sellers') }}</h3>
-			{% if shippingMethods|length > 0 %}
-				<div style="position: relative; height: 300px;">
-					<canvas id="shippingChart"></canvas>
-				</div>
-			{% else %}
-				<p>{{ "No data available"|t('best-sellers') }}</p>
-			{% endif %}
-		</div>
+		{% include 'best-sellers/_includes/widgets/items-per-order' %}
+		{% include 'best-sellers/_includes/widgets/shipping-methods' %}
 	</div>
 
-	{# Discount Trend #}
-	<div class="bs-chart-container">
-		<h3 class="bs-chart-container__title">{{ "Discount Trend"|t('best-sellers') }}</h3>
-		{% if discountTrend.labels|length > 0 %}
-			<div style="position: relative; height: 300px;">
-				<canvas id="discountTrendChart"></canvas>
-			</div>
-		{% else %}
-			<p>{{ "No data available"|t('best-sellers') }}</p>
-		{% endif %}
-	</div>
-
-	{# Coupon Usage Table #}
-	{% if couponUsage|length > 0 %}
-		<div class="bs-section">
-			<h3 class="bs-section__title">{{ "Coupon Usage"|t('best-sellers') }}</h3>
-			<table class="bs-data-table">
-				<thead>
-					<tr>
-						<th>{{ "Code"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right">{{ "Uses"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right">{{ "Total Discount"|t('best-sellers') }}</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for coupon in couponUsage %}
-						<tr>
-							<td><code>{{ coupon.code }}</code></td>
-							<td class="bs-data-table--right">{{ coupon.uses }}</td>
-							<td class="bs-data-table--right">{{ coupon.totalDiscount|commerceCurrency }}</td>
-						</tr>
-					{% endfor %}
-				</tbody>
-			</table>
-		</div>
-	{% endif %}
+	{% include 'best-sellers/_includes/widgets/discount-trend' %}
+	{% include 'best-sellers/_includes/widgets/coupon-usage' %}
 {% endblock %}
 
 {% js %}

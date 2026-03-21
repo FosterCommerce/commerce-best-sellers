@@ -12,6 +12,7 @@ use craft\web\twig\variables\Paginate;
 use DateTime;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\behaviors\SalesBehavior;
+use fostercommerce\bestsellers\Plugin;
 use yii\base\InvalidConfigException;
 use yii\web\Response;
 
@@ -20,6 +21,20 @@ class DashboardController extends Controller
 	final public const ITEMS_PER_PAGE = 20;
 
 	protected array|bool|int $allowAnonymous = false;
+
+	/**
+	 * @param \yii\base\Action<static> $action
+	 */
+	public function beforeAction($action): bool
+	{
+		if (! parent::beforeAction($action)) {
+			return false;
+		}
+
+		$this->requirePermission(Plugin::PERMISSION_VIEW_REPORTS);
+
+		return true;
+	}
 
 	/**
 	 * @throws InvalidConfigException
@@ -148,7 +163,7 @@ class DashboardController extends Controller
 			'totalPages' => ceil($total / self::ITEMS_PER_PAGE),
 		]);
 
-		$titleText = $productsOrVariants === 'variants' ? 'Variants' : 'Products';
+		$titleText = $productsOrVariants === 'variants' ? Craft::t('best-sellers', 'Variants') : Craft::t('best-sellers', 'Products');
 
 		return $this->renderTemplate('best-sellers/_dashboard', [
 			'items' => $page,

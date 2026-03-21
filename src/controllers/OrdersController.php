@@ -34,7 +34,7 @@ class OrdersController extends BaseReportController
 		$ordersChange = $this->percentChange($stats['totalOrders'], $prevStats['totalOrders']);
 
 		return $this->renderTemplate('best-sellers/_sales', [
-			'title' => 'Orders',
+			'title' => Craft::t('best-sellers', 'Orders'),
 			'selectedSubnavItem' => 'orders',
 			'from' => $dateRange['from'],
 			'to' => $dateRange['to'],
@@ -172,9 +172,17 @@ class OrdersController extends BaseReportController
 		];
 
 		return $this->asCsv($csvRows, [
-			'Order #', 'Date Ordered', 'Status', 'Email',
-			'Merchandise Total', 'Tax', 'Discount', 'Shipping',
-			'Total Paid', 'Items Sold', 'Payment Status',
+			Craft::t('best-sellers', 'Order #'),
+			Craft::t('best-sellers', 'Date Ordered'),
+			Craft::t('best-sellers', 'Status'),
+			Craft::t('best-sellers', 'Email'),
+			Craft::t('best-sellers', 'Merchandise Total'),
+			Craft::t('best-sellers', 'Tax'),
+			Craft::t('best-sellers', 'Discount'),
+			Craft::t('best-sellers', 'Shipping'),
+			Craft::t('best-sellers', 'Total Paid'),
+			Craft::t('best-sellers', 'Items Sold'),
+			Craft::t('best-sellers', 'Payment Status'),
 		], 'orders');
 	}
 

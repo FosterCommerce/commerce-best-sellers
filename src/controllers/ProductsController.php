@@ -39,7 +39,7 @@ class ProductsController extends BaseReportController
 		$summaryStats = $productStats->getSummaryStats($dateRange['fromDT'], $dateRange['toDT']);
 
 		return $this->renderTemplate('best-sellers/_products', [
-			'title' => 'Products',
+			'title' => Craft::t('best-sellers', 'Products'),
 			'selectedSubnavItem' => 'products',
 			'from' => $dateRange['from'],
 			'to' => $dateRange['to'],
@@ -267,7 +267,13 @@ class ProductsController extends BaseReportController
 		];
 
 		return $this->asCsv($csvRows, [
-			'Product', 'SKU', 'Type', 'Units Sold', 'Orders', 'Revenue', 'Avg Price',
+			Craft::t('best-sellers', 'Product'),
+			Craft::t('best-sellers', 'SKU'),
+			Craft::t('best-sellers', 'Type'),
+			Craft::t('best-sellers', 'Units Sold'),
+			Craft::t('best-sellers', 'Orders'),
+			Craft::t('best-sellers', 'Revenue'),
+			Craft::t('best-sellers', 'Avg Price'),
 		], 'products');
 	}
 
@@ -292,7 +298,7 @@ class ProductsController extends BaseReportController
 		$variantId = (int) $variantId;
 
 		if ($productId === 0 && $variantId === 0) {
-			throw new \yii\web\BadRequestHttpException('productId or variantId is required.');
+			throw new \yii\web\BadRequestHttpException(Craft::t('best-sellers', 'productId or variantId is required.'));
 		}
 
 		/** @var array{productTitle: string, variantTitle: string}|null $titleRow */

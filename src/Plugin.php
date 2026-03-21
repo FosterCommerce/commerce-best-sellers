@@ -15,6 +15,8 @@ use craft\events\CancelableEvent;
 use craft\events\DefineBehaviorsEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterUrlRulesEvent;
+use craft\events\RegisterUserPermissionsEvent;
+use craft\services\UserPermissions;
 use craft\services\Utilities;
 use craft\web\twig\variables\CraftVariable;
 use craft\web\UrlManager;
@@ -45,6 +47,10 @@ use yii\base\Event;
  */
 class Plugin extends BasePlugin
 {
+	public const PERMISSION_VIEW_REPORTS = 'best-sellers:viewReports';
+
+	public const PERMISSION_BACKFILL = 'best-sellers:backfill';
+
 	public string $schemaVersion = '1.1.0';
 
 	public bool $hasCpSettings = false;
@@ -102,6 +108,24 @@ class Plugin extends BasePlugin
 				$variable->set('bestsellers', BestSellersVariable::class);
 			}
 		);
+
+		Event::on(
+			UserPermissions::class,
+			UserPermissions::EVENT_REGISTER_PERMISSIONS,
+			static function (RegisterUserPermissionsEvent $event): void {
+				$event->permissions[] = [
+					'heading' => 'Best Sellers',
+					'permissions' => [
+						self::PERMISSION_VIEW_REPORTS => [
+							'label' => 'View reports',
+						],
+						self::PERMISSION_BACKFILL => [
+							'label' => 'Backfill order data',
+						],
+					],
+				];
+			}
+		);
 	}
 
 	/**
@@ -109,6 +133,10 @@ class Plugin extends BasePlugin
 	 */
 	public function getCpNavItem(): ?array
 	{
+		if (! Craft::$app->getUser()->checkPermission(self::PERMISSION_VIEW_REPORTS)) {
+			return null;
+		}
+
 		$navItem = parent::getCpNavItem();
 		$navItem['label'] = 'Best Sellers';
 		$navItem['url'] = 'best-sellers';

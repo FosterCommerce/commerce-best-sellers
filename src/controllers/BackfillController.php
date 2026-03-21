@@ -21,8 +21,23 @@ class BackfillController extends Controller
 
 	protected array|int|bool $allowAnonymous = false;
 
+	/**
+	 * @param \yii\base\Action<static> $action
+	 */
+	public function beforeAction($action): bool
+	{
+		if (! parent::beforeAction($action)) {
+			return false;
+		}
+
+		$this->requirePermission(Plugin::PERMISSION_BACKFILL);
+
+		return true;
+	}
+
 	public function actionIndex(): Response
 	{
+		$this->requirePostRequest();
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
@@ -66,6 +81,7 @@ class BackfillController extends Controller
 
 	public function actionRebuildDailyStats(): Response
 	{
+		$this->requirePostRequest();
 		$dailyStats = Plugin::getInstance()?->dailyStats;
 		if (! $dailyStats) {
 			Craft::$app->session->setError('DailyStats service not available.');

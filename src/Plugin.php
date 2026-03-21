@@ -70,6 +70,7 @@ class Plugin extends BasePlugin
 				'productStats' => ProductStats::class,
 				'customerStats' => CustomerStats::class,
 				'operationsStats' => OperationsStats::class,
+				'cartAbandonment' => CartAbandonment::class,
 			],
 		];
 	}
@@ -88,16 +89,6 @@ class Plugin extends BasePlugin
 				$event->types[] = BackfillUtility::class;
 			}
 		);
-
-		$this->setComponents([
-			'sales' => Sales::class,
-			'dailyStats' => DailyStats::class,
-			'dateRange' => DateRange::class,
-			'productStats' => ProductStats::class,
-			'customerStats' => CustomerStats::class,
-			'operationsStats' => OperationsStats::class,
-			'cartAbandonment' => CartAbandonment::class,
-		]);
 
 		Event::on(
 			CraftVariable::class,

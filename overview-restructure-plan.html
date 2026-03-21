@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Overview Page Restructure Plan - Commerce Best Sellers</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #1a1a1a;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+  }
+  h1 {
+    font-size: 28px;
+    border-bottom: 3px solid #1a1a1a;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+  h2 {
+    font-size: 22px;
+    margin-top: 40px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 6px;
+  }
+  h3 {
+    font-size: 17px;
+    margin-top: 28px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background-color: #f2f2f2;
+    font-weight: 600;
+  }
+  code {
+    background: #f4f4f4;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+  }
+  pre {
+    background: #f4f4f4;
+    padding: 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .info {
+    background: #e3f2fd;
+    border-left: 4px solid #1976d2;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .success {
+    background: #e8f5e9;
+    border-left: 4px solid #388e3c;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  ul, ol {
+    padding-left: 24px;
+  }
+  li {
+    margin-bottom: 6px;
+  }
+  .meta {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 30px;
+  }
+  .step {
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 20px;
+    margin: 20px 0;
+  }
+  .step h3 {
+    margin-top: 0;
+  }
+  .step .file {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 8px;
+  }
+  .layout-box {
+    border: 2px solid #0073aa;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    font-size: 14px;
+  }
+  .layout-box.hero {
+    border-color: #1976d2;
+    background: #e3f2fd;
+  }
+  .layout-box .section-label {
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .layout-box .section-contents {
+    color: #555;
+    font-size: 13px;
+  }
+  .arrow {
+    text-align: center;
+    font-size: 20px;
+    color: #999;
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Overview Page Restructure Plan</h1>
+<p class="meta">Commerce Best Sellers Plugin &middot; March 2026 &middot; Based on user feedback</p>
+
+<h2>1. Problem Statement</h2>
+<p>
+  The current overview page is organized by data type (Orders, Customers, Products) rather than by the
+  questions a store owner is actually asking. The top row buries the most important business health signals
+  among secondary metrics like Total Discount and Items Sold.
+</p>
+
+<h2>2. Current vs. Proposed Layout</h2>
+
+<h3>Current Layout</h3>
+<div class="layout-box">
+  <div class="section-label">Orders (6 KPI cards)</div>
+  <div class="section-contents">Revenue, Orders, AOV, Total Discount, Items Sold, Avg Items/Order + Revenue/Orders/AOV toggle chart</div>
+</div>
+<div class="arrow">&#8595;</div>
+<div class="layout-box">
+  <div class="section-label">Customers (3 KPI cards)</div>
+  <div class="section-contents">Customers, New Customers, Repeat Rate + New vs Returning chart + Credentialed vs Guest table (side-by-side) + Cart Abandonment widget</div>
+</div>
+<div class="arrow">&#8595;</div>
+<div class="layout-box">
+  <div class="section-label">Products (2 KPI cards)</div>
+  <div class="section-contents">Unique Products Sold, Product Revenue + Best Sellers table</div>
+</div>
+
+<h3>Proposed Layout</h3>
+<div class="layout-box hero">
+  <div class="section-label">Health Check (hero row)</div>
+  <div class="section-contents">Revenue, Orders, AOV, Repeat Rate &mdash; the four metrics that answer "how's the business doing right now?"</div>
+</div>
+<div class="arrow">&#8595;</div>
+<div class="layout-box">
+  <div class="section-label">Revenue &amp; Orders</div>
+  <div class="section-contents">Total Discount, Items Sold, Avg Items/Order (secondary cards) + Revenue/Orders/AOV toggle chart with period comparison</div>
+</div>
+<div class="arrow">&#8595;</div>
+<div class="layout-box">
+  <div class="section-label">Customers &amp; Retention</div>
+  <div class="section-contents">Customers, New Customers, LTV (new top-level stat) + Credentialed vs Guest table (promoted to full-width) + New vs Returning chart</div>
+</div>
+<div class="arrow">&#8595;</div>
+<div class="layout-box">
+  <div class="section-label">Cart Abandonment</div>
+  <div class="section-contents">Own section (separated from Customers). Keep existing widget as-is.</div>
+</div>
+<div class="arrow">&#8595;</div>
+<div class="layout-box">
+  <div class="section-label">Product Performance</div>
+  <div class="section-contents">Unique Products Sold, Product Revenue + Best Sellers table</div>
+</div>
+
+<h2>3. Data Requirements</h2>
+
+<div class="success">
+  <strong>No new queries, controllers, services, or models needed.</strong> All data is already fetched
+  in <code>OverviewController::actionIndex()</code>. The only addition is one line to fetch previous-period LTV
+  for the percent-change indicator.
+</div>
+
+<table>
+  <tr>
+    <th>Change</th>
+    <th>Data Source</th>
+    <th>Already Fetched?</th>
+  </tr>
+  <tr>
+    <td>Health Check row (Revenue, Orders, AOV, Repeat Rate)</td>
+    <td><code>$stats</code> / <code>$prevStats</code> via <code>DailyStats::getStatsForRange()</code></td>
+    <td>Yes (line 26-27)</td>
+  </tr>
+  <tr>
+    <td>Revenue &amp; Orders secondary cards (Total Discount, Items Sold, Avg Items/Order)</td>
+    <td>Same <code>$stats</code> / <code>$prevStats</code></td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>LTV as a top-level KPI card</td>
+    <td><code>$ltvComparison</code> via <code>CustomerStats::getLtvComparison()</code></td>
+    <td>Current period: yes (line 89). <strong>Previous period: no.</strong></td>
+  </tr>
+  <tr>
+    <td>Credentialed vs Guest table (promoted)</td>
+    <td><code>$ltvComparison</code></td>
+    <td>Yes</td>
+  </tr>
+  <tr>
+    <td>New vs Returning chart</td>
+    <td><code>$newVsReturning</code></td>
+    <td>Yes (line 88)</td>
+  </tr>
+  <tr>
+    <td>Cart Abandonment (own section)</td>
+    <td><code>$cartAbandonment</code></td>
+    <td>Yes (line 92)</td>
+  </tr>
+  <tr>
+    <td>Product Performance cards + table</td>
+    <td><code>$productSummary</code>, <code>$bestSellers</code></td>
+    <td>Yes (lines 52-54)</td>
+  </tr>
+</table>
+
+<h3>The one addition</h3>
+<pre>// Add to OverviewController::actionIndex(), after line 89
+$prevLtvComparison = $customerStats->getLtvComparison(
+    $dateRange->getPrev()->fromDT,
+    $dateRange->getPrev()->toDT
+);</pre>
+<p>This calls an existing service method with different date arguments. No new query logic.</p>
+
+<h2>4. Implementation Steps</h2>
+
+<div class="step">
+  <h3>Step 1: Restructure <code>cardGroups()</code> in OverviewController</h3>
+  <div class="file">File: <code>src/controllers/OverviewController.php</code> (lines 154-168)</div>
+  <p>Change the <code>cardGroups()</code> method from the current Orders/Customers grouping to:</p>
+  <pre>'Health Check' => [
+    'keys' => ['revenue', 'orders', 'aov', 'repeatRate'],
+    // No link -- this is the summary row, not a drill-down
+],
+'Revenue & Orders' => [
+    'keys' => ['totalDiscount', 'itemsSold', 'avgItemsPerOrder'],
+    'link' => 'best-sellers/orders',
+    'linkLabel' => 'See all orders',
+],
+'Customers & Retention' => [
+    'keys' => ['customers', 'newCustomers'],
+    'link' => 'best-sellers/customers',
+    'linkLabel' => 'See all customers',
+],</pre>
+  <p>
+    <code>repeatRate</code> moves up to Health Check. The LTV card is built manually in the controller
+    (same pattern as the Products group) since it comes from <code>ltvComparison</code>, not <code>PeriodStats</code>.
+  </p>
+</div>
+
+<div class="step">
+  <h3>Step 2: Fetch previous-period LTV and build the LTV card</h3>
+  <div class="file">File: <code>src/controllers/OverviewController.php</code></div>
+  <p>Add the previous-period LTV fetch, then manually build the LTV KPI card and append it to the
+  Customers &amp; Retention group. Follow the same pattern used for Products cards (lines 66-84).</p>
+  <pre>// Fetch previous LTV
+$prevLtvComparison = $customerStats->getLtvComparison(
+    $dateRange->getPrev()->fromDT,
+    $dateRange->getPrev()->toDT
+);
+
+// Compute blended average LTV
+$totalCustomers = $ltvComparison->credentialed->count + $ltvComparison->guest->count;
+$avgLtv = $totalCustomers > 0
+    ? ($ltvComparison->credentialed->totalRevenue + $ltvComparison->guest->totalRevenue) / $totalCustomers
+    : 0;
+
+$prevTotalCustomers = $prevLtvComparison->credentialed->count + $prevLtvComparison->guest->count;
+$prevAvgLtv = $prevTotalCustomers > 0
+    ? ($prevLtvComparison->credentialed->totalRevenue + $prevLtvComparison->guest->totalRevenue) / $prevTotalCustomers
+    : 0;</pre>
+  <p>Then add the LTV card to the Customers &amp; Retention cards array.</p>
+</div>
+
+<div class="step">
+  <h3>Step 3: Update controller to pass named section data</h3>
+  <div class="file">File: <code>src/controllers/OverviewController.php</code></div>
+  <p>
+    Instead of relying on label-string matching in the template, pass named variables for each section.
+    The current template checks <code>group.label == 'Orders'</code>, <code>group.label == 'Customers'</code>, etc.
+    which is fragile. Switch to explicit template variables:
+  </p>
+  <pre>return $this->renderTemplate('best-sellers/_overview', [
+    // Health Check
+    'healthCheckCards' => [...],
+
+    // Revenue & Orders
+    'revenueOrdersCards' => [...],
+    // (chart data stays the same: dailyLabels, dailyOrders, etc.)
+
+    // Customers & Retention
+    'customerCards' => [...],
+    'newVsReturning' => $newVsReturning,
+    'ltvComparison' => $ltvComparison,
+
+    // Cart Abandonment (unchanged)
+    'cartAbandonment' => $cartAbandonment,
+
+    // Products (unchanged)
+    'productCards' => [...],
+    'bestSellers' => $bestSellers,
+    'bestSellerElements' => $bestSellerElements,
+
+    // Sparklines, chart data, etc.
+    ...
+]);</pre>
+</div>
+
+<div class="step">
+  <h3>Step 4: Restructure the overview template</h3>
+  <div class="file">File: <code>src/templates/_overview.twig</code></div>
+  <p>
+    Replace the single loop over <code>cardGroups</code> with explicit sections. Each section renders
+    its own cards and widgets:
+  </p>
+  <pre>&lt;!-- 1. Health Check hero row --&gt;
+&lt;div class="bs-section bs-section--hero"&gt;
+    &lt;div class="bs-kpi-grid bs-kpi-grid--4"&gt;
+        {% for card in healthCheckCards %}
+            {{ kpi.card(card) }}
+        {% endfor %}
+    &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- 2. Revenue & Orders --&gt;
+&lt;div class="bs-section"&gt;
+    &lt;h3&gt;Revenue &amp; Orders &lt;a class="go"&gt;See all orders&lt;/a&gt;&lt;/h3&gt;
+    &lt;div class="bs-kpi-grid bs-kpi-grid--3"&gt;...&lt;/div&gt;
+    {% include 'best-sellers/_includes/widgets/overview-chart' %}
+&lt;/div&gt;
+
+&lt;!-- 3. Customers & Retention --&gt;
+&lt;div class="bs-section"&gt;
+    &lt;h3&gt;Customers &amp; Retention &lt;a class="go"&gt;See all customers&lt;/a&gt;&lt;/h3&gt;
+    &lt;div class="bs-kpi-grid bs-kpi-grid--3"&gt;...&lt;/div&gt;
+    {% include 'best-sellers/_includes/widgets/ltv-table' %}
+    {% include 'best-sellers/_includes/widgets/new-vs-returning-chart' %}
+&lt;/div&gt;
+
+&lt;!-- 4. Cart Abandonment --&gt;
+&lt;div class="bs-section"&gt;
+    {% include 'best-sellers/_includes/widgets/cart-abandonment' %}
+&lt;/div&gt;
+
+&lt;!-- 5. Product Performance --&gt;
+&lt;div class="bs-section"&gt;
+    &lt;h3&gt;Product Performance &lt;a class="go"&gt;See all products&lt;/a&gt;&lt;/h3&gt;
+    &lt;div class="bs-kpi-grid bs-kpi-grid--2"&gt;...&lt;/div&gt;
+    {% include 'best-sellers/_includes/widgets/best-sellers-table' %}
+&lt;/div&gt;</pre>
+</div>
+
+<div class="step">
+  <h3>Step 5: Split customer-charts.twig into two widget templates</h3>
+  <div class="file">File: <code>src/templates/_includes/widgets/customer-charts.twig</code> (split into two)</div>
+  <p>
+    Currently this template renders the New vs Returning chart and the Credentialed vs Guest table
+    side-by-side in a <code>.bs-columns</code> layout. Split into:
+  </p>
+  <ul>
+    <li><code>_includes/widgets/new-vs-returning-chart.twig</code> &mdash; just the chart canvas and container</li>
+    <li><code>_includes/widgets/ltv-table.twig</code> &mdash; the Credentialed vs Guest table, now full-width</li>
+  </ul>
+  <p>
+    The Credentialed vs Guest table is promoted above the chart. It renders at full width instead of
+    half width, giving the LTV and ordering behavior data more visual prominence. This is especially
+    valuable for B2B stores where the credentialed vs guest gap is a key insight.
+  </p>
+</div>
+
+<div class="step">
+  <h3>Step 6: Add hero row CSS</h3>
+  <div class="file">File: <code>src/assetbundles/dist/css/reports.css</code></div>
+  <p>Add a <code>.bs-section--hero</code> modifier:</p>
+  <ul>
+    <li>Larger font size for KPI values (visually distinct from drill-down sections)</li>
+    <li>4-column grid layout</li>
+    <li>Optional subtle background or border to separate it from the sections below</li>
+  </ul>
+</div>
+
+<h2>5. Files Changed</h2>
+<table>
+  <tr>
+    <th>File</th>
+    <th>Type</th>
+    <th>Change</th>
+  </tr>
+  <tr>
+    <td><code>src/controllers/OverviewController.php</code></td>
+    <td>Modified</td>
+    <td>Restructure card groups, add prev LTV fetch, pass named section data</td>
+  </tr>
+  <tr>
+    <td><code>src/templates/_overview.twig</code></td>
+    <td>Modified</td>
+    <td>Replace single loop with explicit sections and hero row</td>
+  </tr>
+  <tr>
+    <td><code>src/templates/_includes/widgets/customer-charts.twig</code></td>
+    <td>Removed</td>
+    <td>Split into two separate templates below</td>
+  </tr>
+  <tr>
+    <td><code>src/templates/_includes/widgets/new-vs-returning-chart.twig</code></td>
+    <td>New</td>
+    <td>Extracted from customer-charts.twig</td>
+  </tr>
+  <tr>
+    <td><code>src/templates/_includes/widgets/ltv-table.twig</code></td>
+    <td>New</td>
+    <td>Extracted from customer-charts.twig, promoted to full-width</td>
+  </tr>
+  <tr>
+    <td><code>src/assetbundles/dist/css/reports.css</code></td>
+    <td>Modified</td>
+    <td>Add hero row styling (<code>.bs-section--hero</code>)</td>
+  </tr>
+</table>
+
+<div class="info">
+  <strong>No new services, models, queries, migrations, or controllers.</strong>
+  The <code>KpiCards</code> helper does not need changes since the LTV card is built manually in the controller
+  (same pattern already used for the Products group). All data comes from existing service methods.
+</div>
+
+<h2>6. Notes from User Feedback</h2>
+<ul>
+  <li>
+    <strong>Avg Items/Order (35.60)</strong> &mdash; interesting for B2B (Trufast, knife bolts, mower blades) but not
+    a top-level metric. Moved to secondary stat inside Revenue &amp; Orders section.
+  </li>
+  <li>
+    <strong>Credentialed vs Guest table</strong> &mdash; one of the most valuable widgets for B2B. Shows the LTV and
+    ordering behavior gap. Promoted to full-width within Customers &amp; Retention, placed above the
+    New vs Returning chart.
+  </li>
+  <li>
+    <strong>Revenue chart spike annotations</strong> &mdash; noted as a future feature consideration, not part of
+    this restructure. Would benefit from a "notable events" callout for spikes like the Mar 13-14 jump to ~$70k.
+  </li>
+</ul>
+
+</body>
+</html>

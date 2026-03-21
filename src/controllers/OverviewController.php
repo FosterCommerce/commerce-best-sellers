@@ -26,28 +26,65 @@ class OverviewController extends BaseReportController
 		$stats = $dailyStats->getStatsForRange($dateRange->from, $dateRange->to);
 		$prevStats = $dailyStats->getStatsForRange($dateRange->getPrev()->from, $dateRange->getPrev()->to);
 
-		// Build grouped cards
-		$allKeys = [];
-		$cardGroups = [];
-		foreach ($this->cardGroups() as $groupLabel => $group) {
-			$keys = $group['keys'];
-			$cards = KpiCards::build($stats, $prevStats, $keys, $this->percentChange(...));
-			$cardGroups[] = [
-				'label' => $groupLabel,
-				'cards' => $cards,
-				'link' => $group['link'],
-				'linkLabel' => $group['linkLabel'],
-			];
-			$allKeys = array_merge($allKeys, $keys);
-		}
+		// Health Check hero row
+		$healthCheckKeys = ['revenue', 'orders', 'aov', 'repeatRate'];
+		$healthCheckCards = KpiCards::build($stats, $prevStats, $healthCheckKeys, $this->percentChange(...));
 
-		// Sparkline data for all cards
+		// Discounts section
+		$discountKeys = ['totalDiscount', 'itemsSold', 'avgItemsPerOrder'];
+		$discountCards = KpiCards::build($stats, $prevStats, $discountKeys, $this->percentChange(...));
+
+		// Discount & order composition widgets
+		$operationsStats = $plugin->operationsStats;
+		$discountedVsFullPrice = $operationsStats->getDiscountedVsFullPrice($dateRange->fromDT, $dateRange->toDT);
+		$topDiscounts = $operationsStats->getTopDiscounts($dateRange->fromDT, $dateRange->toDT);
+		$itemsPerOrder = $operationsStats->getItemsPerOrderDistribution($dateRange->fromDT, $dateRange->toDT);
+		$shippingMethods = $operationsStats->getShippingMethods($dateRange->fromDT, $dateRange->toDT);
+
+		// Customers & Retention section
+		$customerKeys = ['customers', 'newCustomers'];
+		$customerCards = KpiCards::build($stats, $prevStats, $customerKeys, $this->percentChange(...));
+
+		// LTV card (built manually since it comes from LtvComparison, not PeriodStats)
+		$customerStats = $plugin->customerStats;
+		$ltvComparison = $customerStats->getLtvComparison($dateRange->fromDT, $dateRange->toDT);
+		$prevLtvComparison = $customerStats->getLtvComparison($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
+
+		$totalCustomers = ($ltvComparison->credentialed->count ?? 0) + ($ltvComparison->guest->count ?? 0);
+		$totalRevenueLtv = ($ltvComparison->credentialed->totalRevenue ?? 0) + ($ltvComparison->guest->totalRevenue ?? 0);
+		$avgLtv = $totalCustomers > 0 ? $totalRevenueLtv / $totalCustomers : 0;
+
+		$prevTotalCustomers = ($prevLtvComparison->credentialed->count ?? 0) + ($prevLtvComparison->guest->count ?? 0);
+		$prevTotalRevenueLtv = ($prevLtvComparison->credentialed->totalRevenue ?? 0) + ($prevLtvComparison->guest->totalRevenue ?? 0);
+		$prevAvgLtv = $prevTotalCustomers > 0 ? $prevTotalRevenueLtv / $prevTotalCustomers : 0;
+
+		$customerCards[] = [
+			'label' => Craft::t('best-sellers', 'Avg Customer LTV'),
+			'value' => $avgLtv,
+			'change' => $this->percentChange($avgLtv, $prevAvgLtv),
+			'format' => 'currency',
+		];
+
+		// Sparkline data for all card keys
+		$allKeys = array_merge($healthCheckKeys, $discountKeys, $customerKeys);
 		$sparklines = [];
 		foreach (KpiCards::sparklineColumns($allKeys) as $id => $column) {
 			$sparklines[$id] = $dailyStats->getSparklineData($column, $dateRange->from, $dateRange->to);
 		}
 
-		// Products group
+		// Customer charts
+		$newVsReturning = $customerStats->getNewVsReturningByDay($dateRange->fromDT, $dateRange->toDT);
+
+		// Cart abandonment
+		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($dateRange->fromDT, $dateRange->toDT);
+
+		// Commerce cart settings
+		$commerceSettings = CommercePlugin::getInstance()?->getSettings();
+		$activeCartDuration = $commerceSettings ? DateTimeHelper::humanDuration($commerceSettings->activeCartDuration) : '1 hour';
+		$purgeEnabled = $commerceSettings ? $commerceSettings->purgeInactiveCarts : true;
+		$purgeDuration = ($commerceSettings && $purgeEnabled) ? DateTimeHelper::humanDuration($commerceSettings->purgeInactiveCartsDuration) : null;
+
+		// Products section
 		$productStats = $plugin->productStats;
 		$productSummary = $productStats->getSummaryStats($dateRange->fromDT, $dateRange->toDT);
 		$prevProductSummary = $productStats->getSummaryStats($dateRange->getPrev()->fromDT, $dateRange->getPrev()->toDT);
@@ -63,39 +100,23 @@ class OverviewController extends BaseReportController
 			}
 		}
 
-		$cardGroups[] = [
-			'label' => Craft::t('best-sellers', 'Products'),
-			'link' => 'best-sellers/products',
-			'linkLabel' => Craft::t('best-sellers', 'See all products'),
-			'cards' => [
-				[
-					'label' => Craft::t('best-sellers', 'Unique Products Sold'),
-					'value' => $productSummary->uniqueProducts,
-					'change' => $this->percentChange($productSummary->uniqueProducts, $prevProductSummary->uniqueProducts),
-					'format' => 'number',
-				],
-				[
-					'label' => Craft::t('best-sellers', 'Product Revenue'),
-					'value' => $productSummary->totalProductRevenue,
-					'change' => $this->percentChange($productSummary->totalProductRevenue, $prevProductSummary->totalProductRevenue),
-					'format' => 'currency',
-				],
+		$productCards = [
+			[
+				'label' => Craft::t('best-sellers', 'Unique Products Sold'),
+				'value' => $productSummary->uniqueProducts,
+				'change' => $this->percentChange($productSummary->uniqueProducts, $prevProductSummary->uniqueProducts),
+				'format' => 'number',
+			],
+			[
+				'label' => Craft::t('best-sellers', 'Product Revenue'),
+				'value' => $productSummary->totalProductRevenue,
+				'change' => $this->percentChange($productSummary->totalProductRevenue, $prevProductSummary->totalProductRevenue),
+				'format' => 'currency',
 			],
 		];
 
-		// Customer charts
-		$customerStats = $plugin->customerStats;
-		$newVsReturning = $customerStats->getNewVsReturningByDay($dateRange->fromDT, $dateRange->toDT);
-		$ltvComparison = $customerStats->getLtvComparison($dateRange->fromDT, $dateRange->toDT);
-
-		// Cart abandonment
-		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($dateRange->fromDT, $dateRange->toDT);
-
-		// Commerce cart settings
-		$commerceSettings = CommercePlugin::getInstance()?->getSettings();
-		$activeCartDuration = $commerceSettings ? DateTimeHelper::humanDuration($commerceSettings->activeCartDuration) : '1 hour';
-		$purgeEnabled = $commerceSettings ? $commerceSettings->purgeInactiveCarts : true;
-		$purgeDuration = ($commerceSettings && $purgeEnabled) ? DateTimeHelper::humanDuration($commerceSettings->purgeInactiveCartsDuration) : null;
+		// Summaries
+		$summaryResult = $plugin->summaryEngine->generate($dateRange);
 
 		// Daily chart data
 		$dailyRows = $dailyStats->getDailyRows($dateRange->from, $dateRange->to);
@@ -123,13 +144,23 @@ class OverviewController extends BaseReportController
 		$prevDailyAov = array_map(floatval(...), $prevRawAov);
 
 		return $this->renderTemplate('best-sellers/_overview', [
-			'title' => Craft::t('best-sellers', 'Overview'),
+			'title' => Craft::t('best-sellers', 'Dashboard'),
 			'selectedSubnavItem' => 'overview',
 			'from' => $dateRange->from,
 			'to' => $dateRange->to,
 			'preset' => $dateRange->preset,
-			'cardGroups' => $cardGroups,
+			// Section cards
+			'healthCheckCards' => $healthCheckCards,
+			'discountCards' => $discountCards,
+			'discountedVsFullPrice' => $discountedVsFullPrice,
+			'topDiscounts' => $topDiscounts,
+			'itemsPerOrder' => $itemsPerOrder,
+			'shippingMethods' => $shippingMethods,
+			'customerCards' => $customerCards,
+			'productCards' => $productCards,
+			// Sparklines
 			'sparklines' => $sparklines,
+			// Chart data
 			'dailyLabels' => $dailyLabels,
 			'dailyOrders' => $dailyOrders,
 			'dailyRevenue' => $dailyRevenue,
@@ -137,6 +168,7 @@ class OverviewController extends BaseReportController
 			'prevDailyOrders' => $prevDailyOrders,
 			'prevDailyRevenue' => $prevDailyRevenue,
 			'prevDailyAov' => $prevDailyAov,
+			// Widgets
 			'bestSellers' => $bestSellers,
 			'bestSellerElements' => $bestSellerElements,
 			'newVsReturning' => $newVsReturning,
@@ -145,25 +177,8 @@ class OverviewController extends BaseReportController
 			'activeCartDuration' => $activeCartDuration,
 			'purgeEnabled' => $purgeEnabled,
 			'purgeDuration' => $purgeDuration,
+			// Summaries
+			'summaries' => $summaryResult,
 		]);
-	}
-
-	/**
-	 * @return array<string, array{keys: list<string>, link: string, linkLabel: string}>
-	 */
-	private function cardGroups(): array
-	{
-		return [
-			Craft::t('best-sellers', 'Orders') => [
-				'keys' => ['revenue', 'orders', 'aov', 'totalDiscount', 'itemsSold', 'avgItemsPerOrder'],
-				'link' => 'best-sellers/orders',
-				'linkLabel' => Craft::t('best-sellers', 'See all orders'),
-			],
-			Craft::t('best-sellers', 'Customers') => [
-				'keys' => ['customers', 'newCustomers', 'repeatRate'],
-				'link' => 'best-sellers/customers',
-				'linkLabel' => Craft::t('best-sellers', 'See all customers'),
-			],
-		];
 	}
 }

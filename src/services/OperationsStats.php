@@ -4,7 +4,6 @@ namespace fostercommerce\bestsellers\services;
 
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
-use fostercommerce\bestsellers\db\Table;
 use yii\base\Component;
 
 class OperationsStats extends Component
@@ -62,7 +61,7 @@ class OperationsStats extends Component
 		/** @var array{method: string, cnt: string}|false $topShipping */
 		$topShipping = (new Query())
 			->select([
-				'method' => "COALESCE([[shippingMethodName]], 'None')",
+				'method' => "CASE WHEN [[shippingMethodName]] IS NULL OR [[shippingMethodName]] = '' THEN 'None' ELSE [[shippingMethodName]] END",
 				'cnt' => 'COUNT(*)',
 			])
 			->from(CommerceTable::ORDERS)
@@ -161,7 +160,7 @@ class OperationsStats extends Component
 		/** @var array<int, array{method: string, count: int, revenue: float}> $rows */
 		$rows = (new Query())
 			->select([
-				'method' => "COALESCE([[shippingMethodName]], 'None')",
+				'method' => "CASE WHEN [[shippingMethodName]] IS NULL OR [[shippingMethodName]] = '' THEN 'None' ELSE [[shippingMethodName]] END",
 				'count' => 'COUNT(*)',
 				'revenue' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
 			])
@@ -214,28 +213,82 @@ class OperationsStats extends Component
 	}
 
 	/**
-	 * Get discount trend over time.
+	 * Get discounted vs. full-price order breakdown.
 	 *
-	 * @return array{labels: list<string>, discounts: list<float>}
+	 * @return array{discounted: array{orders: int, revenue: float, aov: float}, fullPrice: array{orders: int, revenue: float, aov: float}}
 	 */
-	public function getDiscountTrend(string $fromDT, string $toDT): array
+	public function getDiscountedVsFullPrice(string $fromDT, string $toDT): array
 	{
-		$rows = (new Query())
+		/** @var array{discountedOrders: string, discountedRevenue: string, fullPriceOrders: string, fullPriceRevenue: string}|false $row */
+		$row = (new Query())
 			->select([
-				'date',
-				'totalDiscount',
+				'discountedOrders' => 'SUM(CASE WHEN [[totalDiscount]] < 0 THEN 1 ELSE 0 END)',
+				'discountedRevenue' => 'COALESCE(SUM(CASE WHEN [[totalDiscount]] < 0 THEN [[totalPrice]] ELSE 0 END), 0)',
+				'fullPriceOrders' => 'SUM(CASE WHEN [[totalDiscount]] >= 0 OR [[totalDiscount]] IS NULL THEN 1 ELSE 0 END)',
+				'fullPriceRevenue' => 'COALESCE(SUM(CASE WHEN [[totalDiscount]] >= 0 OR [[totalDiscount]] IS NULL THEN [[totalPrice]] ELSE 0 END), 0)',
 			])
-			->from(Table::DAILY_STATS)
-			->where(['>=', 'date', substr($fromDT, 0, 10)])
-			->andWhere(['<=', 'date', substr($toDT, 0, 10)])
-			->orderBy([
-				'date' => SORT_ASC,
+			->from(CommerceTable::ORDERS)
+			->where([
+				'and',
+				['=', '[[isCompleted]]', true],
+				['>=', '[[dateOrdered]]', $fromDT],
+				['<=', '[[dateOrdered]]', $toDT],
 			])
-			->all();
+			->one();
+
+		$discountedOrders = (int) ($row['discountedOrders'] ?? 0);
+		$discountedRevenue = (float) ($row['discountedRevenue'] ?? 0);
+		$fullPriceOrders = (int) ($row['fullPriceOrders'] ?? 0);
+		$fullPriceRevenue = (float) ($row['fullPriceRevenue'] ?? 0);
 
 		return [
-			'labels' => array_column($rows, 'date'),
-			'discounts' => array_map('floatval', array_column($rows, 'totalDiscount')),
+			'discounted' => [
+				'orders' => $discountedOrders,
+				'revenue' => $discountedRevenue,
+				'aov' => $discountedOrders > 0 ? round($discountedRevenue / $discountedOrders, 2) : 0,
+			],
+			'fullPrice' => [
+				'orders' => $fullPriceOrders,
+				'revenue' => $fullPriceRevenue,
+				'aov' => $fullPriceOrders > 0 ? round($fullPriceRevenue / $fullPriceOrders, 2) : 0,
+			],
 		];
+	}
+
+	/**
+	 * Get the most used discounts (from order adjustments).
+	 *
+	 * @return list<array{name: string, uses: int, totalDiscount: float}>
+	 */
+	public function getTopDiscounts(string $fromDT, string $toDT, int $limit = 5): array
+	{
+		/** @var list<array{name: string, uses: int, totalDiscount: float}> $rows */
+		$rows = (new Query())
+			->select([
+				'name' => '[[adj.name]]',
+				'uses' => 'COUNT(DISTINCT [[adj.orderId]])',
+				'totalDiscount' => 'COALESCE(SUM(ABS([[adj.amount]])), 0)',
+			])
+			->from([
+				'adj' => CommerceTable::ORDERADJUSTMENTS,
+			])
+			->innerJoin([
+				'orders' => CommerceTable::ORDERS,
+			], '[[adj.orderId]] = [[orders.id]]')
+			->where([
+				'and',
+				['=', '[[orders.isCompleted]]', true],
+				['>=', '[[orders.dateOrdered]]', $fromDT],
+				['<=', '[[orders.dateOrdered]]', $toDT],
+				['=', '[[adj.type]]', 'discount'],
+			])
+			->groupBy('[[adj.name]]')
+			->orderBy([
+				'uses' => SORT_DESC,
+			])
+			->limit($limit)
+			->all();
+
+		return $rows;
 	}
 }

@@ -141,7 +141,7 @@ abstract class KpiCards
 				'resolve' => fn (PeriodStats $s): float => $s->averageItemsPerOrder,
 			],
 			'totalDiscount' => [
-				'label' => Craft::t('best-sellers', 'Total Discount'),
+				'label' => Craft::t('best-sellers', 'Total Discounts'),
 				'format' => 'currency',
 				'sparklineId' => 'sparkDiscount',
 				'sparklineColumn' => 'totalDiscount',

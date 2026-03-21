@@ -1,4 +1,12 @@
 {% extends 'best-sellers/_layouts/reports' %}
+{% do view.registerTranslations('best-sellers', [
+	'Filtered: {label}',
+	'Clear filter',
+	'Shipping: {method}',
+	'Discounted orders',
+	'Full-price orders',
+	'Discount: {name}',
+]) %}
 
 {% set title = "Orders"|t('best-sellers') %}
 {% set selectedSubnavItem = 'orders' %}

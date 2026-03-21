@@ -248,7 +248,29 @@
 				options.restoreFilterState(savedFilters);
 			}
 
-			var savedState = readSavedState();
+			// Read URL query params for cross-page filter links (e.g. from dashboard)
+			var urlFilters = {};
+			var urlFilterLabel = '';
+			try {
+				var urlParams = new URLSearchParams(window.location.search);
+				['shippingMethod', 'discountStatus', 'discountName'].forEach(function (key) {
+					var val = urlParams.get(key);
+					if (val) { urlFilters[key] = val; }
+				});
+				if (urlFilters.shippingMethod) {
+					urlFilterLabel = Craft.t('best-sellers', 'Shipping: {method}', { method: urlFilters.shippingMethod });
+				} else if (urlFilters.discountStatus) {
+					urlFilterLabel = urlFilters.discountStatus === 'discounted'
+						? Craft.t('best-sellers', 'Discounted orders')
+						: Craft.t('best-sellers', 'Full-price orders');
+				} else if (urlFilters.discountName) {
+					urlFilterLabel = Craft.t('best-sellers', 'Discount: {name}', { name: urlFilters.discountName });
+				}
+			} catch (err) {
+				// URLSearchParams not supported or other error
+			}
+
+			var savedState = Object.keys(urlFilters).length > 0 ? null : readSavedState();
 
 			// Wire up sortable headers
 			var tableEl = tbodyEl.closest('table');
@@ -399,7 +421,7 @@
 				currentPage = page;
 				showLoading();
 
-				var params = Object.assign({}, options.baseParams, { page: page });
+				var params = Object.assign({}, options.baseParams, urlFilters, { page: page });
 
 				if (currentSort) {
 					params.sort = currentSort;
@@ -434,6 +456,21 @@
 				loadPage: loadPage,
 				reload: function () { loadPage(1); },
 				init: function () {
+					// Show filter banner for cross-page links
+					if (urlFilterLabel && containerEl) {
+						var banner = document.createElement('div');
+						banner.className = 'bs-filter-banner';
+						var labelSpan = document.createElement('span');
+						labelSpan.textContent = Craft.t('best-sellers', 'Filtered: {label}', { label: urlFilterLabel });
+						banner.appendChild(labelSpan);
+						var clearLink = document.createElement('a');
+						clearLink.href = window.location.pathname + '?from=' + (options.baseParams.from || '') + '&to=' + (options.baseParams.to || '') + '&preset=' + (options.baseParams.preset || '');
+						clearLink.textContent = Craft.t('best-sellers', 'Clear filter');
+						clearLink.className = 'bs-filter-banner__clear';
+						banner.appendChild(clearLink);
+						containerEl.parentNode.insertBefore(banner, containerEl);
+					}
+
 					if (savedState) {
 						currentSort = savedState.sort || currentSort;
 						currentSortDir = savedState.sortDir || currentSortDir;

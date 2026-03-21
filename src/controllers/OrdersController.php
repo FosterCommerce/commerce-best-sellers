@@ -309,7 +309,7 @@ class OrdersController extends BaseReportController
 	}
 
 	/**
-	 * Apply shared order filters (status, payment, search) to a query.
+	 * Apply shared order filters (status, payment, search, shipping, discounts) to a query.
 	 *
 	 * @template TQuery of OrderQuery|Query<array-key, mixed>
 	 * @param TQuery $query
@@ -374,6 +374,57 @@ class OrdersController extends BaseReportController
 				['like', '[[reference]]', $search],
 				['like', '[[email]]', $search],
 				['like', '[[number]]', $search],
+			]);
+		}
+
+		// Shipping method filter
+		/** @var string $shippingMethod */
+		$shippingMethod = $request->getQueryParam('shippingMethod', '');
+		if ($shippingMethod !== '') {
+			if ($shippingMethod === 'None') {
+				$query->andWhere([
+					'or',
+					[
+						'[[shippingMethodName]]' => null,
+					],
+					[
+						'[[shippingMethodName]]' => '',
+					],
+				]);
+			} else {
+				$query->andWhere([
+					'[[shippingMethodName]]' => $shippingMethod,
+				]);
+			}
+		}
+
+		// Discount status filter (discounted vs full-price)
+		/** @var string $discountStatus */
+		$discountStatus = $request->getQueryParam('discountStatus', '');
+		if ($discountStatus === 'discounted') {
+			$query->andWhere(['<', '[[totalDiscount]]', 0]);
+		} elseif ($discountStatus === 'fullPrice') {
+			$query->andWhere([
+				'or',
+				['>=', '[[totalDiscount]]', 0],
+				[
+					'[[totalDiscount]]' => null,
+				],
+			]);
+		}
+
+		// Discount name filter (orders using a specific discount)
+		/** @var string $discountName */
+		$discountName = $request->getQueryParam('discountName', '');
+		if ($discountName !== '') {
+			$query->andWhere([
+				'[[id]]' => (new Query())
+					->select('DISTINCT [[orderId]]')
+					->from(CommerceTable::ORDERADJUSTMENTS)
+					->where([
+						'[[type]]' => 'discount',
+						'[[name]]' => $discountName,
+					]),
 			]);
 		}
 	}

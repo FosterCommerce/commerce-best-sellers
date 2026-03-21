@@ -31,6 +31,7 @@ use fostercommerce\bestsellers\services\DateRange;
 use fostercommerce\bestsellers\services\OperationsStats;
 use fostercommerce\bestsellers\services\ProductStats;
 use fostercommerce\bestsellers\services\Sales;
+use fostercommerce\bestsellers\services\SummaryEngine;
 use fostercommerce\bestsellers\utilities\BackfillUtility;
 use fostercommerce\bestsellers\variables\BestSellersVariable;
 use yii\base\Event;
@@ -44,6 +45,7 @@ use yii\base\Event;
  * @property-read CustomerStats $customerStats
  * @property-read OperationsStats $operationsStats
  * @property-read CartAbandonment $cartAbandonment
+ * @property-read SummaryEngine $summaryEngine
  */
 class Plugin extends BasePlugin
 {
@@ -71,6 +73,7 @@ class Plugin extends BasePlugin
 				'customerStats' => CustomerStats::class,
 				'operationsStats' => OperationsStats::class,
 				'cartAbandonment' => CartAbandonment::class,
+				'summaryEngine' => SummaryEngine::class,
 			],
 		];
 	}
@@ -133,7 +136,7 @@ class Plugin extends BasePlugin
 		$navItem['url'] = 'best-sellers';
 		$navItem['subnav'] = [
 			'overview' => [
-				'label' => Craft::t('best-sellers', 'Overview'),
+				'label' => Craft::t('best-sellers', 'Dashboard'),
 				'url' => 'best-sellers/',
 			],
 			'orders' => [

@@ -232,6 +232,69 @@
 	color: #1a1a1a;
 }
 
+/* Summary blocks */
+.bs-summary {
+	margin-bottom: 1.5rem;
+}
+
+.bs-summary__lead {
+	font-size: 1.1rem;
+	line-height: 1.5;
+	color: #333;
+	margin: 0 0 0.25rem;
+}
+
+.bs-summary__context {
+	font-size: 0.88rem;
+	line-height: 1.5;
+	color: #6c757d;
+	margin: 0;
+}
+
+.bs-summary__sep {
+	color: #ccc;
+	margin: 0 0.15rem;
+}
+
+.bs-summary__warnings {
+	margin-top: 0.75rem;
+}
+
+.bs-summary__warning {
+	font-size: 0.8rem;
+	color: #95a5a6;
+	margin: 0.25rem 0 0;
+	line-height: 1.4;
+}
+
+/* Filter banner for cross-page links */
+.bs-filter-banner {
+	background: #f0f7fb;
+	border: 1px solid #d0e3ed;
+	border-radius: 6px;
+	padding: 0.6rem 1rem;
+	margin-bottom: 1rem;
+	font-size: 0.9rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.bs-filter-banner__clear {
+	font-size: 0.85rem;
+}
+
+/* Hero row (Health Check) */
+.bs-section--hero {
+	margin-bottom: 3rem;
+	padding-bottom: 3rem;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+.bs-section--hero .bs-kpi-card__value {
+	font-size: 1.75rem;
+}
+
 /* Two-column layout */
 .bs-columns {
 	display: grid;

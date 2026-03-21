@@ -19,10 +19,7 @@ class OperationsController extends BaseReportController
 		assert($plugin instanceof Plugin);
 		$operationsStats = $plugin->operationsStats;
 
-		$itemsPerOrder = $operationsStats->getItemsPerOrderDistribution($dateRange->fromDT, $dateRange->toDT);
-		$shippingMethods = $operationsStats->getShippingMethods($dateRange->fromDT, $dateRange->toDT);
 		$couponUsage = $operationsStats->getCouponUsage($dateRange->fromDT, $dateRange->toDT);
-		$discountTrend = $operationsStats->getDiscountTrend($dateRange->fromDT, $dateRange->toDT);
 
 		return $this->renderTemplate('best-sellers/_operations', [
 			'title' => Craft::t('best-sellers', 'Operations'),
@@ -30,10 +27,7 @@ class OperationsController extends BaseReportController
 			'from' => $dateRange->from,
 			'to' => $dateRange->to,
 			'preset' => $dateRange->preset,
-			'itemsPerOrder' => $itemsPerOrder,
-			'shippingMethods' => $shippingMethods,
 			'couponUsage' => $couponUsage,
-			'discountTrend' => $discountTrend,
 		]);
 	}
 }

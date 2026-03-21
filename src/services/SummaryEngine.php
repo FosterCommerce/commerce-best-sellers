@@ -38,15 +38,19 @@ class SummaryEngine extends Component
 		$rangeLabel = RangeLabelBuilder::rangeLabel($scope->preset, $scope->from, $scope->to);
 		$compLabel = RangeLabelBuilder::comparisonLabel($scope->preset, $scope->from, $scope->to, $days);
 
+		// For partial periods, use today as the effective end date
+		$today = (new \DateTime('now'))->format('Y-m-d');
+		$effectiveTo = $isPartial && $scope->to > $today ? $today : $scope->to;
+
 		$earliestOrderDate = $this->getEarliestOrderDate();
-		$yoyDates = $this->getYoyDates($scope->from, $scope->to);
+		$yoyDates = $this->getYoyDates($scope->from, $effectiveTo);
 		$yoyAvailable = $earliestOrderDate !== null && $earliestOrderDate <= $yoyDates['from'];
 
 		$warningContext = [
 			'is_partial' => $isPartial,
 			'days' => $days,
 			'from' => $scope->from,
-			'to' => $scope->to,
+			'to' => $effectiveTo,
 			'elapsed_days' => $elapsedDays,
 			'earliest_order_date' => $earliestOrderDate,
 			'yoy_available' => $yoyAvailable,
@@ -65,7 +69,7 @@ class SummaryEngine extends Component
 			? $dailyStats->getStatsForRange($yoyDates['from'], $yoyDates['to'])
 			: null;
 
-		$trailing = $this->computeTrailingAverage($dailyStats, $scope->from, $days, $isPartial, $elapsedDays, $earliestOrderDate);
+		$trailing = $this->computeTrailingAverage($dailyStats, $scope->from, $elapsedDays, $isPartial, $elapsedDays, $earliestOrderDate);
 		$warningContext['trailing_chunk_count'] = $trailing['chunk_count'] ?? null;
 		$warningContext['trailing_prorated'] = $trailing['prorated'];
 
@@ -245,19 +249,10 @@ class SummaryEngine extends Component
 			: 0;
 
 		if ($prevTotalOrders > 0 && $prevPctDiscounted > 0) {
-			$diff = $pctDiscounted - $prevPctDiscounted;
-			if (abs($diff) >= 1.0) {
-				$direction = $diff > 0
-					? Craft::t('best-sellers', 'up')
-					: Craft::t('best-sellers', 'down');
-				$formattedDiff = $this->markedValue(number_format(abs($diff), 1) . 'pp');
-				$formattedPrevPct = $this->markedValue(number_format($prevPctDiscounted, 1) . '%');
-				$sentences[] = Craft::t('best-sellers', 'Discount share is {direction} {diff} from {prevPct} last period', [
-					'direction' => $direction,
-					'diff' => $formattedDiff,
-					'prevPct' => $formattedPrevPct,
-				]);
-			}
+			$formattedPrevPct = $this->markedValue(number_format($prevPctDiscounted, 1) . '%');
+			$sentences[] = Craft::t('best-sellers', 'Discount share was {prevPct} last period', [
+				'prevPct' => $formattedPrevPct,
+			]);
 		}
 
 		// Low/high volume callout

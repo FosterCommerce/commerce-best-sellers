@@ -366,7 +366,7 @@
 
 					var info = document.createElement('span');
 					info.className = 'light';
-					info.textContent = 'Showing ' + rangeStart + '\u2013' + rangeEnd + ' of ' + totalItems + ' ' + itemLabel;
+					info.textContent = Craft.t('best-sellers', 'Showing {start}\u2013{end} of {total} {label}', { start: rangeStart, end: rangeEnd, total: totalItems, label: itemLabel });
 					paginationEl.appendChild(info);
 
 					var buttons = document.createElement('div');
@@ -376,14 +376,14 @@
 					if (currentPage > 1) {
 						var prevBtn = document.createElement('button');
 						prevBtn.className = 'btn';
-						prevBtn.textContent = 'Previous';
+						prevBtn.textContent = Craft.t('best-sellers', 'Previous');
 						prevBtn.addEventListener('click', function () { loadPage(currentPage - 1); });
 						buttons.appendChild(prevBtn);
 					}
 					if (currentPage < totalPages) {
 						var nextBtn = document.createElement('button');
 						nextBtn.className = 'btn';
-						nextBtn.textContent = 'Next';
+						nextBtn.textContent = Craft.t('best-sellers', 'Next');
 						nextBtn.addEventListener('click', function () { loadPage(currentPage + 1); });
 						buttons.appendChild(nextBtn);
 					}
@@ -401,7 +401,7 @@
 					if (!exportTarget.querySelector('.bs-export-btn')) {
 						var exportBtn = document.createElement('a');
 						exportBtn.className = 'btn bs-export-btn';
-						exportBtn.textContent = 'Export CSV';
+						exportBtn.textContent = Craft.t('best-sellers', 'Export CSV');
 						if (!options.exportContainerEl) {
 							exportBtn.style.marginLeft = 'auto';
 						}
@@ -454,7 +454,7 @@
 				.then(function (data) { renderData(data); writeState(); })
 				.catch(function (error) {
 					spinnerEl.style.display = 'none';
-					messageEl.textContent = 'Failed to load data: ' + error.message;
+					messageEl.textContent = Craft.t('best-sellers', 'Failed to load data: {error}', { error: error.message });
 					console.error('Best Sellers data load error:', error);
 				});
 			}

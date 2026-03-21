@@ -132,17 +132,14 @@ abstract class BaseReportController extends Controller
 		}
 
 		rewind($output);
-		$csv = stream_get_contents($output);
+		$csv = (string) stream_get_contents($output);
 		fclose($output);
 
 		/** @var Response $response */
 		$response = Craft::$app->getResponse();
-		$response->format = Response::FORMAT_RAW;
-		$response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
-		$response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
 
-		$response->data = $csv;
-
-		return $response;
+		return $response->sendContentAsFile($csv, $filename, [
+			'mimeType' => 'text/csv',
+		]);
 	}
 }

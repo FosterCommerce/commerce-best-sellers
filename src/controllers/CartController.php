@@ -54,17 +54,31 @@ class CartController extends Controller
 			throw new HttpException(400, Craft::t('best-sellers', 'This order has already been completed.'));
 		}
 
-		// Check if cart belongs to a credentialed user
 		$currentUser = Craft::$app->getUser()->getIdentity();
 		$currentUserId = $currentUser?->id;
+		$cartCustomerId = $order->customerId;
 		$cartCustomer = $order->getCustomer();
+		$isCredentialed = $cartCustomer && $cartCustomer->getIsCredentialed();
 
-		if ($cartCustomer && $cartCustomer->getIsCredentialed() && (! $currentUserId || $order->customerId !== $currentUserId)) {
+		$blocked = false;
+		if ($currentUser && $cartCustomerId && $cartCustomerId !== $currentUserId) {
+			// Logged in user trying to restore someone else's cart
+			$blocked = true;
+		} elseif (! $currentUser && $isCredentialed) {
+			// Logged out user trying to restore a credentialed user's cart
+			$blocked = true;
+		}
+
+		if ($blocked) {
 			/** @var string $loginPath */
 			$loginPath = Craft::$app->getConfig()->getGeneral()->getLoginPath();
 			$loginUrl = UrlHelper::url($loginPath, [
 				'return' => $request->getAbsoluteUrl(),
 			]);
+
+			$message = $currentUser
+				? Craft::t('best-sellers', 'This cart belongs to another account. Please log in as the cart owner to continue.')
+				: Craft::t('best-sellers', 'This cart belongs to a user account. Please log in to continue.');
 
 			// Render login-required page
 			$view = Craft::$app->getView();
@@ -72,7 +86,7 @@ class CartController extends Controller
 			$view->setTemplateMode(View::TEMPLATE_MODE_CP);
 			$html = $view->renderTemplate('best-sellers/_cart/login-required', [
 				'loginUrl' => $loginUrl,
-				'message' => Craft::t('best-sellers', 'This cart belongs to a user account. Please log in to continue.'),
+				'message' => $message,
 			]);
 			$view->setTemplateMode($oldMode);
 
@@ -90,8 +104,9 @@ class CartController extends Controller
 
 		Craft::$app->getSession()->setNotice(Craft::t('best-sellers', 'Your cart has been restored.'));
 
-		// Redirect to Commerce's configured load cart redirect URL, or site root
-		$cartUrl = $commerce->getSettings()->loadCartRedirectUrl ?? '/';
+		// Redirect to Commerce's configured load cart redirect URL
+		$loadCartRedirectUrl = $commerce->getSettings()->loadCartRedirectUrl ?? '';
+		$cartUrl = UrlHelper::siteUrl($loadCartRedirectUrl, siteId: $order->orderSiteId);
 
 		return $this->redirect($cartUrl);
 	}

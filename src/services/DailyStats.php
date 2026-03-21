@@ -175,8 +175,8 @@ class DailyStats extends Component
 				'returningCustomers' => 'COALESCE(SUM([[returningCustomers]]), 0)',
 			])
 			->from(Table::DAILY_STATS)
-			->where(['>=', 'date', $fromDate])
-			->andWhere(['<=', 'date', $toDate])
+			->where(['>=', '[[date]]', $fromDate])
+			->andWhere(['<=', '[[date]]', $toDate])
 			->one();
 
 		$totalOrders = (int) ($row['totalOrders'] ?? 0);
@@ -208,8 +208,8 @@ class DailyStats extends Component
 		/** @var array<int, array<string, mixed>> $rows */
 		$rows = (new Query())
 			->from(Table::DAILY_STATS)
-			->where(['>=', 'date', $fromDate])
-			->andWhere(['<=', 'date', $toDate])
+			->where(['>=', '[[date]]', $fromDate])
+			->andWhere(['<=', '[[date]]', $toDate])
 			->orderBy([
 				'date' => SORT_ASC,
 			])
@@ -228,8 +228,8 @@ class DailyStats extends Component
 		return (new Query())
 			->select($column)
 			->from(Table::DAILY_STATS)
-			->where(['>=', 'date', $fromDate])
-			->andWhere(['<=', 'date', $toDate])
+			->where(['>=', '[[date]]', $fromDate])
+			->andWhere(['<=', '[[date]]', $toDate])
 			->orderBy([
 				'date' => SORT_ASC,
 			])

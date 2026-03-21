@@ -18,8 +18,6 @@ class OperationsController extends BaseReportController
 
 		$commerce = CommercePlugin::getInstance();
 		$store = $commerce?->getStores()->getPrimaryStore();
-		$storeHandle = $store?->handle ?? 'default';
-
 		// Order statuses with their associated emails
 		$allStatuses = $commerce?->getOrderStatuses()->getAllOrderStatuses() ?? [];
 		$statusEmails = [];
@@ -47,10 +45,10 @@ class OperationsController extends BaseReportController
 				['=', '[[isCompleted]]', true],
 				[
 					'not', [
-						'couponCode' => null,
+						'[[couponCode]]' => null,
 					],
 				],
-				['!=', 'couponCode', ''],
+				['!=', '[[couponCode]]', ''],
 			])
 			->groupBy('[[couponCode]]')
 			->orderBy([
@@ -61,7 +59,6 @@ class OperationsController extends BaseReportController
 		return $this->renderTemplate('best-sellers/_operations', [
 			'title' => Craft::t('best-sellers', 'Operations'),
 			'selectedSubnavItem' => 'operations',
-			'storeHandle' => $storeHandle,
 			'storeId' => $store?->id,
 			'statusEmails' => $statusEmails,
 			'allEmails' => $allEmails,

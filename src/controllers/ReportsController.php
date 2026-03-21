@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use craft\web\Controller;
 use craft\web\Request;
@@ -108,7 +109,7 @@ class ReportsController extends Controller
 				'totalRevenue' => 'COALESCE(SUM([[totalPrice]]), 0)',
 				'totalCustomers' => 'COUNT(DISTINCT [[customerId]])',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],
@@ -129,10 +130,10 @@ class ReportsController extends Controller
 				'totalItems' => 'COALESCE(SUM([[lineItems.qty]]), 0)',
 			])
 			->from([
-				'lineItems' => '{{%commerce_lineitems}}',
+				'lineItems' => CommerceTable::LINEITEMS,
 			])
 			->innerJoin([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where([
 				'and',
@@ -172,7 +173,7 @@ class ReportsController extends Controller
 				'orderCount' => 'COUNT(*)',
 				'revenue' => 'COALESCE(SUM([[totalPrice]]), 0)',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],

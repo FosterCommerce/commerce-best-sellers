@@ -9,9 +9,9 @@ use craft\db\Query;
 use craft\helpers\UrlHelper;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
+use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\Plugin;
-use fostercommerce\bestsellers\records\VariantSale;
 use yii\web\BadRequestHttpException;
 use yii\web\Response;
 
@@ -312,7 +312,7 @@ class ProductsController extends BaseReportController
 		$titleRow = (new Query())
 			->select(['[[variantSales.productTitle]]', '[[variantSales.variantTitle]]'])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where($variantId !== 0 ? [
 				'[[variantSales.variantId]]' => $variantId,
@@ -371,7 +371,7 @@ class ProductsController extends BaseReportController
 		$query = (new Query())
 			->select(['[[variantSales.orderId]]', '[[variantSales.qty]]', '[[variantSales.lineItemTotal]]'])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $dateRange->fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $dateRange->toDT]);

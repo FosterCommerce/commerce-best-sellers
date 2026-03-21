@@ -2,8 +2,10 @@
 
 namespace fostercommerce\bestsellers\services;
 
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use DateTime;
+use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\models\PeriodStats;
 use fostercommerce\bestsellers\records\DailyStat;
 use yii\base\Component;
@@ -36,7 +38,7 @@ class DailyStats extends Component
 				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
 				'uniqueCustomers' => 'COUNT(DISTINCT [[email]])',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->one();
 
@@ -51,10 +53,10 @@ class DailyStats extends Component
 		$totalItemsSold = (int) (new Query())
 			->select(['COALESCE(SUM([[lineItems.qty]]), 0)'])
 			->from([
-				'lineItems' => '{{%commerce_lineitems}}',
+				'lineItems' => CommerceTable::LINEITEMS,
 			])
 			->innerJoin([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where([
 				'and',
@@ -67,7 +69,7 @@ class DailyStats extends Component
 		// New vs returning customers (tracked by email across all time)
 		$customerEmails = (new Query())
 			->select('DISTINCT [[email]]')
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->andWhere([
 				'not', [
@@ -87,7 +89,7 @@ class DailyStats extends Component
 							'email' => '[[email]]',
 							'firstOrder' => 'MIN([[dateOrdered]])',
 						])
-						->from('{{%commerce_orders}}')
+						->from(CommerceTable::ORDERS)
 						->where([
 							'and',
 							['=', '[[isCompleted]]', true],
@@ -172,7 +174,7 @@ class DailyStats extends Component
 				'newCustomers' => 'COALESCE(SUM([[newCustomers]]), 0)',
 				'returningCustomers' => 'COALESCE(SUM([[returningCustomers]]), 0)',
 			])
-			->from(DailyStat::tableName())
+			->from(Table::DAILY_STATS)
 			->where(['>=', 'date', $fromDate])
 			->andWhere(['<=', 'date', $toDate])
 			->one();
@@ -205,7 +207,7 @@ class DailyStats extends Component
 	{
 		/** @var array<int, array<string, mixed>> $rows */
 		$rows = (new Query())
-			->from(DailyStat::tableName())
+			->from(Table::DAILY_STATS)
 			->where(['>=', 'date', $fromDate])
 			->andWhere(['<=', 'date', $toDate])
 			->orderBy([
@@ -225,7 +227,7 @@ class DailyStats extends Component
 	{
 		return (new Query())
 			->select($column)
-			->from(DailyStat::tableName())
+			->from(Table::DAILY_STATS)
 			->where(['>=', 'date', $fromDate])
 			->andWhere(['<=', 'date', $toDate])
 			->orderBy([

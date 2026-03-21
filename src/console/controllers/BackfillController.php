@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\console\controllers;
 
 use Craft;
+use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
 use craft\db\Query;
 use DateTime;
@@ -67,7 +68,7 @@ class BackfillController extends Controller
 				'minDate' => 'MIN([[dateOrdered]])',
 				'maxDate' => 'MAX([[dateOrdered]])',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where(['=', 'isCompleted', true])
 			->one();
 

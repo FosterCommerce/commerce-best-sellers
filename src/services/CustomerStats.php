@@ -3,7 +3,9 @@
 namespace fostercommerce\bestsellers\services;
 
 use Craft;
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use craft\db\Table as CraftTable;
 use fostercommerce\bestsellers\models\CustomerKpis;
 use fostercommerce\bestsellers\models\CustomerRow;
 use fostercommerce\bestsellers\models\LtvComparison;
@@ -26,7 +28,7 @@ class CustomerStats extends Component
 
 		$total = (int) (new Query())
 			->select('COUNT(DISTINCT [[email]])')
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->andWhere([
 				'not', [
@@ -38,7 +40,7 @@ class CustomerStats extends Component
 		// Emails who ordered in this period
 		$customerEmails = (new Query())
 			->select('DISTINCT [[email]]')
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->andWhere([
 				'not', [
@@ -59,7 +61,7 @@ class CustomerStats extends Component
 							'email' => '[[email]]',
 							'firstOrder' => 'MIN([[dateOrdered]])',
 						])
-						->from('{{%commerce_orders}}')
+						->from(CommerceTable::ORDERS)
 						->where([
 							'and',
 							['=', '[[isCompleted]]', true],
@@ -101,7 +103,7 @@ class CustomerStats extends Component
 		// Get emails who ordered in the range
 		$customerEmails = (new Query())
 			->select('DISTINCT [[email]]')
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],
@@ -129,7 +131,7 @@ class CustomerStats extends Component
 				'email' => '[[email]]',
 				'firstOrder' => 'MIN([[dateOrdered]])',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],
@@ -150,7 +152,7 @@ class CustomerStats extends Component
 				'day' => $dayExpression,
 				'email' => '[[email]]',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],
@@ -221,11 +223,11 @@ class CustomerStats extends Component
 				'lastOrder' => 'MAX([[orders.dateOrdered]])',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->leftJoin(
 				[
-					'users' => '{{%users}}',
+					'users' => CraftTable::USERS,
 				],
 				'[[orders.customerId]] = [[users.id]]',
 			)
@@ -278,10 +280,10 @@ class CustomerStats extends Component
 				'count' => 'COUNT(DISTINCT [[orders.email]])',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->innerJoin([
-				'addresses' => '{{%addresses}}',
+				'addresses' => CraftTable::ADDRESSES,
 			], '[[orders.shippingAddressId]] = [[addresses.id]]')
 			->where([
 				'and',
@@ -331,11 +333,11 @@ class CustomerStats extends Component
 				'orderCount' => 'COUNT(*)',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->innerJoin(
 				[
-					'users' => '{{%users}}',
+					'users' => CraftTable::USERS,
 				],
 				'[[orders.customerId]] = [[users.id]]',
 			)
@@ -353,11 +355,11 @@ class CustomerStats extends Component
 				'orderCount' => 'COUNT(*)',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->leftJoin(
 				[
-					'users' => '{{%users}}',
+					'users' => CraftTable::USERS,
 				],
 				'[[orders.customerId]] = [[users.id]]',
 			)

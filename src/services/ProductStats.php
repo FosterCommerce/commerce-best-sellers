@@ -3,10 +3,11 @@
 namespace fostercommerce\bestsellers\services;
 
 use Craft;
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\models\ProductSummary;
-use fostercommerce\bestsellers\records\VariantSale;
 use yii\base\Component;
 use yii\db\Expression;
 
@@ -30,13 +31,13 @@ class ProductStats extends Component
 				'productType' => '[[productTypes.name]]',
 			])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->innerJoin([
-				'products' => '{{%commerce_products}}',
+				'products' => CommerceTable::PRODUCTS,
 			], '[[variantSales.productId]] = [[products.id]]')
 			->innerJoin([
-				'productTypes' => '{{%commerce_producttypes}}',
+				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -88,13 +89,13 @@ class ProductStats extends Component
 				'productType' => '[[productTypes.name]]',
 			])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->innerJoin([
-				'products' => '{{%commerce_products}}',
+				'products' => CommerceTable::PRODUCTS,
 			], '[[variantSales.productId]] = [[products.id]]')
 			->innerJoin([
-				'productTypes' => '{{%commerce_producttypes}}',
+				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -157,7 +158,7 @@ class ProductStats extends Component
 		$topItems = (new Query())
 			->select($selectFields)
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -195,7 +196,7 @@ class ProductStats extends Component
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 			])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -253,13 +254,13 @@ class ProductStats extends Component
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 			])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->innerJoin([
-				'products' => '{{%commerce_products}}',
+				'products' => CommerceTable::PRODUCTS,
 			], '[[variantSales.productId]] = [[products.id]]')
 			->innerJoin([
-				'productTypes' => '{{%commerce_producttypes}}',
+				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -323,13 +324,13 @@ class ProductStats extends Component
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->innerJoin([
-				'products' => '{{%commerce_products}}',
+				'products' => CommerceTable::PRODUCTS,
 			], '[[variantSales.productId]] = [[products.id]]')
 			->innerJoin([
-				'productTypes' => '{{%commerce_producttypes}}',
+				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -362,7 +363,7 @@ class ProductStats extends Component
 		$uniqueProducts = (int) (new Query())
 			->select('COUNT(DISTINCT [[variantSales.productId]])')
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -376,7 +377,7 @@ class ProductStats extends Component
 				'revenue' => new Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'),
 			])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -390,7 +391,7 @@ class ProductStats extends Component
 		$totalProductRevenue = (float) (new Query())
 			->select(new Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'))
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])
@@ -419,13 +420,13 @@ class ProductStats extends Component
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
 			->from([
-				'variantSales' => VariantSale::tableName(),
+				'variantSales' => Table::VARIANT_SALES,
 			])
 			->innerJoin([
-				'products' => '{{%commerce_products}}',
+				'products' => CommerceTable::PRODUCTS,
 			], '[[variantSales.productId]] = [[products.id]]')
 			->innerJoin([
-				'productTypes' => '{{%commerce_producttypes}}',
+				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[products.typeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $toDT])

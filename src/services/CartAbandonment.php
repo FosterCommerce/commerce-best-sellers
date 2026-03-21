@@ -2,6 +2,7 @@
 
 namespace fostercommerce\bestsellers\services;
 
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use DateTime;
 use fostercommerce\bestsellers\models\AbandonmentStats;
@@ -48,13 +49,13 @@ class CartAbandonment extends Component
 				'orders.[[dateUpdated]]',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->innerJoin(
 				[
 					'lineItemCheck' => (new Query())
 						->select('DISTINCT [[orderId]]')
-						->from('{{%commerce_lineitems}}'),
+						->from(CommerceTable::LINEITEMS),
 				],
 				'[[lineItemCheck.orderId]] = [[orders.id]]'
 			)
@@ -70,7 +71,7 @@ class CartAbandonment extends Component
 		// Completed orders in the same period (for rate calculation)
 		$totalCompleted = (int) (new Query())
 			->select('COUNT(*)')
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],
@@ -81,7 +82,7 @@ class CartAbandonment extends Component
 
 		$completedValue = (float) (new Query())
 			->select(new Expression('COALESCE(SUM([[totalPrice]]), 0)'))
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],

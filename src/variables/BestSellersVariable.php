@@ -2,13 +2,14 @@
 
 namespace fostercommerce\bestsellers\variables;
 
+use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\db\VariantQuery;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Variant;
 use craft\db\Query;
 use craft\elements\User;
 use DateTime;
-use fostercommerce\bestsellers\records\VariantSale;
+use fostercommerce\bestsellers\db\Table;
 
 class BestSellersVariable
 {
@@ -22,7 +23,7 @@ class BestSellersVariable
 	public function variantTotalSales(int $variantId, ?string $startDate = null, ?string $endDate = null): int
 	{
 		$query = (new Query())
-			->from(VariantSale::tableName())
+			->from(Table::VARIANT_SALES)
 			->where([
 				'variantId' => $variantId,
 			]);
@@ -41,7 +42,7 @@ class BestSellersVariable
 	public function variantTotalRevenue(int $variantId, ?string $startDate = null, ?string $endDate = null): float
 	{
 		$query = (new Query())
-			->from(VariantSale::tableName())
+			->from(Table::VARIANT_SALES)
 			->where([
 				'variantId' => $variantId,
 			]);
@@ -64,7 +65,7 @@ class BestSellersVariable
 	public function productTotalSales(int $productId, ?string $startDate = null, ?string $endDate = null): int
 	{
 		$query = (new Query())
-			->from(VariantSale::tableName())
+			->from(Table::VARIANT_SALES)
 			->where([
 				'productId' => $productId,
 			]);
@@ -83,7 +84,7 @@ class BestSellersVariable
 	public function productTotalRevenue(int $productId, ?string $startDate = null, ?string $endDate = null): float
 	{
 		$query = (new Query())
-			->from(VariantSale::tableName())
+			->from(Table::VARIANT_SALES)
 			->where([
 				'productId' => $productId,
 			]);
@@ -107,7 +108,7 @@ class BestSellersVariable
 			->isCompleted()
 			->innerJoin(
 				[
-					'lineitems' => '{{%commerce_lineitems}}',
+					'lineitems' => CommerceTable::LINEITEMS,
 				],
 				'[[commerce_orders.id]] = [[lineitems.orderId]]'
 			)
@@ -135,10 +136,10 @@ class BestSellersVariable
 		$rows = (new Query())
 			->select('[[l.purchasableId]]')
 			->from([
-				'o' => '{{%commerce_orders}}',
+				'o' => CommerceTable::ORDERS,
 			])
 			->leftJoin([
-				'l' => '{{%commerce_lineitems}}',
+				'l' => CommerceTable::LINEITEMS,
 			], '[[o.id]] = [[l.orderId]]')
 			->where([
 				'[[o.isCompleted]]' => true,

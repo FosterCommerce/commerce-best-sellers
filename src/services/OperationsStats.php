@@ -2,8 +2,9 @@
 
 namespace fostercommerce\bestsellers\services;
 
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
-use fostercommerce\bestsellers\records\DailyStat;
+use fostercommerce\bestsellers\db\Table;
 use yii\base\Component;
 
 class OperationsStats extends Component
@@ -29,7 +30,7 @@ class OperationsStats extends Component
 				'avgDiscount' => 'COALESCE(AVG(ABS([[totalDiscount]])), 0)',
 				'withCoupon' => "SUM(CASE WHEN [[couponCode]] IS NOT NULL AND [[couponCode]] != '' THEN 1 ELSE 0 END)",
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->one();
 
@@ -42,10 +43,10 @@ class OperationsStats extends Component
 		$totalItemsSold = (int) (new Query())
 			->select('COALESCE(SUM([[lineItems.qty]]), 0)')
 			->from([
-				'lineItems' => '{{%commerce_lineitems}}',
+				'lineItems' => CommerceTable::LINEITEMS,
 			])
 			->innerJoin([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where([
 				'and',
@@ -64,7 +65,7 @@ class OperationsStats extends Component
 				'method' => "COALESCE([[shippingMethodName]], 'None')",
 				'cnt' => 'COUNT(*)',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->groupBy('[[shippingMethodName]]')
 			->orderBy([
@@ -102,10 +103,10 @@ class OperationsStats extends Component
 				'itemCount' => 'SUM([[lineItems.qty]])',
 			])
 			->from([
-				'lineItems' => '{{%commerce_lineitems}}',
+				'lineItems' => CommerceTable::LINEITEMS,
 			])
 			->innerJoin([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where($dateCondition)
 			->groupBy('[[orders.id]]')
@@ -164,7 +165,7 @@ class OperationsStats extends Component
 				'count' => 'COUNT(*)',
 				'revenue' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->groupBy('[[shippingMethodName]]')
 			->orderBy([
@@ -201,7 +202,7 @@ class OperationsStats extends Component
 				'uses' => 'COUNT(*)',
 				'totalDiscount' => 'COALESCE(SUM(ABS([[totalDiscount]])), 0)',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->groupBy('[[couponCode]]')
 			->orderBy([
@@ -224,7 +225,7 @@ class OperationsStats extends Component
 				'date',
 				'totalDiscount',
 			])
-			->from(DailyStat::tableName())
+			->from(Table::DAILY_STATS)
 			->where(['>=', 'date', substr($fromDT, 0, 10)])
 			->andWhere(['<=', 'date', substr($toDT, 0, 10)])
 			->orderBy([

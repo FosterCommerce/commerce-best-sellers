@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\db\OrderQuery;
 use craft\commerce\elements\Order;
 use craft\db\Query;
@@ -200,7 +201,7 @@ class OrdersController extends BaseReportController
 			$ordersQuery->andWhere([
 				'[[orderStatusId]]' => (new Query())
 					->select('[[id]]')
-					->from('{{%commerce_orderstatuses}}')
+					->from(CommerceTable::ORDERSTATUSES)
 					->where([
 						'[[handle]]' => $orderStatuses,
 					]),
@@ -251,7 +252,7 @@ class OrdersController extends BaseReportController
 					'orderId',
 					'totalItems' => 'COALESCE(SUM([[qty]]), 0)',
 				])
-				->from('{{%commerce_lineitems}}')
+				->from(CommerceTable::LINEITEMS)
 				->where(['in', 'orderId', $orderIds])
 				->groupBy('orderId')
 				->all();
@@ -319,13 +320,13 @@ class OrdersController extends BaseReportController
 				'totalShippingCost' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
 				'totalPaid' => 'COALESCE(SUM([[totalPaid]]), 0)',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where(['in', '[[id]]', $orderIds])
 			->one();
 
 		$totalItemsSold = (int) (new Query())
 			->select('COALESCE(SUM([[qty]]), 0)')
-			->from('{{%commerce_lineitems}}')
+			->from(CommerceTable::LINEITEMS)
 			->where(['in', '[[orderId]]', $orderIds])
 			->scalar();
 

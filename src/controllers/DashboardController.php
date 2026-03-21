@@ -163,7 +163,7 @@ class DashboardController extends Controller
 			'totalPages' => ceil($total / self::ITEMS_PER_PAGE),
 		]);
 
-		$titleText = $productsOrVariants === 'variants' ? 'Variants' : 'Products';
+		$titleText = $productsOrVariants === 'variants' ? Craft::t('best-sellers', 'Variants') : Craft::t('best-sellers', 'Products');
 
 		return $this->renderTemplate('best-sellers/_dashboard', [
 			'items' => $page,

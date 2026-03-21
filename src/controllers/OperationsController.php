@@ -25,7 +25,7 @@ class OperationsController extends BaseReportController
 		$discountTrend = $operationsStats->getDiscountTrend($dateRange['fromDT'], $dateRange['toDT']);
 
 		return $this->renderTemplate('best-sellers/_operations', [
-			'title' => 'Operations',
+			'title' => Craft::t('best-sellers', 'Operations'),
 			'selectedSubnavItem' => 'operations',
 			'from' => $dateRange['from'],
 			'to' => $dateRange['to'],

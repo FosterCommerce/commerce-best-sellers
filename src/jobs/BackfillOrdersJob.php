@@ -2,6 +2,7 @@
 
 namespace fostercommerce\bestsellers\jobs;
 
+use Craft;
 use craft\commerce\elements\Order;
 use craft\queue\BaseJob;
 use fostercommerce\bestsellers\Plugin;
@@ -49,6 +50,6 @@ class BackfillOrdersJob extends BaseJob
 
 	protected function defaultDescription(): string
 	{
-		return "Backfilling orders starting at offset {$this->offset}";
+		return Craft::t('best-sellers', 'Backfilling orders starting at offset {offset}', ['offset' => $this->offset]);
 	}
 }

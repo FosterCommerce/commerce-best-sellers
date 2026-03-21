@@ -26,7 +26,7 @@ class CustomersController extends BaseReportController
 		$newCustomersChange = $this->percentChange($kpis['new'], $prevKpis['new']);
 
 		return $this->renderTemplate('best-sellers/_customers', [
-			'title' => 'Customers',
+			'title' => Craft::t('best-sellers', 'Customers'),
 			'selectedSubnavItem' => 'customers',
 			'from' => $dateRange['from'],
 			'to' => $dateRange['to'],
@@ -205,7 +205,12 @@ class CustomersController extends BaseReportController
 		];
 
 		return $this->asCsv($csvRows, [
-			'Email', 'Status', '# Orders', 'Total Spent', 'AOV', 'Last Purchase',
+			Craft::t('best-sellers', 'Email'),
+			Craft::t('best-sellers', 'Status'),
+			Craft::t('best-sellers', '# Orders'),
+			Craft::t('best-sellers', 'Total Spent'),
+			Craft::t('best-sellers', 'AOV'),
+			Craft::t('best-sellers', 'Last Purchase'),
 		], 'customers');
 	}
 }

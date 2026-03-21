@@ -114,13 +114,13 @@ class Plugin extends BasePlugin
 			UserPermissions::EVENT_REGISTER_PERMISSIONS,
 			static function (RegisterUserPermissionsEvent $event): void {
 				$event->permissions[] = [
-					'heading' => 'Best Sellers',
+					'heading' => Craft::t('best-sellers', 'Best Sellers'),
 					'permissions' => [
 						self::PERMISSION_VIEW_REPORTS => [
-							'label' => 'View reports',
+							'label' => Craft::t('best-sellers', 'View reports'),
 						],
 						self::PERMISSION_BACKFILL => [
-							'label' => 'Backfill order data',
+							'label' => Craft::t('best-sellers', 'Backfill order data'),
 						],
 					],
 				];
@@ -138,27 +138,27 @@ class Plugin extends BasePlugin
 		}
 
 		$navItem = parent::getCpNavItem();
-		$navItem['label'] = 'Best Sellers';
+		$navItem['label'] = Craft::t('best-sellers', 'Best Sellers');
 		$navItem['url'] = 'best-sellers';
 		$navItem['subnav'] = [
 			'overview' => [
-				'label' => 'Overview',
+				'label' => Craft::t('best-sellers', 'Overview'),
 				'url' => 'best-sellers/',
 			],
 			'orders' => [
-				'label' => 'Orders',
+				'label' => Craft::t('best-sellers', 'Orders'),
 				'url' => 'best-sellers/orders',
 			],
 			'products' => [
-				'label' => 'Products',
+				'label' => Craft::t('best-sellers', 'Products'),
 				'url' => 'best-sellers/products',
 			],
 			'customers' => [
-				'label' => 'Customers',
+				'label' => Craft::t('best-sellers', 'Customers'),
 				'url' => 'best-sellers/customers',
 			],
 			'operations' => [
-				'label' => 'Operations',
+				'label' => Craft::t('best-sellers', 'Operations'),
 				'url' => 'best-sellers/operations',
 			],
 		];

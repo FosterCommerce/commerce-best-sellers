@@ -5,7 +5,7 @@ namespace fostercommerce\bestsellers\helpers;
 use Craft;
 use fostercommerce\bestsellers\models\PeriodStats;
 
-class KpiCards
+abstract class KpiCards
 {
 	/**
 	 * Build KPI card data for the given keys.

@@ -9,7 +9,7 @@ use craft\helpers\Db;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\db\Table;
 
-class Query
+abstract class Query
 {
 	/**
 	 * @template TKey of array-key

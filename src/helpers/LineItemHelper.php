@@ -6,7 +6,7 @@ use craft\commerce\base\PurchasableInterface;
 use craft\commerce\enums\LineItemType;
 use craft\commerce\models\LineItem;
 
-class LineItemHelper
+abstract class LineItemHelper
 {
 	public static function getPurchasable(LineItem $lineItem): ?PurchasableInterface
 	{

@@ -2,7 +2,7 @@
 
 namespace fostercommerce\bestsellers\helpers;
 
-class ChartConfig
+abstract class ChartConfig
 {
 	public const COLOR_PRIMARY = '#0073aa';
 

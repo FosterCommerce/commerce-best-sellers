@@ -7,9 +7,9 @@ use craft\db\Query as DbQuery;
 use craft\elements\db\ElementQuery;
 use craft\helpers\Db;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
-use fostercommerce\bestsellers\records\VariantSale;
+use fostercommerce\bestsellers\db\Table;
 
-class Query
+abstract class Query
 {
 	/**
 	 * @template TKey of array-key
@@ -36,7 +36,7 @@ class Query
 				'totalQtySold' => 'COALESCE(SUM(qty), 0)',
 				'totalRevenue' => 'COALESCE(SUM(lineItemTotal), 0)',
 			])
-			->from(VariantSale::tableName())
+			->from(Table::VARIANT_SALES)
 			->groupBy($id);
 
 		if ($behavior->bestSellersFrom !== null) {

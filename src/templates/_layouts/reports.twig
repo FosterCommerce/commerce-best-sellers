@@ -1,4 +1,11 @@
 {% extends '_layouts/cp' %}
+{% do view.registerTranslations('best-sellers', [
+	'Showing {start}\u2013{end} of {total} {label}',
+	'Previous',
+	'Next',
+	'Export CSV',
+	'Failed to load data: {error}',
+]) %}
 
 {% set selectedSubnavItem = selectedSubnavItem ?? 'overview' %}
 
@@ -7,6 +14,7 @@
 		from: from,
 		to: to,
 		preset: preset,
+		scope: scope ?? null,
 	} only %}
 {% endset %}
 

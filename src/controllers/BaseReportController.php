@@ -6,9 +6,11 @@ use Craft;
 use craft\commerce\Plugin as CommercePlugin;
 use craft\helpers\MoneyHelper;
 use craft\web\Controller;
+use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\Plugin;
 use Money\Currency;
 use Money\Money;
+use RuntimeException;
 use yii\web\Response;
 
 abstract class BaseReportController extends Controller
@@ -48,21 +50,14 @@ abstract class BaseReportController extends Controller
 	}
 
 	/**
-	 * Resolve the current and previous date range.
-	 *
-	 * @return array{from: string, to: string, preset: string, fromDT: string, toDT: string, prev: array{from: string, to: string, fromDT: string, toDT: string}}
+	 * Resolve the full report scope (date range + order status filter).
 	 */
-	protected function resolveDateRange(): array
+	protected function resolveScope(): ReportScope
 	{
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
-		$dateRange = $plugin->dateRange;
-		$current = $dateRange->resolve();
-		$previous = $dateRange->previousPeriod($current['from'], $current['to']);
 
-		return array_merge($current, [
-			'prev' => $previous,
-		]);
+		return $plugin->dateRange->resolveScope();
 	}
 
 	protected function getStoreCurrency(): Currency
@@ -125,7 +120,7 @@ abstract class BaseReportController extends Controller
 
 		$output = fopen('php://temp', 'r+');
 		if ($output === false) {
-			throw new \RuntimeException('Failed to open temp stream');
+			throw new RuntimeException('Failed to open temp stream');
 		}
 
 		fputcsv($output, $headers);
@@ -137,17 +132,14 @@ abstract class BaseReportController extends Controller
 		}
 
 		rewind($output);
-		$csv = stream_get_contents($output);
+		$csv = (string) stream_get_contents($output);
 		fclose($output);
 
-		/** @var \craft\web\Response $response */
+		/** @var Response $response */
 		$response = Craft::$app->getResponse();
-		$response->format = Response::FORMAT_RAW;
-		$response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
-		$response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
 
-		$response->data = $csv;
-
-		return $response;
+		return $response->sendContentAsFile($csv, $filename, [
+			'mimeType' => 'text/csv',
+		]);
 	}
 }

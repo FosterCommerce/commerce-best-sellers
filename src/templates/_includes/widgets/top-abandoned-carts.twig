@@ -1,0 +1,78 @@
+{# Highest-Value Abandoned Carts #}
+<div class="bs-chart-container">
+	<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
+		<h3 class="bs-chart-container__title" style="margin: 0;">{{ "Highest-Value Abandoned Carts"|t('best-sellers') }}</h3>
+		<label style="font-size: 0.8rem; color: #6c757d; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+			<input type="checkbox" id="include-anonymous-abandoned" style="-webkit-appearance: checkbox; appearance: checkbox; width: 14px; height: 14px;">
+			{{ "Include anonymous carts"|t('best-sellers') }}
+		</label>
+	</div>
+	{% if topAbandonedCarts|length > 0 %}
+		<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;" id="abandoned-carts-table">
+			<thead>
+				<tr>
+					<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Customer"|t('best-sellers') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Value"|t('best-sellers') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Age"|t('best-sellers') }}</th>
+					<th style="padding: 0.5rem; border-bottom: 2px solid #e0e0e0;"></th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for cart in topAbandonedCarts %}
+					<tr data-anonymous="{{ cart.email ? 'false' : 'true' }}" data-value="{{ cart.totalPrice }}">
+						<td style="padding: 0.5rem;">
+							{% if cart.email %}
+								{{ cart.email }}
+							{% else %}
+								<span style="color: #999;">{{ "Anonymous"|t('best-sellers') }}</span>
+							{% endif %}
+						</td>
+						<td style="padding: 0.5rem; text-align: right; font-weight: 600;">{{ cart.totalPrice|commerceCurrency }}</td>
+						<td style="padding: 0.5rem; text-align: right; color: #6c757d;">
+							{% if cart.hoursOld < 24 %}
+								{{ cart.hoursOld|number_format(0) }}{{ "h"|t('best-sellers') }}
+							{% elseif cart.hoursOld < 168 %}
+								{{ (cart.hoursOld / 24)|number_format(0) }}{{ "d"|t('best-sellers') }}
+							{% else %}
+								{{ (cart.hoursOld / 168)|number_format(0) }}{{ "w"|t('best-sellers') }}
+							{% endif %}
+						</td>
+						<td style="padding: 0.5rem; text-align: right; white-space: nowrap;">
+							<a href="{{ cpUrl('commerce/orders/' ~ cart.id) }}" class="go" style="font-size: 0.8rem;">{{ "View"|t('best-sellers') }}</a>
+							{% if cart.email %}
+								<a href="#" class="bs-copy-link" data-url="{{ actionUrl('best-sellers/cart/restore', {number: cart.number}) }}" style="font-size: 0.8rem; margin-left: 0.5rem;" title="{{ 'Copy cart restore link to share with the customer'|t('best-sellers') }}">{{ "Share"|t('best-sellers') }}</a>
+							{% endif %}
+						</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+			<tfoot>
+				<tr>
+					<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;" id="abandoned-carts-count">
+						{{ topAbandonedCarts|length }} {{ "carts"|t('best-sellers') }}
+					</td>
+					<td style="padding: 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0;" id="abandoned-carts-total">
+						{% set totalValue = 0 %}
+						{% for cart in topAbandonedCarts %}
+							{% set totalValue = totalValue + cart.totalPrice %}
+						{% endfor %}
+						{{ totalValue|commerceCurrency }}
+					</td>
+					<td style="border-top: 2px solid #e0e0e0;" colspan="2"></td>
+				</tr>
+			</tfoot>
+		</table>
+
+		<div style="margin-top: 0.75rem; font-size: 0.75rem; color: #999;">
+			<p style="margin: 0;">{{ "Share copies a link that restores the cart when the customer visits it."|t('best-sellers') }}</p>
+			<p style="margin: 0.25rem 0 0;">{{ "Carts belonging to registered customers can only be restored by the account holder."|t('best-sellers') }}</p>
+			{% if purgeEnabled is defined and purgeEnabled and purgeDuration is defined and purgeDuration %}
+				<p style="margin: 0.25rem 0 0;">{{ "Links expire when carts are purged (after {duration})."|t('best-sellers', {duration: purgeDuration}) }}</p>
+			{% elseif purgeEnabled is defined and not purgeEnabled %}
+				<p style="margin: 0.25rem 0 0;">{{ "Cart purging is disabled. Links remain valid indefinitely."|t('best-sellers') }}</p>
+			{% endif %}
+		</div>
+	{% else %}
+		<p style="color: #999; font-size: 0.9rem;">{{ "No abandoned carts in this period."|t('best-sellers') }}</p>
+	{% endif %}
+</div>

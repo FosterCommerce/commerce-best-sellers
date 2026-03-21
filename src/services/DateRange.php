@@ -3,6 +3,11 @@
 namespace fostercommerce\bestsellers\services;
 
 use Craft;
+use craft\commerce\Plugin as CommercePlugin;
+use craft\web\Request;
+use DateTime;
+use fostercommerce\bestsellers\models\DateRangeResult;
+use fostercommerce\bestsellers\models\ReportScope;
 use yii\base\Component;
 
 class DateRange extends Component
@@ -33,18 +38,18 @@ class DateRange extends Component
 
 	private const SESSION_KEY_PRESET = 'bestSellers.dateRange.preset';
 
+	private const SESSION_KEY_ORDER_STATUSES = 'bestSellers.scope.orderStatusIds';
+
 	/**
 	 * Resolve the date range from query params (priority) or session.
-	 *
-	 * @return array{from: string, to: string, preset: string, fromDT: string, toDT: string}
 	 */
-	public function resolve(): array
+	public function resolve(): DateRangeResult
 	{
 		$request = Craft::$app->getRequest();
 		$session = Craft::$app->getSession();
 
 		// Query params take priority
-		if ($request instanceof \craft\web\Request) {
+		if ($request instanceof Request) {
 			$preset = $request->getQueryParam('preset');
 			$from = $request->getQueryParam('from');
 			$to = $request->getQueryParam('to');
@@ -90,12 +95,12 @@ class DateRange extends Component
 		}
 
 		// Convert to datetime strings for SQL
-		$fromDTObj = new \DateTime($from);
+		$fromDTObj = new DateTime($from);
 		$fromDTObj->setTime(0, 0, 0);
 
 		$fromDT = $fromDTObj->format('Y-m-d H:i:s');
 
-		$toDTObj = new \DateTime($to);
+		$toDTObj = new DateTime($to);
 		$toDTObj->setTime(23, 59, 59);
 
 		$toDT = $toDTObj->format('Y-m-d H:i:s');
@@ -105,35 +110,107 @@ class DateRange extends Component
 		$session->set(self::SESSION_KEY_FROM, $from);
 		$session->set(self::SESSION_KEY_TO, $to);
 
-		return [
+		return new DateRangeResult([
 			'from' => $from,
 			'to' => $to,
-			'preset' => $preset,
 			'fromDT' => $fromDT,
 			'toDT' => $toDT,
-		];
+			'preset' => $preset,
+		]);
+	}
+
+	/**
+	 * Resolve a full report scope including date range and order status filter.
+	 */
+	public function resolveScope(): ReportScope
+	{
+		$dateRange = $this->resolve();
+
+		// For partial periods (thisMonth, thisYear, thisWeek), clamp the comparison
+		// to the elapsed portion so we compare apples to apples
+		$today = (new DateTime('now'))->format('Y-m-d');
+		$effectiveTo = $dateRange->to > $today ? $today : $dateRange->to;
+		$previous = $this->previousPeriod($dateRange->from, $effectiveTo);
+
+		$request = Craft::$app->getRequest();
+		$session = Craft::$app->getSession();
+
+		// Read order statuses from query params (priority) or session
+		$statusHandles = null;
+		if ($request instanceof Request) {
+			$statusHandles = $request->getQueryParam('orderStatuses');
+		}
+
+		if ($statusHandles !== null) {
+			if (is_string($statusHandles)) {
+				// Empty string means "clear filter" (from hidden input fallback)
+				$statusHandles = $statusHandles !== '' ? [$statusHandles] : [];
+			} elseif (! is_array($statusHandles)) {
+				$statusHandles = [];
+			}
+
+			// Convert handles to IDs
+			$statusIds = $this->resolveStatusIds($statusHandles);
+			$session->set(self::SESSION_KEY_ORDER_STATUSES, $statusIds);
+		} else {
+			$sessionValue = $session->get(self::SESSION_KEY_ORDER_STATUSES, []);
+			/** @var list<int> $statusIds */
+			$statusIds = is_array($sessionValue) ? $sessionValue : [];
+		}
+
+		return new ReportScope([
+			'from' => $dateRange->from,
+			'to' => $dateRange->to,
+			'fromDT' => $dateRange->fromDT,
+			'toDT' => $dateRange->toDT,
+			'preset' => $dateRange->preset,
+			'prev' => $previous,
+			'orderStatusIds' => $statusIds,
+		]);
 	}
 
 	/**
 	 * Calculate the previous period of the same duration.
-	 *
-	 * @return array{from: string, to: string, fromDT: string, toDT: string}
 	 */
-	public function previousPeriod(string $from, string $to): array
+	public function previousPeriod(string $from, string $to): DateRangeResult
 	{
-		$currentFrom = new \DateTime($from);
-		$currentTo = new \DateTime($to);
+		$currentFrom = new DateTime($from);
+		$currentTo = new DateTime($to);
 		$interval = $currentFrom->diff($currentTo);
 
 		$previousToDTObj = (clone $currentFrom)->modify('-1 second');
 		$previousFromDTObj = (clone $previousToDTObj)->sub($interval);
 
-		return [
+		return new DateRangeResult([
 			'from' => $previousFromDTObj->format('Y-m-d'),
 			'to' => $previousToDTObj->format('Y-m-d'),
 			'fromDT' => $previousFromDTObj->format('Y-m-d H:i:s'),
 			'toDT' => $previousToDTObj->format('Y-m-d H:i:s'),
-		];
+		]);
+	}
+
+	/**
+	 * Convert order status handles to IDs.
+	 *
+	 * @param list<string> $handles
+	 * @return list<int>
+	 */
+	private function resolveStatusIds(array $handles): array
+	{
+		if ($handles === []) {
+			return [];
+		}
+
+		$allStatuses = CommercePlugin::getInstance()?->getOrderStatuses()->getAllOrderStatuses() ?? [];
+		$ids = [];
+
+		foreach ($allStatuses as $status) {
+			if (in_array($status->handle, $handles, true)) {
+				$ids[] = (int) $status->id;
+			}
+		}
+
+		return $ids;
 	}
 
 	/**
@@ -143,14 +220,14 @@ class DateRange extends Component
 	 */
 	private function resolvePreset(string $preset): array
 	{
-		$now = new \DateTime('now');
+		$now = new DateTime('now');
 		$today = $now->format('Y-m-d');
 
 		return match ($preset) {
 			self::PRESET_TODAY => [$today, $today],
 			self::PRESET_THIS_WEEK => [
-				(new \DateTime('monday this week'))->format('Y-m-d'),
-				(new \DateTime('sunday this week'))->format('Y-m-d'),
+				(new DateTime('monday this week'))->format('Y-m-d'),
+				(new DateTime('sunday this week'))->format('Y-m-d'),
 			],
 			self::PRESET_THIS_MONTH => [
 				$now->format('Y-m-01'),
@@ -161,27 +238,27 @@ class DateRange extends Component
 				$now->format('Y-12-31'),
 			],
 			self::PRESET_PAST_7_DAYS => [
-				(new \DateTime('-7 days'))->format('Y-m-d'),
-				$today,
+				(new DateTime('-7 days'))->format('Y-m-d'),
+				(new DateTime('-1 day'))->format('Y-m-d'),
 			],
 			self::PRESET_PAST_30_DAYS => [
-				(new \DateTime('-30 days'))->format('Y-m-d'),
-				$today,
+				(new DateTime('-30 days'))->format('Y-m-d'),
+				(new DateTime('-1 day'))->format('Y-m-d'),
 			],
 			self::PRESET_PAST_90_DAYS => [
-				(new \DateTime('-90 days'))->format('Y-m-d'),
-				$today,
+				(new DateTime('-90 days'))->format('Y-m-d'),
+				(new DateTime('-1 day'))->format('Y-m-d'),
 			],
 			self::PRESET_PAST_YEAR => [
-				(new \DateTime('-1 year'))->format('Y-m-d'),
-				$today,
+				(new DateTime('-1 year'))->format('Y-m-d'),
+				(new DateTime('-1 day'))->format('Y-m-d'),
 			],
 			self::PRESET_ALL => [
 				'2000-01-01',
 				$today,
 			],
 			default => [
-				(new \DateTime('-30 days'))->format('Y-m-d'),
+				(new DateTime('-30 days'))->format('Y-m-d'),
 				$today,
 			],
 		};

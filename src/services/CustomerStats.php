@@ -3,28 +3,28 @@
 namespace fostercommerce\bestsellers\services;
 
 use Craft;
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use craft\db\Table as CraftTable;
+use fostercommerce\bestsellers\models\CustomerKpis;
+use fostercommerce\bestsellers\models\CustomerRow;
+use fostercommerce\bestsellers\models\LtvComparison;
+use fostercommerce\bestsellers\models\LtvSegment;
+use fostercommerce\bestsellers\models\ReportScope;
 use yii\base\Component;
 
 class CustomerStats extends Component
 {
 	/**
-	 * Get customer KPIs for a date range.
-	 *
-	 * @return array{total: int, new: int, returning: int, repeatRate: float}
+	 * Get customer KPIs for a report scope.
 	 */
-	public function getCustomerKpis(string $fromDT, string $toDT): array
+	public function getCustomerKpis(ReportScope $scope): CustomerKpis
 	{
-		$dateCondition = [
-			'and',
-			['=', '[[isCompleted]]', true],
-			['>=', '[[dateOrdered]]', $fromDT],
-			['<=', '[[dateOrdered]]', $toDT],
-		];
+		$dateCondition = $this->buildDateCondition($scope);
 
 		$total = (int) (new Query())
 			->select('COUNT(DISTINCT [[email]])')
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->andWhere([
 				'not', [
@@ -36,7 +36,7 @@ class CustomerStats extends Component
 		// Emails who ordered in this period
 		$customerEmails = (new Query())
 			->select('DISTINCT [[email]]')
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->andWhere([
 				'not', [
@@ -50,23 +50,25 @@ class CustomerStats extends Component
 
 		if (! empty($customerEmails)) {
 			// Find emails whose first-ever completed order is within this period
+			$firstOrderQuery = (new Query())
+				->select([
+					'email' => '[[email]]',
+					'firstOrder' => 'MIN([[dateOrdered]])',
+				])
+				->from(CommerceTable::ORDERS)
+				->where([
+					'and',
+					['=', '[[isCompleted]]', true],
+					['in', '[[email]]', $customerEmails],
+				])
+				->groupBy('[[email]]');
+
 			$new = (int) (new Query())
 				->from([
-					'firstOrders' => (new Query())
-						->select([
-							'email' => '[[email]]',
-							'firstOrder' => 'MIN([[dateOrdered]])',
-						])
-						->from('{{%commerce_orders}}')
-						->where([
-							'and',
-							['=', '[[isCompleted]]', true],
-							['in', '[[email]]', $customerEmails],
-						])
-						->groupBy('[[email]]'),
+					'firstOrders' => $firstOrderQuery,
 				])
-				->andWhere(['>=', 'firstOrder', $fromDT])
-				->andWhere(['<=', 'firstOrder', $toDT])
+				->andWhere(['>=', 'firstOrder', $scope->fromDT])
+				->andWhere(['<=', 'firstOrder', $scope->toDT])
 				->count();
 
 			$returning = max(0, $total - $new);
@@ -74,12 +76,12 @@ class CustomerStats extends Component
 
 		$repeatRate = $total > 0 ? round(($returning / $total) * 100, 1) : 0;
 
-		return [
+		return new CustomerKpis([
 			'total' => $total,
 			'new' => $new,
 			'returning' => $returning,
 			'repeatRate' => $repeatRate,
-		];
+		]);
 	}
 
 	/**
@@ -87,7 +89,7 @@ class CustomerStats extends Component
 	 *
 	 * @return array{labels: list<string>, new: list<int>, returning: list<int>}
 	 */
-	public function getNewVsReturningByDay(string $fromDT, string $toDT): array
+	public function getNewVsReturningByDay(ReportScope $scope): array
 	{
 		$db = Craft::$app->getDb();
 		$isMysql = $db->getIsMysql();
@@ -96,21 +98,18 @@ class CustomerStats extends Component
 			? 'DATE([[dateOrdered]])'
 			: 'CAST([[dateOrdered]] AS DATE)';
 
+		$dateCondition = $this->buildDateCondition($scope);
+
 		// Get emails who ordered in the range
 		$customerEmails = (new Query())
 			->select('DISTINCT [[email]]')
-			->from('{{%commerce_orders}}')
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
-				[
-					'not', [
-						'[[email]]' => null,
-					]],
-				['!=', '[[email]]', ''],
-			])
+			->from(CommerceTable::ORDERS)
+			->where($dateCondition)
+			->andWhere([
+				'not', [
+					'[[email]]' => null,
+				]])
+			->andWhere(['!=', '[[email]]', ''])
 			->column();
 
 		if (empty($customerEmails)) {
@@ -127,7 +126,7 @@ class CustomerStats extends Component
 				'email' => '[[email]]',
 				'firstOrder' => 'MIN([[dateOrdered]])',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where([
 				'and',
 				['=', '[[isCompleted]]', true],
@@ -148,18 +147,13 @@ class CustomerStats extends Component
 				'day' => $dayExpression,
 				'email' => '[[email]]',
 			])
-			->from('{{%commerce_orders}}')
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
-				[
-					'not', [
-						'[[email]]' => null,
-					]],
-				['!=', '[[email]]', ''],
-			])
+			->from(CommerceTable::ORDERS)
+			->where($dateCondition)
+			->andWhere([
+				'not', [
+					'[[email]]' => null,
+				]])
+			->andWhere(['!=', '[[email]]', ''])
 			->all();
 
 		// Group by day
@@ -205,11 +199,11 @@ class CustomerStats extends Component
 	/**
 	 * Get top customers by total spent, with AOV and guest detection.
 	 *
-	 * @return array<int, array<string, mixed>>
+	 * @return list<CustomerRow>
 	 */
-	public function getTopCustomers(string $fromDT, string $toDT, int $limit = 100): array
+	public function getTopCustomers(ReportScope $scope, int $limit = 100): array
 	{
-		$rows = (new Query())
+		$query = (new Query())
 			->select([
 				'email' => '[[orders.email]]',
 				'customerId' => '[[orders.customerId]]',
@@ -219,28 +213,24 @@ class CustomerStats extends Component
 				'lastOrder' => 'MAX([[orders.dateOrdered]])',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->leftJoin(
 				[
-					'users' => '{{%users}}',
+					'users' => CraftTable::USERS,
 				],
 				'[[orders.customerId]] = [[users.id]]',
 			)
-			->where([
-				'and',
-				['=', '[[orders.isCompleted]]', true],
-				['>=', '[[orders.dateOrdered]]', $fromDT],
-				['<=', '[[orders.dateOrdered]]', $toDT],
-			])
+			->where($this->buildDateCondition($scope, 'orders'))
 			->groupBy('[[orders.email]], [[orders.customerId]]')
 			->orderBy([
 				'totalSpent' => SORT_DESC,
 			])
-			->limit($limit)
-			->all();
+			->limit($limit);
 
-		return array_map(function ($row): array {
+		$rows = $query->all();
+
+		return array_map(function ($row): CustomerRow {
 			/** @var array{email: string, customerId: ?string, userActive: ?string, orderCount: string, totalSpent: string, lastOrder: ?string} $row */
 			$orderCount = (int) $row['orderCount'];
 			$totalSpent = (float) $row['totalSpent'];
@@ -248,7 +238,7 @@ class CustomerStats extends Component
 			$isActive = (bool) ($row['userActive'] ?? false);
 			$isGuest = $customerId === null || ! $isActive;
 
-			return [
+			return new CustomerRow([
 				'email' => $row['email'],
 				'customerId' => $customerId,
 				'isGuest' => $isGuest,
@@ -257,7 +247,7 @@ class CustomerStats extends Component
 				'totalSpent' => $totalSpent,
 				'aov' => $orderCount > 0 ? round($totalSpent / $orderCount, 2) : 0,
 				'lastOrder' => $row['lastOrder'],
-			];
+			]);
 		}, $rows);
 	}
 
@@ -266,7 +256,7 @@ class CustomerStats extends Component
 	 *
 	 * @return array<int, array{country: string, state: string, count: int}>
 	 */
-	public function getTopShippingLocations(string $fromDT, string $toDT, int $limit = 10): array
+	public function getTopShippingLocations(ReportScope $scope, int $limit = 10): array
 	{
 		/** @var array<int, array{country: string, state: string, count: string}> $rows */
 		$rows = (new Query())
@@ -276,21 +266,16 @@ class CustomerStats extends Component
 				'count' => 'COUNT(DISTINCT [[orders.email]])',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->innerJoin([
-				'addresses' => '{{%addresses}}',
+				'addresses' => CraftTable::ADDRESSES,
 			], '[[orders.shippingAddressId]] = [[addresses.id]]')
-			->where([
-				'and',
-				['=', '[[orders.isCompleted]]', true],
-				['>=', '[[orders.dateOrdered]]', $fromDT],
-				['<=', '[[orders.dateOrdered]]', $toDT],
-				[
-					'not', [
-						'[[addresses.countryCode]]' => null,
-					]],
-			])
+			->where($this->buildDateCondition($scope, 'orders'))
+			->andWhere([
+				'not', [
+					'[[addresses.countryCode]]' => null,
+				]])
 			->groupBy('[[addresses.countryCode]], [[addresses.administrativeArea]]')
 			->orderBy([
 				'count' => SORT_DESC,
@@ -307,22 +292,15 @@ class CustomerStats extends Component
 
 	/**
 	 * Get LTV comparison between credentialed and guest customers.
-	 *
-	 * @return array{credentialed: array{count: int, totalRevenue: float, avgLtv: float, avgOrders: float}, guest: array{count: int, totalRevenue: float, avgLtv: float, avgOrders: float}}
 	 */
-	public function getLtvComparison(string $fromDT, string $toDT): array
+	public function getLtvComparison(ReportScope $scope): LtvComparison
 	{
-		$dateCondition = [
-			'and',
-			['=', '[[orders.isCompleted]]', true],
-			['>=', '[[orders.dateOrdered]]', $fromDT],
-			['<=', '[[orders.dateOrdered]]', $toDT],
-			[
-				'not', [
-					'[[orders.email]]' => null,
-				]],
-			['!=', '[[orders.email]]', ''],
-		];
+		$dateCondition = $this->buildDateCondition($scope, 'orders');
+		$dateCondition[] = [
+			'not', [
+				'[[orders.email]]' => null,
+			]];
+		$dateCondition[] = ['!=', '[[orders.email]]', ''];
 
 		// Credentialed: has an active user account
 		$credentialedRows = (new Query())
@@ -331,11 +309,11 @@ class CustomerStats extends Component
 				'orderCount' => 'COUNT(*)',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->innerJoin(
 				[
-					'users' => '{{%users}}',
+					'users' => CraftTable::USERS,
 				],
 				'[[orders.customerId]] = [[users.id]]',
 			)
@@ -353,11 +331,11 @@ class CustomerStats extends Component
 				'orderCount' => 'COUNT(*)',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->leftJoin(
 				[
-					'users' => '{{%users}}',
+					'users' => CraftTable::USERS,
 				],
 				'[[orders.customerId]] = [[users.id]]',
 			)
@@ -385,19 +363,43 @@ class CustomerStats extends Component
 		$guestRevenue = array_sum(array_column($guestRows, 'totalSpent'));
 		$guestOrders = array_sum(array_column($guestRows, 'orderCount'));
 
-		return [
-			'credentialed' => [
+		return new LtvComparison([
+			'credentialed' => new LtvSegment([
 				'count' => $credentialedCount,
 				'totalRevenue' => (float) $credentialedRevenue,
 				'avgLtv' => $credentialedCount > 0 ? round($credentialedRevenue / $credentialedCount, 2) : 0,
 				'avgOrders' => $credentialedCount > 0 ? round($credentialedOrders / $credentialedCount, 2) : 0,
-			],
-			'guest' => [
+			]),
+			'guest' => new LtvSegment([
 				'count' => $guestCount,
 				'totalRevenue' => (float) $guestRevenue,
 				'avgLtv' => $guestCount > 0 ? round($guestRevenue / $guestCount, 2) : 0,
 				'avgOrders' => $guestCount > 0 ? round($guestOrders / $guestCount, 2) : 0,
-			],
+			]),
+		]);
+	}
+
+	/**
+	 * Build a standard date + status condition for commerce_orders queries.
+	 *
+	 * @return list<mixed>
+	 */
+	private function buildDateCondition(ReportScope $scope, string $tableAlias = ''): array
+	{
+		$prefix = $tableAlias !== '' ? $tableAlias . '.' : '';
+
+		$condition = [
+			'and',
+			['=', "[[{$prefix}isCompleted]]", true],
+			['>=', "[[{$prefix}dateOrdered]]", $scope->fromDT],
+			['<=', "[[{$prefix}dateOrdered]]", $scope->toDT],
 		];
+
+		$statusCondition = $scope->statusCondition($tableAlias);
+		if ($statusCondition !== null) {
+			$condition[] = $statusCondition;
+		}
+
+		return $condition;
 	}
 }

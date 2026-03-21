@@ -248,7 +248,31 @@
 				options.restoreFilterState(savedFilters);
 			}
 
-			var savedState = readSavedState();
+			// Read URL query params for cross-page filter links (e.g. from dashboard)
+			var urlFilters = {};
+			var urlFilterLabel = '';
+			try {
+				var urlParams = new URLSearchParams(window.location.search);
+				['shippingMethod', 'discountStatus', 'discountId', 'itemsPerOrder'].forEach(function (key) {
+					var val = urlParams.get(key);
+					if (val) { urlFilters[key] = val; }
+				});
+				if (urlFilters.shippingMethod) {
+					urlFilterLabel = Craft.t('best-sellers', 'Shipping: {method}', { method: urlFilters.shippingMethod });
+				} else if (urlFilters.discountStatus) {
+					urlFilterLabel = urlFilters.discountStatus === 'discounted'
+						? Craft.t('best-sellers', 'Discounted orders')
+						: Craft.t('best-sellers', 'Full-price orders');
+				} else if (urlFilters.discountId) {
+					urlFilterLabel = Craft.t('best-sellers', 'Discount ID: {id}', { id: urlFilters.discountId });
+				} else if (urlFilters.itemsPerOrder) {
+					urlFilterLabel = Craft.t('best-sellers', 'Items per order: {bucket}', { bucket: urlFilters.itemsPerOrder });
+				}
+			} catch (err) {
+				// URLSearchParams not supported or other error
+			}
+
+			var savedState = Object.keys(urlFilters).length > 0 ? null : readSavedState();
 
 			// Wire up sortable headers
 			var tableEl = tbodyEl.closest('table');
@@ -342,7 +366,7 @@
 
 					var info = document.createElement('span');
 					info.className = 'light';
-					info.textContent = 'Showing ' + rangeStart + '\u2013' + rangeEnd + ' of ' + totalItems + ' ' + itemLabel;
+					info.textContent = Craft.t('best-sellers', 'Showing {start}\u2013{end} of {total} {label}', { start: rangeStart, end: rangeEnd, total: totalItems, label: itemLabel });
 					paginationEl.appendChild(info);
 
 					var buttons = document.createElement('div');
@@ -352,14 +376,14 @@
 					if (currentPage > 1) {
 						var prevBtn = document.createElement('button');
 						prevBtn.className = 'btn';
-						prevBtn.textContent = 'Previous';
+						prevBtn.textContent = Craft.t('best-sellers', 'Previous');
 						prevBtn.addEventListener('click', function () { loadPage(currentPage - 1); });
 						buttons.appendChild(prevBtn);
 					}
 					if (currentPage < totalPages) {
 						var nextBtn = document.createElement('button');
 						nextBtn.className = 'btn';
-						nextBtn.textContent = 'Next';
+						nextBtn.textContent = Craft.t('best-sellers', 'Next');
 						nextBtn.addEventListener('click', function () { loadPage(currentPage + 1); });
 						buttons.appendChild(nextBtn);
 					}
@@ -373,23 +397,28 @@
 
 				// Export CSV button
 				if (options.exportUrl && totalItems > 0) {
-					var exportBtn = document.createElement('a');
-					exportBtn.className = 'btn';
-					exportBtn.textContent = 'Export CSV';
-					exportBtn.style.marginLeft = 'auto';
-					exportBtn.addEventListener('click', function (event) {
-						event.preventDefault();
-						var exportParams = Object.assign({}, options.baseParams);
-						if (options.getFilterParams) {
-							Object.assign(exportParams, options.getFilterParams());
+					var exportTarget = options.exportContainerEl || paginationEl;
+					if (!exportTarget.querySelector('.bs-export-btn')) {
+						var exportBtn = document.createElement('a');
+						exportBtn.className = 'btn bs-export-btn';
+						exportBtn.textContent = Craft.t('best-sellers', 'Export CSV');
+						if (!options.exportContainerEl) {
+							exportBtn.style.marginLeft = 'auto';
 						}
-						if (currentSort) {
-							exportParams.sort = currentSort;
-							exportParams.sortDir = currentSortDir;
-						}
-						window.location.href = Craft.getActionUrl(options.exportUrl, exportParams);
-					});
-					paginationEl.appendChild(exportBtn);
+						exportBtn.addEventListener('click', function (event) {
+							event.preventDefault();
+							var exportParams = Object.assign({}, options.baseParams);
+							if (options.getFilterParams) {
+								Object.assign(exportParams, options.getFilterParams());
+							}
+							if (currentSort) {
+								exportParams.sort = currentSort;
+								exportParams.sortDir = currentSortDir;
+							}
+							window.location.href = Craft.getActionUrl(options.exportUrl, exportParams);
+						});
+						exportTarget.appendChild(exportBtn);
+					}
 				}
 
 				hideLoading();
@@ -399,7 +428,7 @@
 				currentPage = page;
 				showLoading();
 
-				var params = Object.assign({}, options.baseParams, { page: page });
+				var params = Object.assign({}, options.baseParams, urlFilters, { page: page });
 
 				if (currentSort) {
 					params.sort = currentSort;
@@ -425,7 +454,7 @@
 				.then(function (data) { renderData(data); writeState(); })
 				.catch(function (error) {
 					spinnerEl.style.display = 'none';
-					messageEl.textContent = 'Failed to load data: ' + error.message;
+					messageEl.textContent = Craft.t('best-sellers', 'Failed to load data: {error}', { error: error.message });
 					console.error('Best Sellers data load error:', error);
 				});
 			}
@@ -434,6 +463,21 @@
 				loadPage: loadPage,
 				reload: function () { loadPage(1); },
 				init: function () {
+					// Show filter banner for cross-page links
+					if (urlFilterLabel && containerEl) {
+						var banner = document.createElement('div');
+						banner.className = 'bs-filter-banner';
+						var labelSpan = document.createElement('span');
+						labelSpan.textContent = Craft.t('best-sellers', 'Filtered: {label}', { label: urlFilterLabel });
+						banner.appendChild(labelSpan);
+						var clearLink = document.createElement('a');
+						clearLink.href = window.location.pathname + '?from=' + (options.baseParams.from || '') + '&to=' + (options.baseParams.to || '') + '&preset=' + (options.baseParams.preset || '');
+						clearLink.textContent = Craft.t('best-sellers', 'Clear filter');
+						clearLink.className = 'bs-filter-banner__clear';
+						banner.appendChild(clearLink);
+						containerEl.parentNode.insertBefore(banner, containerEl);
+					}
+
 					if (savedState) {
 						currentSort = savedState.sort || currentSort;
 						currentSortDir = savedState.sortDir || currentSortDir;

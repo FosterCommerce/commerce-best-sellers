@@ -2,8 +2,14 @@
 
 namespace fostercommerce\bestsellers\services;
 
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use DateTime;
+use fostercommerce\bestsellers\models\AbandonmentStats;
+use fostercommerce\bestsellers\models\AgeBucket;
+use fostercommerce\bestsellers\models\ReportScope;
 use yii\base\Component;
+use yii\db\Expression;
 
 class CartAbandonment extends Component
 {
@@ -26,26 +32,75 @@ class CartAbandonment extends Component
 	];
 
 	/**
+	 * Get the highest-value abandoned carts.
+	 *
+	 * @return list<array{id: int, number: string, email: string, totalPrice: float, dateUpdated: string, hoursOld: float}>
+	 */
+	public function getTopAbandonedCarts(ReportScope $scope, int $limit = 5): array
+	{
+		$cutoff = (new DateTime())->modify('-4 hours')->format('Y-m-d H:i:s');
+
+		/** @var list<array{id: string, number: string, email: string|null, totalPrice: string, dateUpdated: string}> $rows */
+		$rows = (new Query())
+			->select([
+				'orders.[[id]]',
+				'orders.[[number]]',
+				'orders.[[email]]',
+				'orders.[[totalPrice]]',
+				'orders.[[dateUpdated]]',
+			])
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->innerJoin(
+				[
+					'lineItemCheck' => (new Query())
+						->select('DISTINCT [[orderId]]')
+						->from(CommerceTable::LINEITEMS),
+				],
+				'[[lineItemCheck.orderId]] = [[orders.id]]'
+			)
+			->where([
+				'and',
+				['=', '[[orders.isCompleted]]', false],
+				['>=', '[[orders.dateUpdated]]', $scope->fromDT],
+				['<=', '[[orders.dateUpdated]]', $scope->toDT],
+				['<=', '[[orders.dateUpdated]]', $cutoff],
+			])
+			->orderBy([
+				'orders.[[totalPrice]]' => SORT_DESC,
+			])
+			->limit($limit)
+			->all();
+
+		$now = new DateTime();
+
+		return array_map(function (array $row) use ($now): array {
+			$updatedAt = new DateTime($row['dateUpdated']);
+			$hoursOld = ($now->getTimestamp() - $updatedAt->getTimestamp()) / 3600;
+
+			return [
+				'id' => (int) $row['id'],
+				'number' => $row['number'],
+				'email' => $row['email'] ?? '',
+				'totalPrice' => (float) $row['totalPrice'],
+				'dateUpdated' => $row['dateUpdated'],
+				'hoursOld' => round($hoursOld, 1),
+			];
+		}, $rows);
+	}
+
+	/**
 	 * Get cart abandonment stats for the Overview widget.
 	 *
 	 * An abandoned cart is any incomplete order with line items, older than 4 hours.
-	 *
-	 * @return array{
-	 *   totalAbandoned: int,
-	 *   totalCompleted: int,
-	 *   abandonmentRate: float,
-	 *   abandonedValue: float,
-	 *   withCustomer: int,
-	 *   withoutCustomer: int,
-	 *   byAge: array<string, array{count: int, value: float, withCustomer: int}>,
-	 *   completedValue: float
-	 * }
 	 */
-	public function getAbandonmentStats(string $fromDT, string $toDT): array
+	public function getAbandonmentStats(ReportScope $scope): AbandonmentStats
 	{
-		$cutoff = (new \DateTime())->modify('-4 hours')->format('Y-m-d H:i:s');
+		$cutoff = (new DateTime())->modify('-4 hours')->format('Y-m-d H:i:s');
 
 		// Abandoned carts: incomplete orders with line items, older than 4 hours
+		// Note: status filter does NOT apply to abandoned carts (they are incomplete)
 		$abandonedCarts = (new Query())
 			->select([
 				'orders.[[id]]',
@@ -55,46 +110,48 @@ class CartAbandonment extends Component
 				'orders.[[dateUpdated]]',
 			])
 			->from([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			])
 			->innerJoin(
 				[
 					'lineItemCheck' => (new Query())
 						->select('DISTINCT [[orderId]]')
-						->from('{{%commerce_lineitems}}'),
+						->from(CommerceTable::LINEITEMS),
 				],
 				'[[lineItemCheck.orderId]] = [[orders.id]]'
 			)
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', false],
-				['>=', '[[orders.dateUpdated]]', $fromDT],
-				['<=', '[[orders.dateUpdated]]', $toDT],
+				['>=', '[[orders.dateUpdated]]', $scope->fromDT],
+				['<=', '[[orders.dateUpdated]]', $scope->toDT],
 				['<=', '[[orders.dateUpdated]]', $cutoff],
 			])
 			->all();
 
 		// Completed orders in the same period (for rate calculation)
+		// Status filter applies here
+		$completedCondition = [
+			'and',
+			['=', '[[isCompleted]]', true],
+			['>=', '[[dateOrdered]]', $scope->fromDT],
+			['<=', '[[dateOrdered]]', $scope->toDT],
+		];
+		$statusCondition = $scope->statusCondition();
+		if ($statusCondition !== null) {
+			$completedCondition[] = $statusCondition;
+		}
+
 		$totalCompleted = (int) (new Query())
 			->select('COUNT(*)')
-			->from('{{%commerce_orders}}')
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
-			])
+			->from(CommerceTable::ORDERS)
+			->where($completedCondition)
 			->scalar();
 
 		$completedValue = (float) (new Query())
-			->select(new \yii\db\Expression('COALESCE(SUM([[totalPrice]]), 0)'))
-			->from('{{%commerce_orders}}')
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
-			])
+			->select(new Expression('COALESCE(SUM([[totalPrice]]), 0)'))
+			->from(CommerceTable::ORDERS)
+			->where($completedCondition)
 			->scalar();
 
 		$totalAbandoned = count($abandonedCarts);
@@ -103,10 +160,10 @@ class CartAbandonment extends Component
 		$withCustomer = 0;
 		$withoutCustomer = 0;
 
-		$now = new \DateTime();
-		$byAge = [];
+		$now = new DateTime();
+		$byAgeData = [];
 		foreach (self::AGE_BUCKETS as $label => $bucket) {
-			$byAge[$label] = [
+			$byAgeData[$label] = [
 				'count' => 0,
 				'value' => 0.0,
 				'withCustomer' => 0,
@@ -127,7 +184,7 @@ class CartAbandonment extends Component
 				$withoutCustomer++;
 			}
 
-			$updatedAt = new \DateTime($abandonedCart['dateUpdated']);
+			$updatedAt = new DateTime($abandonedCart['dateUpdated']);
 			$hoursOld = ($now->getTimestamp() - $updatedAt->getTimestamp()) / 3600;
 
 			foreach (self::AGE_BUCKETS as $label => $bucket) {
@@ -135,11 +192,11 @@ class CartAbandonment extends Component
 				$maxHours = $bucket['maxHours'];
 
 				if ($hoursOld >= $minHours && ($maxHours === null || $hoursOld < $maxHours)) {
-					$byAge[$label]['count']++;
-					$byAge[$label]['value'] += $cartValue;
+					$byAgeData[$label]['count']++;
+					$byAgeData[$label]['value'] += $cartValue;
 					if ($hasCustomer) {
-						$byAge[$label]['withCustomer']++;
-						$byAge[$label]['valueWithEmail'] += $cartValue;
+						$byAgeData[$label]['withCustomer']++;
+						$byAgeData[$label]['valueWithEmail'] += $cartValue;
 					}
 
 					break;
@@ -147,12 +204,22 @@ class CartAbandonment extends Component
 			}
 		}
 
+		$byAgeBuckets = [];
+		foreach ($byAgeData as $label => $data) {
+			$byAgeBuckets[$label] = new AgeBucket([
+				'count' => $data['count'],
+				'value' => $data['value'],
+				'withCustomer' => $data['withCustomer'],
+				'valueWithEmail' => $data['valueWithEmail'],
+			]);
+		}
+
 		$totalCartsCreated = $totalCompleted + $totalAbandoned;
 		$abandonmentRate = $totalCartsCreated > 0
 			? round(($totalAbandoned / $totalCartsCreated) * 100, 1)
 			: 0;
 
-		return [
+		return new AbandonmentStats([
 			'totalAbandoned' => $totalAbandoned,
 			'totalCompleted' => $totalCompleted,
 			'abandonmentRate' => $abandonmentRate,
@@ -161,7 +228,7 @@ class CartAbandonment extends Component
 			'completedValue' => $completedValue,
 			'withCustomer' => $withCustomer,
 			'withoutCustomer' => $withoutCustomer,
-			'byAge' => $byAge,
-		];
+			'byAge' => $byAgeBuckets,
+		]);
 	}
 }

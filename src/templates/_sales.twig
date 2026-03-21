@@ -1,28 +1,18 @@
 {% extends 'best-sellers/_layouts/reports' %}
+{% do view.registerTranslations('best-sellers', [
+	'Filtered: {label}',
+	'Clear filter',
+	'Shipping: {method}',
+	'Discounted orders',
+	'Full-price orders',
+	'Discount ID: {id}',
+	'Items per order: {bucket}',
+]) %}
 
 {% set title = "Orders"|t('best-sellers') %}
 {% set selectedSubnavItem = 'orders' %}
 
 {% block reportContent %}
-	{# Written Summary #}
-	<div class="bs-chart-container" style="margin-bottom: 2rem;">
-		<p style="font-size: 1.1rem; margin: 0;">
-			{{ "Revenue is"|t('best-sellers') }}
-			{% if revenueChange is not null %}
-				{% if revenueChange >= 0 %}
-					<strong style="color: #27ae60;">{{ "up"|t('best-sellers') }} {{ revenueChange|abs|number_format(2) }}%</strong>
-				{% else %}
-					<strong style="color: #e74c3c;">{{ "down"|t('best-sellers') }} {{ revenueChange|abs|number_format(2) }}%</strong>
-				{% endif %}
-			{% else %}
-				<strong>---</strong>
-			{% endif %}
-			{{ "for the selected date range compared to the previous period."|t('best-sellers') }}
-			{{ "You also have"|t('best-sellers') }}
-			<strong{% if ordersChange is not null and ordersChange < 0 %} style="color: #e74c3c;"{% elseif ordersChange is not null and ordersChange >= 0 %} style="color: #27ae60;"{% endif %}>{{ stats.totalOrders|number_format }} {{ "orders"|t('best-sellers') }}{% if ordersChange is not null %} ({{ ordersChange >= 0 ? 'up'|t('best-sellers') : 'down'|t('best-sellers') }} {{ "by"|t('best-sellers') }} {{ ordersChange|abs|number_format(2) }}%){% endif %}</strong>.
-		</p>
-	</div>
-
 	{# Filters #}
 	{% set orderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
 	<div class="bs-section">
@@ -43,9 +33,35 @@
 					<label><input type="checkbox" value="unpaid"> {{ "Unpaid"|t('best-sellers') }}</label>
 				</div>
 			</div>
+			{% if shippingMethods is defined and shippingMethods|length > 0 %}
+				<div class="bs-multiselect" id="shipping-method-multiselect">
+					<button type="button" class="bs-multiselect__btn" data-label="{{ 'Shipping'|t('best-sellers') }}">{{ "Shipping"|t('best-sellers') }}</button>
+					<div class="bs-multiselect__dropdown">
+						{% for method in shippingMethods %}
+							<label><input type="checkbox" value="{{ method.method }}"> {{ method.method }}</label>
+						{% endfor %}
+					</div>
+				</div>
+			{% endif %}
+			<div class="bs-multiselect" id="discount-status-multiselect">
+				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Discount'|t('best-sellers') }}">{{ "Discount"|t('best-sellers') }}</button>
+				<div class="bs-multiselect__dropdown">
+					<label><input type="checkbox" value="discounted"> {{ "Discounted"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="fullPrice"> {{ "Full Price"|t('best-sellers') }}</label>
+					{% if topDiscounts is defined and topDiscounts|length > 0 %}
+						<hr style="margin: 0.3rem 1rem; border: none; border-top: 1px solid #e0e0e0;">
+						{% for discount in topDiscounts %}
+							{% if discount.discountId %}
+								<label><input type="checkbox" value="discount:{{ discount.discountId }}"> {{ discount.name }}</label>
+							{% endif %}
+						{% endfor %}
+					{% endif %}
+				</div>
+			</div>
 			<div class="bs-filter-bar__item">
 				<input type="text" id="orders-search" class="text fullwidth" placeholder="{{ 'Search orders...'|t('best-sellers') }}" autocomplete="off">
 			</div>
+			<span id="orders-export"></span>
 		</div>
 
 		{# Loading State #}
@@ -96,6 +112,16 @@ document.addEventListener('DOMContentLoaded', function () {
 		onChange: function () { table.reload(); }
 	});
 
+	var shippingMethodMulti = BestSellersReports.createMultiSelect({
+		container: document.getElementById('shipping-method-multiselect'),
+		onChange: function () { table.reload(); }
+	});
+
+	var discountStatusMulti = BestSellersReports.createMultiSelect({
+		container: document.getElementById('discount-status-multiselect'),
+		onChange: function () { table.reload(); }
+	});
+
 	var table = BestSellersReports.createAjaxTable({
 		loadingEl: document.getElementById('orders-loading'),
 		containerEl: document.getElementById('orders-container'),
@@ -103,6 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		paginationEl: document.getElementById('orders-pagination'),
 		actionUrl: 'best-sellers/orders/orders-data',
 		exportUrl: 'best-sellers/orders/export-csv',
+		exportContainerEl: document.getElementById('orders-export'),
 		baseParams: { from: '{{ from }}', to: '{{ to }}', preset: '{{ preset }}' },
 		defaultSort: 'dateOrdered',
 		defaultSortDir: 'desc',
@@ -126,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		buildTotalsRow: function (totals) {
 			var row = document.createElement('tr');
 			row.innerHTML =
-				'<td>{{ "Page Total"|t("best-sellers") }}</td>' +
+				'<td>{{ "All Results Total"|t("best-sellers") }}</td>' +
 				'<td></td>' +
 				'<td></td>' +
 				'<td class="bs-data-table--right">' + totals.itemSubtotal + '</td>' +
@@ -146,6 +173,20 @@ document.addEventListener('DOMContentLoaded', function () {
 			if (orderStatuses.length > 0) { params['orderStatus[]'] = orderStatuses; }
 			var paymentStatuses = paymentStatusMulti.getSelected();
 			if (paymentStatuses.length > 0) { params['paymentStatus[]'] = paymentStatuses; }
+			if (shippingMethodMulti) {
+				var shippingMethods = shippingMethodMulti.getSelected();
+				if (shippingMethods.length > 0) { params['shippingMethod'] = shippingMethods[0]; }
+			}
+			if (discountStatusMulti) {
+				var discountSelections = discountStatusMulti.getSelected();
+				discountSelections.forEach(function (val) {
+					if (val.indexOf('discount:') === 0) {
+						params['discountId'] = val.substring(9);
+					} else {
+						params['discountStatus'] = val;
+					}
+				});
+			}
 			return params;
 		},
 		restoreFilterState: function (filters) {
@@ -170,6 +211,28 @@ document.addEventListener('DOMContentLoaded', function () {
 				});
 				paymentStatusMulti.refresh();
 			}
+			if (filters.shippingMethod && shippingMethodMulti) {
+				var shippingContainer = document.getElementById('shipping-method-multiselect');
+				if (shippingContainer) {
+					shippingContainer.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+						cb.checked = cb.value === filters.shippingMethod;
+					});
+					shippingMethodMulti.refresh();
+				}
+			}
+			if ((filters.discountStatus || filters.discountId) && discountStatusMulti) {
+				var discountContainer = document.getElementById('discount-status-multiselect');
+				if (discountContainer) {
+					discountContainer.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+						if (filters.discountStatus && cb.value === filters.discountStatus) {
+							cb.checked = true;
+						} else if (filters.discountId && cb.value === 'discount:' + filters.discountId) {
+							cb.checked = true;
+						}
+					});
+					discountStatusMulti.refresh();
+				}
+			}
 		}
 	});
 
@@ -181,5 +244,38 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	table.init();
+
+	// Pre-check dropdowns from URL params (for cross-page filter links)
+	try {
+		var urlParams = new URLSearchParams(window.location.search);
+		var urlShipping = urlParams.get('shippingMethod');
+		var urlDiscountStatus = urlParams.get('discountStatus');
+		var urlDiscountId = urlParams.get('discountId');
+
+		if (urlShipping && shippingMethodMulti) {
+			var shipContainer = document.getElementById('shipping-method-multiselect');
+			if (shipContainer) {
+				shipContainer.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+					cb.checked = cb.value === urlShipping;
+				});
+				shippingMethodMulti.refresh();
+			}
+		}
+		if ((urlDiscountStatus || urlDiscountId) && discountStatusMulti) {
+			var discContainer = document.getElementById('discount-status-multiselect');
+			if (discContainer) {
+				discContainer.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+					if (urlDiscountStatus && cb.value === urlDiscountStatus) {
+						cb.checked = true;
+					} else if (urlDiscountId && cb.value === 'discount:' + urlDiscountId) {
+						cb.checked = true;
+					}
+				});
+				discountStatusMulti.refresh();
+			}
+		}
+	} catch (e) {
+		// URLSearchParams not supported
+	}
 });
 {% endjs %}

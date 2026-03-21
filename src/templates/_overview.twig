@@ -1,37 +1,87 @@
 {% extends 'best-sellers/_layouts/reports' %}
 {% import 'best-sellers/_includes/kpi-card' as kpi %}
+{% import 'best-sellers/_includes/summary' as summaryBlock %}
 
-{% set title = "Overview"|t('best-sellers') %}
+{% set title = "Dashboard"|t('best-sellers') %}
 {% set selectedSubnavItem = 'overview' %}
 
 {% block reportContent %}
-	{# Grouped KPI Cards #}
-	{% for group in cardGroups %}
-		<div class="bs-section">
-			<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
-				<h3 class="bs-section__title" style="margin: 0;">{{ group.label|t('best-sellers') }}</h3>
-				<a href="{{ cpUrl(group.link) }}" class="go" style="font-size: 0.85rem;">{{ group.linkLabel|t('best-sellers') }}</a>
-			</div>
-			<div class="bs-kpi-grid bs-kpi-grid--{{ group.cards|length }}">
-				{% for card in group.cards %}
-					{{ kpi.card(card) }}
-				{% endfor %}
-			</div>
-
-			{% if group.label == 'Orders' %}
-				{% include 'best-sellers/_includes/widgets/overview-chart' %}
-			{% endif %}
-
-			{% if group.label == 'Products' and bestSellers|length > 0 %}
-				{% include 'best-sellers/_includes/widgets/best-sellers-table' %}
-			{% endif %}
-
-			{% if group.label == 'Customers' %}
-				{% include 'best-sellers/_includes/widgets/customer-charts' %}
-				{% include 'best-sellers/_includes/widgets/cart-abandonment' %}
-			{% endif %}
+	{# 1. Hero row #}
+	<div class="bs-section bs-section--hero">
+		{{ summaryBlock.render(summaries.orders) }}
+		<div class="bs-kpi-grid bs-kpi-grid--4">
+			{% for card in healthCheckCards %}
+				{{ kpi.card(card) }}
+			{% endfor %}
 		</div>
-	{% endfor %}
+		{% include 'best-sellers/_includes/widgets/overview-chart' %}
+	</div>
+
+	{# 2. Discounts & Order Composition #}
+	<div class="bs-section bs-section--discounts">
+		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
+			<h3 class="bs-section__title" style="margin: 0;">{{ "Discounts & Order Composition"|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/orders') }}" class="go" style="font-size: 0.85rem;">{{ "See all orders"|t('best-sellers') }}</a>
+		</div>
+		{{ summaryBlock.render(summaries.discounts) }}
+		<div class="bs-kpi-grid bs-kpi-grid--3">
+			{% for card in discountCards %}
+				{{ kpi.card(card) }}
+			{% endfor %}
+		</div>
+		<div class="bs-columns">
+			{% include 'best-sellers/_includes/widgets/discounted-vs-fullprice' %}
+			{% include 'best-sellers/_includes/widgets/top-discounts' %}
+		</div>
+		<div class="bs-columns">
+			{% include 'best-sellers/_includes/widgets/items-per-order' %}
+			{% include 'best-sellers/_includes/widgets/shipping-methods' %}
+		</div>
+	</div>
+
+	{# 3. Customers & Retention #}
+	<div class="bs-section bs-section--customers">
+		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
+			<h3 class="bs-section__title" style="margin: 0;">{{ "Customers & Retention"|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/customers') }}" class="go" style="font-size: 0.85rem;">{{ "See all customers"|t('best-sellers') }}</a>
+		</div>
+		{{ summaryBlock.render(summaries.customers) }}
+		<div class="bs-kpi-grid bs-kpi-grid--3">
+			{% for card in customerCards %}
+				{{ kpi.card(card) }}
+			{% endfor %}
+		</div>
+		<div class="bs-columns">
+			{% include 'best-sellers/_includes/widgets/top-customers' %}
+			{% include 'best-sellers/_includes/widgets/ltv-table' %}
+		</div>
+		{% include 'best-sellers/_includes/widgets/new-vs-returning-chart' %}
+	</div>
+
+	{# 4. Product Performance #}
+	<div class="bs-section bs-section--products">
+		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
+			<h3 class="bs-section__title" style="margin: 0;">{{ "Product Performance"|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/products') }}" class="go" style="font-size: 0.85rem;">{{ "See all products"|t('best-sellers') }}</a>
+		</div>
+		{{ summaryBlock.render(summaries.products) }}
+		<div class="bs-kpi-grid bs-kpi-grid--{{ productCards|length }}">
+			{% for card in productCards %}
+				{{ kpi.card(card) }}
+			{% endfor %}
+		</div>
+		{% if bestSellers|length > 0 %}
+			{% include 'best-sellers/_includes/widgets/best-sellers-table' %}
+		{% endif %}
+	</div>
+
+	{# 5. Carts #}
+	<div class="bs-section bs-section--carts">
+		<h3 class="bs-section__title">{{ "Carts"|t('best-sellers') }}</h3>
+		{{ summaryBlock.render(summaries.abandonment) }}
+		{% include 'best-sellers/_includes/widgets/cart-abandonment' %}
+		{% include 'best-sellers/_includes/widgets/top-abandoned-carts' %}
+	</div>
 {% endblock %}
 
 {% js %}
@@ -311,5 +361,89 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	renderAbandonment();
+
+	// Items per order chart (with clickable bars)
+	{% if itemsPerOrder.counts|length > 0 %}
+	var ipoLabels = {{ itemsPerOrder.labels|json_encode|raw }};
+	var ipoChart = new Chart(document.getElementById('itemsPerOrderChart').getContext('2d'), {
+		type: 'bar',
+		data: {
+			labels: ipoLabels,
+			datasets: [{
+				label: '{{ "Orders"|t("best-sellers") }}',
+				data: {{ itemsPerOrder.counts|json_encode|raw }},
+				backgroundColor: 'rgba(0, 115, 170, 0.6)',
+				borderColor: '#0073aa',
+				borderWidth: 1
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: { legend: { display: false } },
+			scales: {
+				x: { title: { display: true, text: '{{ "Items"|t("best-sellers") }}' } },
+				y: { beginAtZero: true, title: { display: true, text: '{{ "Orders"|t("best-sellers") }}' } }
+			},
+			onClick: function (evt) {
+				var points = ipoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+				if (points.length > 0) {
+					var bucket = ipoLabels[points[0].index];
+					window.location.href = '{{ cpUrl("best-sellers/orders") }}' + '?itemsPerOrder=' + encodeURIComponent(bucket);
+				}
+			},
+			onHover: function (evt, elements) {
+				evt.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+			}
+		}
+	});
+	{% endif %}
+
+	// Copy-to-clipboard for cart restore links
+	document.querySelectorAll('.bs-copy-link').forEach(function (link) {
+		link.addEventListener('click', function (e) {
+			e.preventDefault();
+			var url = this.getAttribute('data-url');
+			var el = this;
+			navigator.clipboard.writeText(url).then(function () {
+				var original = el.textContent;
+				el.textContent = '{{ "Copied!"|t("best-sellers") }}';
+				setTimeout(function () { el.textContent = original; }, 1500);
+			});
+		});
+	});
+
+	// Anonymous cart toggle for abandoned carts table
+	var anonToggle = document.getElementById('include-anonymous-abandoned');
+	if (anonToggle) {
+		// Default: hide anonymous rows
+		function filterAbandonedRows() {
+			var rows = document.querySelectorAll('#abandoned-carts-table tbody tr');
+			var showAnon = anonToggle.checked;
+			var visibleCount = 0;
+			var visibleTotal = 0;
+			var maxVisible = 5;
+			rows.forEach(function (row) {
+				var isAnon = row.getAttribute('data-anonymous') === 'true';
+				if ((isAnon && !showAnon) || visibleCount >= maxVisible) {
+					row.style.display = 'none';
+				} else {
+					row.style.display = '';
+					visibleCount++;
+					visibleTotal += parseFloat(row.getAttribute('data-value') || '0');
+				}
+			});
+			var countEl = document.getElementById('abandoned-carts-count');
+			if (countEl) {
+				countEl.textContent = visibleCount + ' {{ "carts"|t("best-sellers") }}';
+			}
+			var totalEl = document.getElementById('abandoned-carts-total');
+			if (totalEl) {
+				totalEl.textContent = BestSellersReports.formatCurrency(visibleTotal);
+			}
+		}
+		anonToggle.addEventListener('change', filterAbandonedRows);
+		filterAbandonedRows();
+	}
 });
 {% endjs %}

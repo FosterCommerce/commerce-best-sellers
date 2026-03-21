@@ -148,6 +148,10 @@
 }
 
 /* Data tables */
+.bs-data-table td a.go {
+	white-space: nowrap;
+}
+
 .bs-data-table {
 	width: 100%;
 	border-collapse: collapse;
@@ -232,11 +236,142 @@
 	color: #1a1a1a;
 }
 
+/* Summary blocks */
+.bs-summary {
+	margin-bottom: 1.5rem;
+}
+
+.bs-summary__lead {
+	font-size: 1.1rem;
+	line-height: 1.5;
+	color: #333;
+	margin: 0 0 0.25rem;
+}
+
+.bs-summary__context {
+	font-size: 0.88rem;
+	line-height: 1.5;
+	color: #6c757d;
+	margin: 0;
+}
+
+.bs-summary__sep {
+	color: #ccc;
+	margin: 0 0.15rem;
+}
+
+.bs-summary__warnings {
+	margin-top: 0.75rem;
+}
+
+.bs-summary__warning {
+	font-size: 0.8rem;
+	color: #95a5a6;
+	margin: 0.25rem 0 0;
+	line-height: 1.4;
+}
+
+/* Filter banner for cross-page links */
+.bs-filter-banner {
+	background: #f0f7fb;
+	border: 1px solid #d0e3ed;
+	border-radius: 6px;
+	padding: 0.6rem 1rem;
+	margin-bottom: 1rem;
+	font-size: 0.9rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.bs-filter-banner__clear {
+	font-size: 0.85rem;
+}
+
+/* Scope dropdown (appended to body, positioned via JS) */
+.bs-scope-dropdown {
+	display: none;
+	position: fixed;
+	z-index: 1000;
+	background: #fff;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	padding: 0.5rem 0;
+	min-width: 200px;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.bs-scope-dropdown.is-open {
+	display: block;
+}
+
+.bs-scope-dropdown label {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4rem 1rem;
+	cursor: pointer;
+	font-size: 0.85rem;
+	user-select: none;
+}
+
+.bs-scope-dropdown label:hover {
+	background: #f5f5f5;
+}
+
+.bs-scope-dropdown label .status {
+	margin-right: 0;
+}
+
+.bs-scope-dropdown input[type="checkbox"] {
+	margin: 0;
+	-webkit-appearance: checkbox;
+	appearance: checkbox;
+	width: 16px;
+	height: 16px;
+}
+
+/* Section accent borders */
+.bs-section--discounts,
+.bs-section--customers,
+.bs-section--products,
+.bs-section--carts {
+	border-left: 4px solid;
+	padding-left: 1.5rem;
+}
+
+.bs-section--discounts { border-left-color: #f39c12; }
+.bs-section--customers { border-left-color: #27ae60; }
+.bs-section--products { border-left-color: #8e44ad; }
+.bs-section--carts { border-left-color: #e74c3c; }
+
+.bs-section > :last-child {
+	margin-bottom: 0;
+}
+
+/* Hero row (Health Check) */
+.bs-section--hero {
+	margin-bottom: 3rem;
+	padding-bottom: 3rem;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+.bs-section--hero .bs-kpi-card__value {
+	font-size: 1.5rem;
+}
+
 /* Two-column layout */
 .bs-columns {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	gap: 2rem;
+	margin-bottom: 2rem;
+}
+
+.bs-columns .bs-chart-container {
+	margin-bottom: 0;
 }
 
 @media (max-width: 900px) {
@@ -313,7 +448,8 @@
 	border-radius: 6px;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 	padding: 0.5rem 0;
-	min-width: 180px;
+	min-width: 200px;
+	max-width: 320px;
 	margin-top: 4px;
 	max-height: 300px;
 	overflow-y: auto;
@@ -330,7 +466,6 @@
 	padding: 0.4rem 1rem;
 	cursor: pointer;
 	font-size: 0.85rem;
-	white-space: nowrap;
 	user-select: none;
 }
 
@@ -357,6 +492,7 @@
 	border-radius: 50%;
 	width: 18px;
 	height: 18px;
+	margin-left: 0.3rem;
 }
 
 /* Column toggle menu */

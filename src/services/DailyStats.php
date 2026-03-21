@@ -2,7 +2,11 @@
 
 namespace fostercommerce\bestsellers\services;
 
+use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use DateTime;
+use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\models\PeriodStats;
 use fostercommerce\bestsellers\records\DailyStat;
 use yii\base\Component;
 
@@ -34,7 +38,7 @@ class DailyStats extends Component
 				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
 				'uniqueCustomers' => 'COUNT(DISTINCT [[email]])',
 			])
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->one();
 
@@ -49,10 +53,10 @@ class DailyStats extends Component
 		$totalItemsSold = (int) (new Query())
 			->select(['COALESCE(SUM([[lineItems.qty]]), 0)'])
 			->from([
-				'lineItems' => '{{%commerce_lineitems}}',
+				'lineItems' => CommerceTable::LINEITEMS,
 			])
 			->innerJoin([
-				'orders' => '{{%commerce_orders}}',
+				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where([
 				'and',
@@ -65,7 +69,7 @@ class DailyStats extends Component
 		// New vs returning customers (tracked by email across all time)
 		$customerEmails = (new Query())
 			->select('DISTINCT [[email]]')
-			->from('{{%commerce_orders}}')
+			->from(CommerceTable::ORDERS)
 			->where($dateCondition)
 			->andWhere([
 				'not', [
@@ -85,7 +89,7 @@ class DailyStats extends Component
 							'email' => '[[email]]',
 							'firstOrder' => 'MIN([[dateOrdered]])',
 						])
-						->from('{{%commerce_orders}}')
+						->from(CommerceTable::ORDERS)
 						->where([
 							'and',
 							['=', '[[isCompleted]]', true],
@@ -139,8 +143,8 @@ class DailyStats extends Component
 	 */
 	public function rebuildRange(string $startDate, string $endDate): int
 	{
-		$current = new \DateTime($startDate);
-		$end = new \DateTime($endDate);
+		$current = new DateTime($startDate);
+		$end = new DateTime($endDate);
 		$count = 0;
 
 		while ($current <= $end) {
@@ -154,10 +158,8 @@ class DailyStats extends Component
 
 	/**
 	 * Get aggregated stats for a date range from the daily_stats table.
-	 *
-	 * @return array<string, mixed>
 	 */
-	public function getStatsForRange(string $fromDate, string $toDate): array
+	public function getStatsForRange(string $fromDate, string $toDate): PeriodStats
 	{
 		/** @var array{totalOrders: string, totalRevenue: string, totalDiscount: string, totalShipping: string, totalTax: string, totalItemsSold: string, uniqueCustomers: string, newCustomers: string, returningCustomers: string}|false $row */
 		$row = (new Query())
@@ -172,16 +174,16 @@ class DailyStats extends Component
 				'newCustomers' => 'COALESCE(SUM([[newCustomers]]), 0)',
 				'returningCustomers' => 'COALESCE(SUM([[returningCustomers]]), 0)',
 			])
-			->from(DailyStat::tableName())
-			->where(['>=', 'date', $fromDate])
-			->andWhere(['<=', 'date', $toDate])
+			->from(Table::DAILY_STATS)
+			->where(['>=', '[[date]]', $fromDate])
+			->andWhere(['<=', '[[date]]', $toDate])
 			->one();
 
 		$totalOrders = (int) ($row['totalOrders'] ?? 0);
 		$totalRevenue = (float) ($row['totalRevenue'] ?? 0);
 		$totalItemsSold = (int) ($row['totalItemsSold'] ?? 0);
 
-		return [
+		return new PeriodStats([
 			'totalOrders' => $totalOrders,
 			'totalRevenue' => $totalRevenue,
 			'totalDiscount' => (float) ($row['totalDiscount'] ?? 0),
@@ -193,7 +195,7 @@ class DailyStats extends Component
 			'returningCustomers' => (int) ($row['returningCustomers'] ?? 0),
 			'averageOrderValue' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
 			'averageItemsPerOrder' => $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0,
-		];
+		]);
 	}
 
 	/**
@@ -205,9 +207,9 @@ class DailyStats extends Component
 	{
 		/** @var array<int, array<string, mixed>> $rows */
 		$rows = (new Query())
-			->from(DailyStat::tableName())
-			->where(['>=', 'date', $fromDate])
-			->andWhere(['<=', 'date', $toDate])
+			->from(Table::DAILY_STATS)
+			->where(['>=', '[[date]]', $fromDate])
+			->andWhere(['<=', '[[date]]', $toDate])
 			->orderBy([
 				'date' => SORT_ASC,
 			])
@@ -225,9 +227,9 @@ class DailyStats extends Component
 	{
 		return (new Query())
 			->select($column)
-			->from(DailyStat::tableName())
-			->where(['>=', 'date', $fromDate])
-			->andWhere(['<=', 'date', $toDate])
+			->from(Table::DAILY_STATS)
+			->where(['>=', '[[date]]', $fromDate])
+			->andWhere(['<=', '[[date]]', $toDate])
 			->orderBy([
 				'date' => SORT_ASC,
 			])

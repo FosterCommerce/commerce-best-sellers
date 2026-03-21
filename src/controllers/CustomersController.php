@@ -3,7 +3,9 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
+use fostercommerce\bestsellers\models\CustomerRow;
 use fostercommerce\bestsellers\Plugin;
 use yii\web\Response;
 
@@ -16,23 +18,15 @@ class CustomersController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		$dateRange = $this->resolveDateRange();
-		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
-		$customerStats = $plugin->customerStats;
-
-		$kpis = $customerStats->getCustomerKpis($dateRange['fromDT'], $dateRange['toDT']);
-		$prevKpis = $customerStats->getCustomerKpis($dateRange['prev']['fromDT'], $dateRange['prev']['toDT']);
-		$newCustomersChange = $this->percentChange($kpis['new'], $prevKpis['new']);
+		$scope = $this->resolveScope();
 
 		return $this->renderTemplate('best-sellers/_customers', [
 			'title' => Craft::t('best-sellers', 'Customers'),
 			'selectedSubnavItem' => 'customers',
-			'from' => $dateRange['from'],
-			'to' => $dateRange['to'],
-			'preset' => $dateRange['preset'],
-			'kpis' => $kpis,
-			'newCustomersChange' => $newCustomersChange,
+			'from' => $scope->from,
+			'to' => $scope->to,
+			'preset' => $scope->preset,
+			'scope' => $scope,
 		]);
 	}
 
@@ -43,9 +37,9 @@ class CustomersController extends BaseReportController
 	{
 		$this->requireAcceptsJson();
 
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var int|string $page */
 		$page = $request->getQueryParam('page', 1);
@@ -72,23 +66,27 @@ class CustomersController extends BaseReportController
 		assert($plugin instanceof Plugin);
 		$customerStats = $plugin->customerStats;
 
-		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, status: string, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
-		$allCustomers = $customerStats->getTopCustomers($dateRange['fromDT'], $dateRange['toDT'], 10000);
+		/** @var list<CustomerRow> $allCustomers */
+		$allCustomers = $customerStats->getTopCustomers($dateRange, 10000);
 
 		if ($customerTypes !== []) {
-			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => in_array($customer['status'], $customerTypes, true)));
+			$allCustomers = array_values(array_filter($allCustomers, fn (CustomerRow $customer): bool => in_array($customer->status, $customerTypes, true)));
 		}
 
 		if ($search !== '') {
 			$searchLower = strtolower($search);
-			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => str_contains(strtolower($customer['email']), $searchLower)));
+			$allCustomers = array_values(array_filter($allCustomers, fn (CustomerRow $customer): bool => str_contains(strtolower($customer->email), $searchLower)));
 		}
 
 		$allowedSortColumns = ['email', 'status', 'orderCount', 'totalSpent', 'aov', 'lastOrder'];
 		if (in_array($sort, $allowedSortColumns, true)) {
-			usort($allCustomers, function (array $customerA, array $customerB) use ($sort, $sortDir): int {
-				$valueA = $customerA[$sort] ?? 0;
-				$valueB = $customerB[$sort] ?? 0;
+			usort($allCustomers, function (CustomerRow $customerA, CustomerRow $customerB) use ($sort, $sortDir): int {
+				$arrA = $customerA->toArray();
+				$arrB = $customerB->toArray();
+				/** @var string|int|float|bool|null $valueA */
+				$valueA = $arrA[$sort] ?? 0;
+				/** @var string|int|float|bool|null $valueB */
+				$valueB = $arrB[$sort] ?? 0;
 				if (is_numeric($valueA) && is_numeric($valueB)) {
 					$comparison = (float) $valueA <=> (float) $valueB;
 				} else {
@@ -105,25 +103,25 @@ class CustomersController extends BaseReportController
 		$pageItems = array_slice($allCustomers, $offset, self::PER_PAGE);
 
 		$rows = [];
-		foreach ($pageItems as $customer) {
+		foreach ($pageItems as $pageItem) {
 			$rows[] = [
-				'email' => $customer['email'],
-				'customerId' => $customer['customerId'],
-				'isGuest' => $customer['isGuest'],
-				'status' => $customer['status'],
-				'orderCount' => $customer['orderCount'],
-				'totalSpent' => $this->formatCurrency($customer['totalSpent']),
-				'aov' => $this->formatCurrency($customer['aov']),
-				'lastOrder' => $customer['lastOrder'] !== null ? substr($customer['lastOrder'], 0, 10) : '',
-				'cpUrl' => $customer['customerId'] !== null ? Craft::$app->getUrlManager()->createUrl('users/' . $customer['customerId']) : null,
+				'email' => $pageItem->email,
+				'customerId' => $pageItem->customerId,
+				'isGuest' => $pageItem->isGuest,
+				'status' => $pageItem->status,
+				'orderCount' => $pageItem->orderCount,
+				'totalSpent' => $this->formatCurrency($pageItem->totalSpent),
+				'aov' => $this->formatCurrency($pageItem->aov),
+				'lastOrder' => $pageItem->lastOrder !== null ? substr($pageItem->lastOrder, 0, 10) : '',
+				'cpUrl' => $pageItem->customerId !== null ? Craft::$app->getUrlManager()->createUrl('users/' . $pageItem->customerId) : null,
 			];
 		}
 
 		$totalOrderCount = 0;
 		$totalSpentSum = 0.0;
-		foreach ($pageItems as $pageItem) {
-			$totalOrderCount += $pageItem['orderCount'];
-			$totalSpentSum += $pageItem['totalSpent'];
+		foreach ($allCustomers as $allCustomer) {
+			$totalOrderCount += $allCustomer->orderCount;
+			$totalSpentSum += $allCustomer->totalSpent;
 		}
 
 		$totals = [
@@ -146,9 +144,9 @@ class CustomersController extends BaseReportController
 	 */
 	public function actionExportCsv(): Response
 	{
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var string $rawSearch */
 		$rawSearch = $request->getQueryParam('search', '');
@@ -165,16 +163,16 @@ class CustomersController extends BaseReportController
 		assert($plugin instanceof Plugin);
 		$customerStats = $plugin->customerStats;
 
-		/** @var array<int, array{email: string, customerId: int|null, isGuest: bool, status: string, orderCount: int, totalSpent: float, aov: float, lastOrder: string|null}> $allCustomers */
-		$allCustomers = $customerStats->getTopCustomers($dateRange['fromDT'], $dateRange['toDT'], 10000);
+		/** @var list<CustomerRow> $allCustomers */
+		$allCustomers = $customerStats->getTopCustomers($dateRange, 10000);
 
 		if ($customerTypes !== []) {
-			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => in_array($customer['status'], $customerTypes, true)));
+			$allCustomers = array_values(array_filter($allCustomers, fn (CustomerRow $customer): bool => in_array($customer->status, $customerTypes, true)));
 		}
 
 		if ($search !== '') {
 			$searchLower = strtolower($search);
-			$allCustomers = array_values(array_filter($allCustomers, fn (array $customer): bool => str_contains(strtolower($customer['email']), $searchLower)));
+			$allCustomers = array_values(array_filter($allCustomers, fn (CustomerRow $customer): bool => str_contains(strtolower($customer->email), $searchLower)));
 		}
 
 		$csvRows = [];
@@ -182,16 +180,16 @@ class CustomersController extends BaseReportController
 		$totalSpentSum = 0.0;
 
 		foreach ($allCustomers as $allCustomer) {
-			$totalOrderCount += $allCustomer['orderCount'];
-			$totalSpentSum += $allCustomer['totalSpent'];
+			$totalOrderCount += $allCustomer->orderCount;
+			$totalSpentSum += $allCustomer->totalSpent;
 
 			$csvRows[] = [
-				'email' => $allCustomer['email'],
-				'status' => ucfirst($allCustomer['status']),
-				'orders' => $allCustomer['orderCount'],
-				'totalSpent' => round($allCustomer['totalSpent'], 2),
-				'aov' => round($allCustomer['aov'], 2),
-				'lastOrder' => $allCustomer['lastOrder'] !== null ? substr($allCustomer['lastOrder'], 0, 10) : '',
+				'email' => $allCustomer->email,
+				'status' => ucfirst($allCustomer->status),
+				'orders' => $allCustomer->orderCount,
+				'totalSpent' => round($allCustomer->totalSpent, 2),
+				'aov' => round($allCustomer->aov, 2),
+				'lastOrder' => $allCustomer->lastOrder !== null ? substr($allCustomer->lastOrder, 0, 10) : '',
 			];
 		}
 

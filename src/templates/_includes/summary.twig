@@ -1,0 +1,36 @@
+{#
+ # Summary block macro
+ #
+ # Renders GroupSummary sentences with {b}...{/b} markers converted to bold spans.
+ #
+ # Usage:
+ #   {% import 'best-sellers/_includes/summary' as summaryBlock %}
+ #   {{ summaryBlock.render(groupSummary) }}
+ #}
+
+{% macro render(groupSummary) %}
+	{% if groupSummary and groupSummary.sentences|length > 0 %}
+		<div class="bs-summary">
+			<p class="bs-summary__lead">{{ _self.toned(groupSummary.sentences[0]) }}</p>
+			{% if groupSummary.sentences|length > 1 %}
+				<p class="bs-summary__context">
+					{% for sentence in groupSummary.sentences|slice(1) %}
+						{{ _self.toned(sentence) }}{% if not loop.last %} <span class="bs-summary__sep">&middot;</span> {% endif %}
+					{% endfor %}
+				</p>
+			{% endif %}
+			{% if groupSummary.warnings|length > 0 %}
+				<div class="bs-summary__warnings">
+					{% for warning in groupSummary.warnings %}
+						<p class="bs-summary__warning">{{ warning }}</p>
+					{% endfor %}
+				</div>
+			{% endif %}
+		</div>
+	{% endif %}
+{% endmacro %}
+
+{% macro toned(text) %}
+	{%- set html = text|replace({'{b}': '<strong>', '{/b}': '</strong>'}) -%}
+	{{- html|raw -}}
+{% endmacro %}

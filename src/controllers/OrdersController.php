@@ -3,12 +3,17 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\commerce\db\Table as CommerceTable;
+use craft\commerce\elements\db\OrderQuery;
 use craft\commerce\elements\Order;
 use craft\db\Query;
 use craft\helpers\MoneyHelper;
+use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
+use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\Plugin;
 use Money\Money;
+use yii\db\Expression;
 use yii\web\Response;
 
 class OrdersController extends BaseReportController
@@ -20,28 +25,23 @@ class OrdersController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		$dateRange = $this->resolveDateRange();
+		$scope = $this->resolveScope();
 		$plugin = Plugin::getInstance();
 		assert($plugin instanceof Plugin);
-		$dailyStats = $plugin->dailyStats;
 
-		$stats = $dailyStats->getStatsForRange($dateRange['from'], $dateRange['to']);
-		$prevStats = $dailyStats->getStatsForRange($dateRange['prev']['from'], $dateRange['prev']['to']);
-
-		/** @var array{totalRevenue: float, totalOrders: int} $stats */
-		/** @var array{totalRevenue: float, totalOrders: int} $prevStats */
-		$revenueChange = $this->percentChange($stats['totalRevenue'], $prevStats['totalRevenue']);
-		$ordersChange = $this->percentChange($stats['totalOrders'], $prevStats['totalOrders']);
+		$operationsStats = $plugin->operationsStats;
+		$shippingMethods = $operationsStats->getShippingMethods($scope);
+		$topDiscounts = $operationsStats->getTopDiscounts($scope, 20);
 
 		return $this->renderTemplate('best-sellers/_sales', [
 			'title' => Craft::t('best-sellers', 'Orders'),
 			'selectedSubnavItem' => 'orders',
-			'from' => $dateRange['from'],
-			'to' => $dateRange['to'],
-			'preset' => $dateRange['preset'],
-			'stats' => $stats,
-			'revenueChange' => $revenueChange,
-			'ordersChange' => $ordersChange,
+			'from' => $scope->from,
+			'to' => $scope->to,
+			'preset' => $scope->preset,
+			'scope' => $scope,
+			'shippingMethods' => $shippingMethods,
+			'topDiscounts' => $topDiscounts,
 		]);
 	}
 
@@ -52,9 +52,9 @@ class OrdersController extends BaseReportController
 	{
 		$this->requireAcceptsJson();
 
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 
 		/** @var int|string $page */
 		$page = $request->getQueryParam('page', 1);
@@ -67,41 +67,15 @@ class OrdersController extends BaseReportController
 		$totalOrders = (int) $ordersQuery->count();
 		$totalPages = max(1, (int) ceil($totalOrders / self::PER_PAGE));
 
+		// Aggregate totals across all filtered results (before pagination)
+		$totals = $this->buildFilteredTotals($dateRange);
+
 		$orders = $ordersQuery
 			->offset($offset)
 			->limit(self::PER_PAGE)
 			->all();
 
 		$rows = $this->buildOrderRows($orders);
-
-		$currency = $this->getStoreCurrency();
-		$totalItemSubtotal = new Money(0, $currency);
-		$totalTax = new Money(0, $currency);
-		$totalDiscount = new Money(0, $currency);
-		$totalShipping = new Money(0, $currency);
-		$totalPaid = new Money(0, $currency);
-		$totalItemsSold = 0;
-
-		foreach ($orders as $order) {
-			$totalItemSubtotal = $totalItemSubtotal->add($this->toMoney($order->itemSubtotal));
-			$totalTax = $totalTax->add($this->toMoney($order->totalTax));
-			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount));
-			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost));
-			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid));
-		}
-
-		foreach ($rows as $row) {
-			$totalItemsSold += $row['itemsSold'];
-		}
-
-		$totals = [
-			'itemSubtotal' => $this->formatMoney($totalItemSubtotal),
-			'totalTax' => $this->formatMoney($totalTax),
-			'totalDiscount' => $this->formatMoney($totalDiscount),
-			'totalShippingCost' => $this->formatMoney($totalShipping),
-			'totalPaid' => $this->formatMoney($totalPaid),
-			'itemsSold' => number_format($totalItemsSold),
-		];
 
 		return $this->asJson([
 			'orders' => $rows,
@@ -118,7 +92,7 @@ class OrdersController extends BaseReportController
 	 */
 	public function actionExportCsv(): Response
 	{
-		$dateRange = $this->resolveDateRange();
+		$dateRange = $this->resolveScope();
 		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
 
 		$orders = $ordersQuery->all();
@@ -186,17 +160,11 @@ class OrdersController extends BaseReportController
 		], 'orders');
 	}
 
-	/**
-	 * @param array{fromDT: string, toDT: string} $dateRange
-	 */
-	private function buildFilteredOrdersQuery(array $dateRange): \craft\commerce\elements\db\OrderQuery
+	private function buildFilteredOrdersQuery(DateRangeResult $dateRange): OrderQuery
 	{
-		/** @var \craft\web\Request $request */
+		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
-		/** @var string $rawSearch */
-		$rawSearch = $request->getQueryParam('search', '');
-		$search = trim($rawSearch);
 		/** @var string $rawSort */
 		$rawSort = $request->getQueryParam('sort', 'dateOrdered');
 		$sort = trim($rawSort);
@@ -204,63 +172,12 @@ class OrdersController extends BaseReportController
 		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
 		$sortDir = trim($rawSortDir);
 
-		$orderStatuses = $request->getQueryParam('orderStatus', []);
-		$paidFilters = $request->getQueryParam('paymentStatus', []);
-
-		if (is_string($orderStatuses) && $orderStatuses !== '') {
-			$orderStatuses = [$orderStatuses];
-		} elseif (! is_array($orderStatuses)) {
-			$orderStatuses = [];
-		}
-
-		if (is_string($paidFilters) && $paidFilters !== '') {
-			$paidFilters = [$paidFilters];
-		} elseif (! is_array($paidFilters)) {
-			$paidFilters = [];
-		}
-
 		$ordersQuery = Order::find()
 			->isCompleted(true)
-			->dateOrdered(['and', '>= ' . $dateRange['fromDT'], '<= ' . $dateRange['toDT']])
+			->dateOrdered(['and', '>= ' . $dateRange->fromDT, '<= ' . $dateRange->toDT])
 			->orderBy($this->resolveOrderSort($sort, $sortDir));
 
-		if ($orderStatuses !== []) {
-			$ordersQuery->andWhere([
-				'[[orderStatusId]]' => (new Query())
-					->select('[[id]]')
-					->from('{{%commerce_orderstatuses}}')
-					->where([
-						'[[handle]]' => $orderStatuses,
-					]),
-			]);
-		}
-
-		if ($paidFilters !== []) {
-			$paymentConditions = ['or'];
-			foreach ($paidFilters as $paidFilter) {
-				if ($paidFilter === 'paid') {
-					$paymentConditions[] = '[[totalPaid]] >= [[totalPrice]]';
-				} elseif ($paidFilter === 'partial') {
-					$paymentConditions[] = ['and', '[[totalPaid]] > 0', '[[totalPaid]] < [[totalPrice]]'];
-				} elseif ($paidFilter === 'unpaid') {
-					$paymentConditions[] = [
-						'[[totalPaid]]' => 0,
-					];
-				}
-			}
-
-			if (count($paymentConditions) > 1) {
-				$ordersQuery->andWhere($paymentConditions);
-			}
-		}
-
-		if ($search !== '') {
-			$ordersQuery->andWhere(['or',
-				['like', '[[reference]]', $search],
-				['like', '[[email]]', $search],
-				['like', '[[number]]', $search],
-			]);
-		}
+		$this->applyOrderFilters($ordersQuery);
 
 		return $ordersQuery;
 	}
@@ -279,7 +196,7 @@ class OrdersController extends BaseReportController
 					'orderId',
 					'totalItems' => 'COALESCE(SUM([[qty]]), 0)',
 				])
-				->from('{{%commerce_lineitems}}')
+				->from(CommerceTable::LINEITEMS)
 				->where(['in', 'orderId', $orderIds])
 				->groupBy('orderId')
 				->all();
@@ -315,6 +232,245 @@ class OrdersController extends BaseReportController
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * Aggregate totals across all filtered orders (not just the current page).
+	 *
+	 * @return array<string, string>
+	 */
+	private function buildFilteredTotals(DateRangeResult $dateRange): array
+	{
+		/** @var array{itemSubtotal: string, totalTax: string, totalDiscount: string, totalShippingCost: string, totalPaid: string}|false $sums */
+		$sums = $this->buildFilteredTotalsQuery($dateRange)
+			->select([
+				'itemSubtotal' => 'COALESCE(SUM([[itemSubtotal]]), 0)',
+				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
+				'totalDiscount' => 'COALESCE(SUM([[totalDiscount]]), 0)',
+				'totalShippingCost' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
+				'totalPaid' => 'COALESCE(SUM([[totalPaid]]), 0)',
+			])
+			->one();
+
+		if (! $sums) {
+			return [
+				'itemSubtotal' => $this->formatCurrency(0),
+				'totalTax' => $this->formatCurrency(0),
+				'totalDiscount' => $this->formatCurrency(0),
+				'totalShippingCost' => $this->formatCurrency(0),
+				'totalPaid' => $this->formatCurrency(0),
+				'itemsSold' => '0',
+			];
+		}
+
+		$idSubquery = $this->buildFilteredTotalsQuery($dateRange)
+			->select(['[[id]]']);
+
+		$totalItemsSold = (int) (new Query())
+			->select(new Expression('COALESCE(SUM([[qty]]), 0)'))
+			->from(CommerceTable::LINEITEMS)
+			->where(['in', '[[orderId]]', $idSubquery])
+			->scalar();
+
+		return [
+			'itemSubtotal' => $this->formatCurrency((float) $sums['itemSubtotal']),
+			'totalTax' => $this->formatCurrency((float) $sums['totalTax']),
+			'totalDiscount' => $this->formatCurrency((float) $sums['totalDiscount']),
+			'totalShippingCost' => $this->formatCurrency((float) $sums['totalShippingCost']),
+			'totalPaid' => $this->formatCurrency((float) $sums['totalPaid']),
+			'itemsSold' => number_format($totalItemsSold),
+		];
+	}
+
+	/**
+	 * Build a raw query on the orders table with the same filters as the element query.
+	 *
+	 * @return Query<array-key, mixed>
+	 */
+	private function buildFilteredTotalsQuery(DateRangeResult $dateRange): Query
+	{
+		$query = (new Query())
+			->from(CommerceTable::ORDERS)
+			->where([
+				'and',
+				[
+					'[[isCompleted]]' => true,
+				],
+				['>=', '[[dateOrdered]]', $dateRange->fromDT],
+				['<=', '[[dateOrdered]]', $dateRange->toDT],
+			]);
+
+		$this->applyOrderFilters($query);
+
+		return $query;
+	}
+
+	/**
+	 * Apply shared order filters (status, payment, search, shipping, discounts) to a query.
+	 *
+	 * @template TQuery of OrderQuery|Query<array-key, mixed>
+	 * @param TQuery $query
+	 */
+	private function applyOrderFilters(OrderQuery|Query $query): void
+	{
+		// Element queries join multiple tables; plain queries have a single table
+		$idCol = $query instanceof OrderQuery ? '[[commerce_orders.id]]' : '[[id]]';
+		$statusIdCol = $query instanceof OrderQuery ? '[[commerce_orders.orderStatusId]]' : '[[orderStatusId]]';
+
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+
+		/** @var string $rawSearch */
+		$rawSearch = $request->getQueryParam('search', '');
+		$search = trim($rawSearch);
+
+		$orderStatuses = $request->getQueryParam('orderStatus', []);
+		$paidFilters = $request->getQueryParam('paymentStatus', []);
+
+		if (is_string($orderStatuses) && $orderStatuses !== '') {
+			$orderStatuses = [$orderStatuses];
+		} elseif (! is_array($orderStatuses)) {
+			$orderStatuses = [];
+		}
+
+		if (is_string($paidFilters) && $paidFilters !== '') {
+			$paidFilters = [$paidFilters];
+		} elseif (! is_array($paidFilters)) {
+			$paidFilters = [];
+		}
+
+		if ($orderStatuses !== []) {
+			$query->andWhere([
+				$statusIdCol => (new Query())
+					->select('[[id]]')
+					->from(CommerceTable::ORDERSTATUSES)
+					->where([
+						'[[handle]]' => $orderStatuses,
+					]),
+			]);
+		}
+
+		if ($paidFilters !== []) {
+			$paymentConditions = ['or'];
+			foreach ($paidFilters as $paidFilter) {
+				if ($paidFilter === 'paid') {
+					$paymentConditions[] = '[[totalPaid]] >= [[totalPrice]]';
+				} elseif ($paidFilter === 'partial') {
+					$paymentConditions[] = ['and', '[[totalPaid]] > 0', '[[totalPaid]] < [[totalPrice]]'];
+				} elseif ($paidFilter === 'unpaid') {
+					$paymentConditions[] = [
+						'[[totalPaid]]' => 0,
+					];
+				}
+			}
+
+			if (count($paymentConditions) > 1) {
+				$query->andWhere($paymentConditions);
+			}
+		}
+
+		if ($search !== '') {
+			$query->andWhere([
+				'or',
+				['like', '[[reference]]', $search],
+				['like', '[[email]]', $search],
+				['like', '[[number]]', $search],
+			]);
+		}
+
+		// Shipping method filter
+		/** @var string $shippingMethod */
+		$shippingMethod = $request->getQueryParam('shippingMethod', '');
+		if ($shippingMethod !== '') {
+			if ($shippingMethod === 'None') {
+				$query->andWhere([
+					'or',
+					[
+						'[[shippingMethodName]]' => null,
+					],
+					[
+						'[[shippingMethodName]]' => '',
+					],
+				]);
+			} else {
+				$query->andWhere([
+					'[[shippingMethodName]]' => $shippingMethod,
+				]);
+			}
+		}
+
+		// Discount status filter (discounted vs full-price)
+		/** @var string $discountStatus */
+		$discountStatus = $request->getQueryParam('discountStatus', '');
+		if ($discountStatus === 'discounted') {
+			$query->andWhere(['<', '[[totalDiscount]]', 0]);
+		} elseif ($discountStatus === 'fullPrice') {
+			$query->andWhere([
+				'or',
+				['>=', '[[totalDiscount]]', 0],
+				[
+					'[[totalDiscount]]' => null,
+				],
+			]);
+		}
+
+		// Discount ID filter (orders using a specific discount)
+		/** @var string $rawDiscountId */
+		$rawDiscountId = $request->getQueryParam('discountId', '');
+		if ($rawDiscountId !== '') {
+			$discountId = (int) $rawDiscountId;
+			$isMysql = Craft::$app->getDb()->getIsMysql();
+			$idExpr = $isMysql
+				? new Expression("JSON_EXTRACT([[sourceSnapshot]], '$.id') = :discountId", [
+					':discountId' => $discountId,
+				])
+				: new Expression("(([[sourceSnapshot]])::json->>'id')::int = :discountId", [
+					':discountId' => $discountId,
+				]);
+
+			$query->andWhere([
+				$idCol => (new Query())
+					->select('DISTINCT [[orderId]]')
+					->from(CommerceTable::ORDERADJUSTMENTS)
+					->where([
+						'[[type]]' => 'discount',
+					])
+					->andWhere($idExpr),
+			]);
+		}
+
+		// Items per order bucket filter
+		/** @var string $itemsBucket */
+		$itemsBucket = $request->getQueryParam('itemsPerOrder', '');
+		if ($itemsBucket !== '') {
+			$itemCountSubquery = (new Query())
+				->select('[[lineItems.orderId]]')
+				->from([
+					'lineItems' => CommerceTable::LINEITEMS,
+				])
+				->groupBy('[[lineItems.orderId]]');
+
+			$bucketRanges = [
+				'1' => [1, 1],
+				'2' => [2, 2],
+				'3' => [3, 3],
+				'4-5' => [4, 5],
+				'6-10' => [6, 10],
+				'11+' => [11, null],
+			];
+
+			if (isset($bucketRanges[$itemsBucket])) {
+				[$min, $max] = $bucketRanges[$itemsBucket];
+				$itemCountSubquery->having(['>=', 'SUM([[lineItems.qty]])', $min]);
+				if ($max !== null) {
+					$itemCountSubquery->andHaving(['<=', 'SUM([[lineItems.qty]])', $max]);
+				}
+
+				$query->andWhere([
+					$idCol => $itemCountSubquery,
+				]);
+			}
+		}
 	}
 
 	/**

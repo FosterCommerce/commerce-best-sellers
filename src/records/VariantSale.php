@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\records;
 
 use craft\db\ActiveRecord;
+use fostercommerce\bestsellers\db\Table;
 
 /**
  * @property int $id
@@ -23,6 +24,6 @@ class VariantSale extends ActiveRecord
 {
 	public static function tableName(): string
 	{
-		return '{{%best_sellers_variant_sales}}';
+		return Table::VARIANT_SALES;
 	}
 }

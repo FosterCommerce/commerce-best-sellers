@@ -3,19 +3,18 @@
 namespace fostercommerce\bestsellers\helpers;
 
 use Craft;
+use fostercommerce\bestsellers\models\PeriodStats;
 
-class KpiCards
+abstract class KpiCards
 {
 	/**
 	 * Build KPI card data for the given keys.
 	 *
-	 * @param array<string, mixed> $stats Current period stats
-	 * @param array<string, mixed> $prevStats Previous period stats
 	 * @param list<string> $keys Which cards to include
 	 * @param callable $percentChange fn(current, previous) => ?float
 	 * @return list<array<string, mixed>>
 	 */
-	public static function build(array $stats, array $prevStats, array $keys, callable $percentChange): array
+	public static function build(PeriodStats $stats, PeriodStats $prevStats, array $keys, callable $percentChange): array
 	{
 		$definitions = self::definitions();
 		$cards = [];
@@ -27,7 +26,7 @@ class KpiCards
 
 			$def = $definitions[$key];
 
-			/** @var callable(array<string, mixed>): (float|int) $resolve */
+			/** @var callable(PeriodStats): (float|int) $resolve */
 			$resolve = $def['resolve'];
 			$value = $resolve($stats);
 			$prevValue = $resolve($prevStats);
@@ -86,51 +85,51 @@ class KpiCards
 				'format' => 'currency',
 				'sparklineId' => 'sparkRevenue',
 				'sparklineColumn' => 'totalRevenue',
-				'resolve' => fn (array $s) => $s['totalRevenue'] ?? 0,
+				'resolve' => fn (PeriodStats $s): float => $s->totalRevenue,
 			],
 			'orders' => [
 				'label' => Craft::t('best-sellers', 'Orders'),
 				'format' => 'number',
 				'sparklineId' => 'sparkOrders',
 				'sparklineColumn' => 'totalOrders',
-				'resolve' => fn (array $s) => $s['totalOrders'] ?? 0,
+				'resolve' => fn (PeriodStats $s): int => $s->totalOrders,
 			],
 			'aov' => [
 				'label' => Craft::t('best-sellers', 'Avg. Order Value'),
 				'format' => 'currency',
 				'sparklineId' => 'sparkAov',
 				'sparklineColumn' => 'averageOrderValue',
-				'resolve' => fn (array $s) => $s['averageOrderValue'] ?? 0,
+				'resolve' => fn (PeriodStats $s): float => $s->averageOrderValue,
 			],
 			'customers' => [
 				'label' => Craft::t('best-sellers', 'Customers'),
 				'format' => 'number',
 				'sparklineId' => 'sparkCustomers',
 				'sparklineColumn' => 'uniqueCustomers',
-				'resolve' => fn (array $s) => $s['uniqueCustomers'] ?? 0,
+				'resolve' => fn (PeriodStats $s): int => $s->uniqueCustomers,
 			],
 			'itemsSold' => [
 				'label' => Craft::t('best-sellers', 'Items Sold'),
 				'format' => 'number',
 				'sparklineId' => 'sparkItemsSold',
 				'sparklineColumn' => 'totalItemsSold',
-				'resolve' => fn (array $s) => $s['totalItemsSold'] ?? 0,
+				'resolve' => fn (PeriodStats $s): int => $s->totalItemsSold,
 			],
 			'newCustomers' => [
 				'label' => Craft::t('best-sellers', 'New Customers'),
 				'format' => 'number',
 				'sparklineId' => 'sparkNewCustomers',
 				'sparklineColumn' => 'newCustomers',
-				'resolve' => fn (array $s) => $s['newCustomers'] ?? 0,
+				'resolve' => fn (PeriodStats $s): int => $s->newCustomers,
 			],
 			'repeatRate' => [
 				'label' => Craft::t('best-sellers', 'Repeat Rate'),
 				'format' => 'percent',
 				'sparklineId' => 'sparkReturning',
 				'sparklineColumn' => 'returningCustomers',
-				'resolve' => function (array $s): float|int {
-					$unique = $s['uniqueCustomers'] ?? 0;
-					$returning = $s['returningCustomers'] ?? 0;
+				'resolve' => function (PeriodStats $s): float|int {
+					$unique = $s->uniqueCustomers;
+					$returning = $s->returningCustomers;
 					return $unique > 0 ? round(($returning / $unique) * 100, 1) : 0;
 				},
 			],
@@ -139,14 +138,14 @@ class KpiCards
 				'format' => 'decimal',
 				'sparklineId' => 'sparkAvgItems',
 				'sparklineColumn' => 'averageItemsPerOrder',
-				'resolve' => fn (array $s) => $s['averageItemsPerOrder'] ?? 0,
+				'resolve' => fn (PeriodStats $s): float => $s->averageItemsPerOrder,
 			],
 			'totalDiscount' => [
-				'label' => Craft::t('best-sellers', 'Total Discount'),
+				'label' => Craft::t('best-sellers', 'Total Discounts'),
 				'format' => 'currency',
 				'sparklineId' => 'sparkDiscount',
 				'sparklineColumn' => 'totalDiscount',
-				'resolve' => fn (array $s): float|int => abs($s['totalDiscount'] ?? 0),
+				'resolve' => fn (PeriodStats $s): float => abs($s->totalDiscount),
 			],
 		];
 	}

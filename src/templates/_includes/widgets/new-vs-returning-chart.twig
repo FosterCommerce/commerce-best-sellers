@@ -1,0 +1,11 @@
+{# New vs Returning Customers Chart #}
+<div class="bs-chart-container">
+	<h3 class="bs-chart-container__title">{{ "New vs Returning Customers"|t('best-sellers') }}</h3>
+	{% if newVsReturning.labels|length > 0 %}
+		<div style="position: relative; height: 300px;">
+			<canvas id="newVsReturningChart"></canvas>
+		</div>
+	{% else %}
+		<p>{{ "No data available"|t('best-sellers') }}</p>
+	{% endif %}
+</div>

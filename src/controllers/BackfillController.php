@@ -75,7 +75,9 @@ class BackfillController extends Controller
 			]));
 		}
 
-		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Backfill queued for {count} orders.', ['count' => $totalOrders]));
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Backfill queued for {count} orders.', [
+			'count' => $totalOrders,
+		]));
 		return $this->redirectToPostedUrl();
 	}
 
@@ -108,7 +110,9 @@ class BackfillController extends Controller
 
 		$count = $dailyStats->rebuildRange($startDate, $endDate);
 
-		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Rebuilt {count} daily stat records.', ['count' => $count]));
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Rebuilt {count} daily stat records.', [
+			'count' => $count,
+		]));
 		return $this->redirectToPostedUrl();
 	}
 }

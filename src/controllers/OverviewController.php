@@ -12,25 +12,6 @@ use yii\web\Response;
 
 class OverviewController extends BaseReportController
 {
-	/**
-	 * @return array<string, array{keys: list<string>, link: string, linkLabel: string}>
-	 */
-	private static function cardGroups(): array
-	{
-		return [
-			Craft::t('best-sellers', 'Orders') => [
-				'keys' => ['revenue', 'orders', 'aov', 'totalDiscount', 'itemsSold', 'avgItemsPerOrder'],
-				'link' => 'best-sellers/orders',
-				'linkLabel' => Craft::t('best-sellers', 'See all orders'),
-			],
-			Craft::t('best-sellers', 'Customers') => [
-				'keys' => ['customers', 'newCustomers', 'repeatRate'],
-				'link' => 'best-sellers/customers',
-				'linkLabel' => Craft::t('best-sellers', 'See all customers'),
-			],
-		];
-	}
-
 	public function actionIndex(): Response
 	{
 		$view = Craft::$app->getView();
@@ -47,7 +28,7 @@ class OverviewController extends BaseReportController
 		// Build grouped cards
 		$allKeys = [];
 		$cardGroups = [];
-		foreach (self::cardGroups() as $groupLabel => $group) {
+		foreach ($this->cardGroups() as $groupLabel => $group) {
 			$keys = $group['keys'];
 			$cards = KpiCards::build($stats, $prevStats, $keys, $this->percentChange(...));
 			$cardGroups[] = [
@@ -164,5 +145,24 @@ class OverviewController extends BaseReportController
 			'purgeEnabled' => $purgeEnabled,
 			'purgeDuration' => $purgeDuration,
 		]);
+	}
+
+	/**
+	 * @return array<string, array{keys: list<string>, link: string, linkLabel: string}>
+	 */
+	private function cardGroups(): array
+	{
+		return [
+			Craft::t('best-sellers', 'Orders') => [
+				'keys' => ['revenue', 'orders', 'aov', 'totalDiscount', 'itemsSold', 'avgItemsPerOrder'],
+				'link' => 'best-sellers/orders',
+				'linkLabel' => Craft::t('best-sellers', 'See all orders'),
+			],
+			Craft::t('best-sellers', 'Customers') => [
+				'keys' => ['customers', 'newCustomers', 'repeatRate'],
+				'link' => 'best-sellers/customers',
+				'linkLabel' => Craft::t('best-sellers', 'See all customers'),
+			],
+		];
 	}
 }

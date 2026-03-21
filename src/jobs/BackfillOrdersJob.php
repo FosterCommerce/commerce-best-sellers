@@ -50,6 +50,8 @@ class BackfillOrdersJob extends BaseJob
 
 	protected function defaultDescription(): string
 	{
-		return Craft::t('best-sellers', 'Backfilling orders starting at offset {offset}', ['offset' => $this->offset]);
+		return Craft::t('best-sellers', 'Backfilling orders starting at offset {offset}', [
+			'offset' => $this->offset,
+		]);
 	}
 }

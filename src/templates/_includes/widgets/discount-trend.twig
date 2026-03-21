@@ -1,0 +1,11 @@
+{# Discount Trend Line Chart #}
+<div class="bs-chart-container">
+	<h3 class="bs-chart-container__title">{{ "Discount Trend"|t('best-sellers') }}</h3>
+	{% if discountTrend.labels|length > 0 %}
+		<div style="position: relative; height: 300px;">
+			<canvas id="discountTrendChart"></canvas>
+		</div>
+	{% else %}
+		<p>{{ "No data available"|t('best-sellers') }}</p>
+	{% endif %}
+</div>

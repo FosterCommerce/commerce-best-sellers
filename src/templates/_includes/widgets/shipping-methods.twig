@@ -1,0 +1,11 @@
+{# Shipping Methods Doughnut #}
+<div class="bs-chart-container">
+	<h3 class="bs-chart-container__title">{{ "Shipping Methods"|t('best-sellers') }}</h3>
+	{% if shippingMethods|length > 0 %}
+		<div style="position: relative; height: 300px;">
+			<canvas id="shippingChart"></canvas>
+		</div>
+	{% else %}
+		<p>{{ "No data available"|t('best-sellers') }}</p>
+	{% endif %}
+</div>

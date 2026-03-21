@@ -19,130 +19,16 @@
 			</div>
 
 			{% if group.label == 'Orders' %}
-				{# Revenue / Orders / AOV Toggle Chart #}
-				<div class="bs-chart-container" style="margin-top: 1.5rem;">
-					<div class="bs-chart-toggle">
-						<button type="button" class="bs-chart-toggle__btn bs-chart-toggle__btn--active" data-chart="revenue">{{ "Revenue"|t('best-sellers') }}</button>
-						<button type="button" class="bs-chart-toggle__btn" data-chart="orders">{{ "Orders"|t('best-sellers') }}</button>
-						<button type="button" class="bs-chart-toggle__btn" data-chart="aov">{{ "AOV"|t('best-sellers') }}</button>
-					</div>
-					<div style="position: relative; height: 350px;">
-						<canvas id="overviewChart"></canvas>
-					</div>
-				</div>
+				{% include 'best-sellers/_includes/widgets/overview-chart' %}
 			{% endif %}
 
 			{% if group.label == 'Products' and bestSellers|length > 0 %}
-				{# Best Sellers Top 10 #}
-				{% set maxUnits = bestSellers|first.unitsSold %}
-				<div class="bs-chart-container" style="margin-top: 1.5rem;">
-					<h3 class="bs-chart-container__title">{{ "Best Sellers"|t('best-sellers') }}</h3>
-					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
-						{% for item in bestSellers %}
-							{% set pct = maxUnits > 0 ? (item.unitsSold / maxUnits * 100) : 0 %}
-							{% set productEl = bestSellerElements[item.productId] ?? null %}
-							<tr>
-								<td style="padding: 0.4rem 0; color: #999; width: 2rem;">{{ loop.index }}.</td>
-								<td style="padding: 0.4rem 0.5rem; position: relative;">
-									<span style="position: absolute; top: 2px; left: 0; bottom: 2px; width: {{ pct }}%; background: rgba(0, 115, 170, 0.08); border-radius: 3px;"></span>
-									<span style="position: relative;">
-										{% if productEl %}
-											<a href="{{ productEl.cpEditUrl }}" class="go">{{ item.productTitle }}</a>
-										{% else %}
-											{{ item.productTitle }}
-										{% endif %}
-									</span>
-								</td>
-								<td style="padding: 0.4rem 0.5rem; text-align: right; white-space: nowrap;">{{ item.unitsSold }} {{ "units"|t('best-sellers') }}</td>
-								<td style="padding: 0.4rem 0; text-align: right; white-space: nowrap;">{{ item.revenue|commerceCurrency }}</td>
-							</tr>
-						{% endfor %}
-					</table>
-				</div>
+				{% include 'best-sellers/_includes/widgets/best-sellers-table' %}
 			{% endif %}
 
 			{% if group.label == 'Customers' %}
-				{# Customer Charts #}
-				<div class="bs-columns" style="margin-top: 1.5rem;">
-					<div class="bs-chart-container">
-						<h3 class="bs-chart-container__title">{{ "New vs Returning Customers"|t('best-sellers') }}</h3>
-						{% if newVsReturning.labels|length > 0 %}
-							<div style="position: relative; height: 300px;">
-								<canvas id="newVsReturningChart"></canvas>
-							</div>
-						{% else %}
-							<p>{{ "No data available"|t('best-sellers') }}</p>
-						{% endif %}
-					</div>
-					<div class="bs-chart-container">
-						<h3 class="bs-chart-container__title">{{ "Credentialed vs Guest"|t('best-sellers') }}</h3>
-						<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
-							<thead>
-								<tr>
-									<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;"></th>
-									<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #0073aa; font-size: 0.8rem;">{{ "Credentialed"|t('best-sellers') }}</th>
-									<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #95a5a6; font-size: 0.8rem;">{{ "Guest"|t('best-sellers') }}</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr>
-									<td style="padding: 0.6rem 0.5rem;">{{ "Customers"|t('best-sellers') }}</td>
-									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.count|number_format }}</td>
-									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.count|number_format }}</td>
-								</tr>
-								<tr>
-									<td style="padding: 0.6rem 0.5rem;">{{ "Avg LTV"|t('best-sellers') }}</td>
-									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.avgLtv|commerceCurrency }}</td>
-									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.avgLtv|commerceCurrency }}</td>
-								</tr>
-								<tr>
-									<td style="padding: 0.6rem 0.5rem;">{{ "Avg Orders"|t('best-sellers') }}</td>
-									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.avgOrders }}</td>
-									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.avgOrders }}</td>
-								</tr>
-								<tr>
-									<td style="padding: 0.6rem 0.5rem;">{{ "Total Revenue"|t('best-sellers') }}</td>
-									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.totalRevenue|commerceCurrency }}</td>
-									<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.totalRevenue|commerceCurrency }}</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
-			{% endif %}
-
-			{% if group.label == 'Customers' %}
-				{# Cart Abandonment #}
-				<div class="bs-chart-container" style="margin-top: 1.5rem;">
-					<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
-						<h3 class="bs-chart-container__title" style="margin: 0;">{{ "Cart Abandonment"|t('best-sellers') }}</h3>
-						<label style="font-size: 0.8rem; color: #6c757d; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
-							<input type="checkbox" id="include-anonymous-carts" style="-webkit-appearance: checkbox; appearance: checkbox; width: 14px; height: 14px;">
-							{{ "Include anonymous carts"|t('best-sellers') }}
-						</label>
-					</div>
-
-					<div class="bs-chart-toggle" style="margin-bottom: 1rem;">
-						<button type="button" class="bs-chart-toggle__btn bs-chart-toggle__btn--active" data-abandonment-tab="overview">{{ "Overview"|t('best-sellers') }}</button>
-						<button type="button" class="bs-chart-toggle__btn" data-abandonment-tab="4-24h">{{ "4-24 hours"|t('best-sellers') }}</button>
-						<button type="button" class="bs-chart-toggle__btn" data-abandonment-tab="1-7d">{{ "1-7 days"|t('best-sellers') }}</button>
-						<button type="button" class="bs-chart-toggle__btn" data-abandonment-tab="7d+">{{ "7+ days"|t('best-sellers') }}</button>
-					</div>
-
-					<div id="cart-abandonment-content"></div>
-
-					<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f0f0f0; font-size: 0.8rem; color: #999;">
-						<strong style="color: #6c757d;">{{ "Store cart settings"|t('best-sellers') }}:</strong>
-						{{ "Active cart duration:"|t('best-sellers') }} <strong>{{ activeCartDuration }}</strong>.
-						{% if purgeEnabled %}
-							{{ "Carts are purged after"|t('best-sellers') }} <strong>{{ purgeDuration }}</strong>.
-						{% else %}
-							{{ "Cart purging is disabled."|t('best-sellers') }}
-						{% endif %}
-						<br>
-						<span style="color: #b0b0b0;">{{ "Recommended: Keep carts active for at least 30 days, purge after 90 days."|t('best-sellers') }}</span>
-					</div>
-				</div>
+				{% include 'best-sellers/_includes/widgets/customer-charts' %}
+				{% include 'best-sellers/_includes/widgets/cart-abandonment' %}
 			{% endif %}
 		</div>
 	{% endfor %}

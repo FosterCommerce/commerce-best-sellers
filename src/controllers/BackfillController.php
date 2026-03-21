@@ -6,10 +6,12 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
 use craft\db\Query;
+use craft\helpers\Queue as QueueHelper;
 use craft\web\Controller;
 use craft\web\Request;
 use DateTime;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
+use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
 use yii\web\Response;
@@ -86,11 +88,6 @@ class BackfillController extends Controller
 	public function actionRebuildDailyStats(): Response
 	{
 		$this->requirePostRequest();
-		$dailyStats = Plugin::getInstance()?->dailyStats;
-		if (! $dailyStats) {
-			Craft::$app->session->setError(Craft::t('best-sellers', 'DailyStats service not available.'));
-			return $this->redirectToPostedUrl();
-		}
 
 		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
 		$row = (new Query())
@@ -110,11 +107,12 @@ class BackfillController extends Controller
 		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
 		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
 
-		$count = $dailyStats->rebuildRange($startDate, $endDate);
-
-		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Rebuilt {count} daily stat records.', [
-			'count' => $count,
+		QueueHelper::push(new RebuildDailyStatsJob([
+			'startDate' => $startDate,
+			'endDate' => $endDate,
 		]));
+
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Daily stats rebuild queued.'));
 		return $this->redirectToPostedUrl();
 	}
 }

@@ -6,9 +6,10 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
 use craft\db\Query;
+use craft\helpers\Queue as QueueHelper;
 use DateTime;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
-use fostercommerce\bestsellers\Plugin;
+use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\records\VariantSale;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -55,13 +56,6 @@ class BackfillController extends Controller
 	 */
 	public function actionDailyStats(): int
 	{
-		$dailyStats = Plugin::getInstance()?->dailyStats;
-		if (! $dailyStats) {
-			$this->stderr("DailyStats service not available.\n");
-			return ExitCode::UNSPECIFIED_ERROR;
-		}
-
-		// Find the date range of completed orders
 		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
 		$row = (new Query())
 			->select([
@@ -80,11 +74,12 @@ class BackfillController extends Controller
 		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
 		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
 
-		$this->stdout("Rebuilding daily stats from {$startDate} to {$endDate}...\n");
+		QueueHelper::push(new RebuildDailyStatsJob([
+			'startDate' => $startDate,
+			'endDate' => $endDate,
+		]));
 
-		$count = $dailyStats->rebuildRange($startDate, $endDate);
-
-		$this->stdout("Rebuilt {$count} daily stat records.\n");
+		$this->stdout("Daily stats rebuild queued for {$startDate} to {$endDate}.\n");
 		return ExitCode::OK;
 	}
 }

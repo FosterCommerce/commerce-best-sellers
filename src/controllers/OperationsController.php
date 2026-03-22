@@ -32,6 +32,7 @@ class OperationsController extends BaseReportController
 		// All emails
 		$allEmails = $commerce?->getEmails()->getAllEmails() ?? [];
 
+		// TODO: Move this query to a service method if the Operations page gets bigger
 		// All-time coupon usage
 		$couponUsage = (new Query())
 			->select([

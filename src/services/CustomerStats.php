@@ -11,10 +11,13 @@ use fostercommerce\bestsellers\models\CustomerRow;
 use fostercommerce\bestsellers\models\LtvComparison;
 use fostercommerce\bestsellers\models\LtvSegment;
 use fostercommerce\bestsellers\models\ReportScope;
+use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use yii\base\Component;
 
 class CustomerStats extends Component
 {
+	use OrderQueryConditions;
+
 	/**
 	 * Get customer KPIs for a report scope.
 	 */
@@ -377,29 +380,5 @@ class CustomerStats extends Component
 				'avgOrders' => $guestCount > 0 ? round($guestOrders / $guestCount, 2) : 0,
 			]),
 		]);
-	}
-
-	/**
-	 * Build a standard date + status condition for commerce_orders queries.
-	 *
-	 * @return list<mixed>
-	 */
-	private function buildDateCondition(ReportScope $scope, string $tableAlias = ''): array
-	{
-		$prefix = $tableAlias !== '' ? $tableAlias . '.' : '';
-
-		$condition = [
-			'and',
-			['=', "[[{$prefix}isCompleted]]", true],
-			['>=', "[[{$prefix}dateOrdered]]", $scope->fromDT],
-			['<=', "[[{$prefix}dateOrdered]]", $scope->toDT],
-		];
-
-		$statusCondition = $scope->statusCondition($tableAlias);
-		if ($statusCondition !== null) {
-			$condition[] = $statusCondition;
-		}
-
-		return $condition;
 	}
 }

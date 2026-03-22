@@ -160,6 +160,10 @@ class OrdersController extends BaseReportController
 		], 'orders');
 	}
 
+	/**
+	 * OrderQuery (element query) because we need full Order elements for rendering
+	 * rows with cpEditUrl, status colors, Money objects, etc.
+	 */
 	private function buildFilteredOrdersQuery(DateRangeResult $dateRange): OrderQuery
 	{
 		/** @var Request $request */
@@ -191,6 +195,8 @@ class OrdersController extends BaseReportController
 		$orderItemCounts = [];
 		if ($orders !== []) {
 			$orderIds = array_map(fn ($order): ?int => $order->id, $orders);
+			// Raw Query because we need a simple aggregate from commerce_lineitems,
+			// not Order elements. Faster than loading line item elements.
 			$itemCounts = (new Query())
 				->select([
 					'orderId',
@@ -266,6 +272,7 @@ class OrdersController extends BaseReportController
 		$idSubquery = $this->buildFilteredTotalsQuery($dateRange)
 			->select(['[[id]]']);
 
+		// Raw Query on commerce_lineitems for a single SUM aggregate
 		$totalItemsSold = (int) (new Query())
 			->select(new Expression('COALESCE(SUM([[qty]]), 0)'))
 			->from(CommerceTable::LINEITEMS)
@@ -283,7 +290,9 @@ class OrdersController extends BaseReportController
 	}
 
 	/**
-	 * Build a raw query on the orders table with the same filters as the element query.
+	 * Raw Query (not OrderQuery) because we only need SUM aggregates across
+	 * all matching rows. An element query would instantiate every Order object
+	 * just to sum a column, which is far slower for large result sets.
 	 *
 	 * @return Query<array-key, mixed>
 	 */
@@ -308,12 +317,16 @@ class OrdersController extends BaseReportController
 	/**
 	 * Apply shared order filters (status, payment, search, shipping, discounts) to a query.
 	 *
+	 * Accepts both OrderQuery (element query for paginated rows) and raw Query
+	 * (for aggregate totals). Column references must be qualified for OrderQuery
+	 * because it joins craft_elements, craft_addresses, etc., making bare column
+	 * names ambiguous.
+	 *
 	 * @template TQuery of OrderQuery|Query<array-key, mixed>
 	 * @param TQuery $query
 	 */
 	private function applyOrderFilters(OrderQuery|Query $query): void
 	{
-		// Element queries join multiple tables; plain queries have a single table
 		$idCol = $query instanceof OrderQuery ? '[[commerce_orders.id]]' : '[[id]]';
 		$statusIdCol = $query instanceof OrderQuery ? '[[commerce_orders.orderStatusId]]' : '[[orderStatusId]]';
 

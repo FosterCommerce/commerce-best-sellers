@@ -39,6 +39,49 @@ Best Sellers registers a `craft.bestsellers` variable with the following methods
 {{ craft.bestsellers.variantTotalRevenue(variant.id, '90 days ago') }}
 ```
 
+### Previous Purchases
+
+```twig
+{# Check if the current user has previously purchased a specific product/variant #}
+{% set previousOrder = craft.bestsellers.previousPurchaseByUser(variant.id, currentUser) %}
+{% if previousOrder %}
+    You purchased this on {{ previousOrder.dateOrdered|date('M j, Y') }}
+{% endif %}
+```
+
+#### Buy Again Page
+
+`previouslyPurchasedProducts()` returns a variant query ordered by most recent purchase, making it easy to build a "Buy Again" page with pagination:
+
+```twig
+{% if currentUser %}
+    {% set previousPurchases = craft.bestsellers.previouslyPurchasedProducts(currentUser) %}
+
+    {% if previousPurchases %}
+        {% paginate previousPurchases.limit(12) as pageInfo, variants %}
+
+        {% if variants|length %}
+            <div class="product-grid">
+                {% for variant in variants %}
+                    {% include '_includes/product-card' with {
+                        title: variant.product.title,
+                        sku: variant.sku,
+                        purchaseableId: variant.id,
+                        url: variant.product.url,
+                        image: variant.product.featuredImage[0] ?? null,
+                        price: variant.getPrice(),
+                        salePrice: variant.getSalePrice(),
+                        addToCart: true,
+                    } %}
+                {% endfor %}
+            </div>
+
+            {% include '_includes/pagination' %}
+        {% endif %}
+    {% endif %}
+{% endif %}
+```
+
 ## PHP
 
 ```php
@@ -55,6 +98,10 @@ $productRevenue = $bestSellers->productTotalRevenue($product->id);
 $variantSales = $bestSellers->variantTotalSales($variant->id);
 $variantSales = $bestSellers->variantTotalSales($variant->id, '2024-01-01', '2024-03-01');
 $variantRevenue = $bestSellers->variantTotalRevenue($variant->id);
+
+// Previous purchases
+$previousOrder = $bestSellers->previousPurchaseByUser($purchasableId, $user);
+$purchasedVariants = $bestSellers->previouslyPurchasedProducts($user);
 ```
 
 ## Element Query Behavior

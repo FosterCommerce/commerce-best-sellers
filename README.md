@@ -132,11 +132,47 @@ Built-in cart restoration for abandoned cart recovery.
 
 ## Templating
 
-Best Sellers provides Twig variables for displaying sales data on your front end. Show bestseller badges, "X sold" counts, or sort products by popularity.
+Best Sellers provides Twig variables for displaying sales data on your front end.
 
-For full Twig and PHP usage examples, see the [Developer Documentation](docs/usage.md).
+### Units Sold & Revenue
 
-## Querying by Sales Data
+```twig
+{# Units sold for a variant #}
+{{ craft.bestsellers.variantTotalSales(variant.id) }}
+{{ craft.bestsellers.variantTotalSales(variant.id, '30 days ago') }}
+{{ craft.bestsellers.variantTotalSales(variant.id, '2024-01-01', '2024-12-31') }}
+
+{# Revenue for a variant #}
+{{ craft.bestsellers.variantTotalRevenue(variant.id)|commerceCurrency }}
+
+{# Units sold for a product (all variants combined) #}
+{{ craft.bestsellers.productTotalSales(product.id) }}
+
+{# Revenue for a product #}
+{{ craft.bestsellers.productTotalRevenue(product.id)|commerceCurrency }}
+```
+
+### Previous Purchases
+
+```twig
+{# Check if the current user previously purchased a specific product #}
+{% set previousOrder = craft.bestsellers.previousPurchaseByUser(variant.id, currentUser) %}
+{% if previousOrder %}
+    You purchased this on {{ previousOrder.dateOrdered|date('M j, Y') }}
+    <a href="{{ previousOrder.cpEditUrl }}">Order #{{ previousOrder.reference }}</a>
+{% endif %}
+
+{# Get all variants previously purchased by a user #}
+{% set purchasedVariants = craft.bestsellers.previouslyPurchasedProducts(currentUser) %}
+{% if purchasedVariants %}
+    <h3>Your Previously Purchased Products</h3>
+    {% for variant in purchasedVariants.all() %}
+        {{ variant.title }}
+    {% endfor %}
+{% endif %}
+```
+
+### Best Sellers Queries
 
 Best Sellers extends Craft's element queries so you can fetch products or variants sorted by sales:
 
@@ -160,6 +196,8 @@ foreach ($bestSellers as $product) {
     echo $product->title . ': ' . $product->totalQtySold;
 }
 ```
+
+For additional examples, see the [Developer Documentation](docs/usage.md).
 
 ## Console Commands
 

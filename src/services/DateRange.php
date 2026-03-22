@@ -158,13 +158,10 @@ class DateRange extends Component
 			$statusIds = is_array($sessionValue) ? $sessionValue : [];
 		}
 
+		$dateRange->prev = $previous;
+
 		return new ReportScope([
-			'from' => $dateRange->from,
-			'to' => $dateRange->to,
-			'fromDT' => $dateRange->fromDT,
-			'toDT' => $dateRange->toDT,
-			'preset' => $dateRange->preset,
-			'prev' => $previous,
+			'dateRange' => $dateRange,
 			'orderStatusIds' => $statusIds,
 		]);
 	}

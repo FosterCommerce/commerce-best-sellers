@@ -62,13 +62,13 @@ class OrdersController extends BaseReportController
 
 		$offset = ($page - 1) * self::PER_PAGE;
 
-		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
+		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange->dateRange);
 
 		$totalOrders = (int) $ordersQuery->count();
 		$totalPages = max(1, (int) ceil($totalOrders / self::PER_PAGE));
 
 		// Aggregate totals across all filtered results (before pagination)
-		$totals = $this->buildFilteredTotals($dateRange);
+		$totals = $this->buildFilteredTotals($dateRange->dateRange);
 
 		$orders = $ordersQuery
 			->offset($offset)
@@ -93,7 +93,7 @@ class OrdersController extends BaseReportController
 	public function actionExportCsv(): Response
 	{
 		$dateRange = $this->resolveScope();
-		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
+		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange->dateRange);
 
 		$orders = $ordersQuery->all();
 		$rows = $this->buildOrderRows($orders);

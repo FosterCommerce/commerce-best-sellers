@@ -3,9 +3,8 @@
 namespace fostercommerce\bestsellers\models;
 
 use craft\base\Model;
-use JsonSerializable;
 
-class LtvSegment extends Model implements JsonSerializable
+class LtvSegment extends Model
 {
 	/**
 	 * @var int Number of customers in this segment
@@ -26,17 +25,4 @@ class LtvSegment extends Model implements JsonSerializable
 	 * @var float Average number of orders per customer
 	 */
 	public float $avgOrders = 0;
-
-	/**
-	 * @return array<string, mixed>
-	 */
-	public function jsonSerialize(): array
-	{
-		return [
-			'count' => $this->count,
-			'totalRevenue' => $this->totalRevenue,
-			'avgLtv' => $this->avgLtv,
-			'avgOrders' => $this->avgOrders,
-		];
-	}
 }

@@ -3,9 +3,8 @@
 namespace fostercommerce\bestsellers\models;
 
 use craft\base\Model;
-use JsonSerializable;
 
-class AgeBucket extends Model implements JsonSerializable
+class AgeBucket extends Model
 {
 	/**
 	 * @var int Total abandoned carts in this bucket
@@ -26,17 +25,4 @@ class AgeBucket extends Model implements JsonSerializable
 	 * @var float Value of abandoned carts with customer email
 	 */
 	public float $valueWithEmail = 0;
-
-	/**
-	 * @return array<string, mixed>
-	 */
-	public function jsonSerialize(): array
-	{
-		return [
-			'count' => $this->count,
-			'value' => $this->value,
-			'withCustomer' => $this->withCustomer,
-			'valueWithEmail' => $this->valueWithEmail,
-		];
-	}
 }

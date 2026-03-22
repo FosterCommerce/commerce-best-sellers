@@ -4,7 +4,7 @@ namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
 use craft\commerce\elements\Product;
-use craft\commerce\Plugin as CommercePlugin;
+use craft\commerce\Plugin as Commerce;
 use craft\helpers\DateTimeHelper;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\helpers\KpiCards;
@@ -85,10 +85,12 @@ class OverviewController extends BaseReportController
 		$topAbandonedCarts = $plugin->cartAbandonment->getTopAbandonedCarts($scope, 100);
 
 		// Commerce cart settings
-		$commerceSettings = CommercePlugin::getInstance()?->getSettings();
-		$activeCartDuration = $commerceSettings ? DateTimeHelper::humanDuration($commerceSettings->activeCartDuration) : '1 hour';
-		$purgeEnabled = $commerceSettings ? $commerceSettings->purgeInactiveCarts : true;
-		$purgeDuration = ($commerceSettings && $purgeEnabled) ? DateTimeHelper::humanDuration($commerceSettings->purgeInactiveCartsDuration) : null;
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		$commerceSettings = $commerce->getSettings();
+		$activeCartDuration = DateTimeHelper::humanDuration($commerceSettings->activeCartDuration);
+		$purgeEnabled = $commerceSettings->purgeInactiveCarts;
+		$purgeDuration = $purgeEnabled ? DateTimeHelper::humanDuration($commerceSettings->purgeInactiveCartsDuration) : null;
 
 		// Products section
 		$productStats = $plugin->productStats;

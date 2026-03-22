@@ -4,7 +4,7 @@ namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
 use craft\commerce\db\Table as CommerceTable;
-use craft\commerce\Plugin as CommercePlugin;
+use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use yii\web\Response;
@@ -16,10 +16,12 @@ class OperationsController extends BaseReportController
 		$view = Craft::$app->getView();
 		$view->registerAssetBundle(ReportsAsset::class);
 
-		$commerce = CommercePlugin::getInstance();
-		$store = $commerce?->getStores()->getPrimaryStore();
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		$store = $commerce->getStores()->getPrimaryStore();
+
 		// Order statuses with their associated emails
-		$allStatuses = $commerce?->getOrderStatuses()->getAllOrderStatuses() ?? [];
+		$allStatuses = $commerce->getOrderStatuses()->getAllOrderStatuses();
 		$statusEmails = [];
 		foreach ($allStatuses as $status) {
 			$emails = $status->getEmails();
@@ -30,7 +32,7 @@ class OperationsController extends BaseReportController
 		}
 
 		// All emails
-		$allEmails = $commerce?->getEmails()->getAllEmails() ?? [];
+		$allEmails = $commerce->getEmails()->getAllEmails();
 
 		// TODO: Move this query to a service method if the Operations page gets bigger
 		// All-time coupon usage

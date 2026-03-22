@@ -5,7 +5,7 @@ namespace fostercommerce\bestsellers\controllers;
 use Craft;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
-use craft\commerce\Plugin as CommercePlugin;
+use craft\commerce\Plugin as Commerce;
 use craft\web\Controller;
 use craft\web\Request;
 use craft\web\twig\variables\Paginate;
@@ -76,7 +76,7 @@ class DashboardController extends Controller
 		if ($fetchVariants) {
 			$query = Variant::find();
 			if ($productType !== 'all') {
-				$productTypeId = CommercePlugin::getInstance()
+				$productTypeId = Commerce::getInstance()
 					?->productTypes
 					->getProductTypeByHandle($productType)
 					?->id;

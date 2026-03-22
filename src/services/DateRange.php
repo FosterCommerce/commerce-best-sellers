@@ -3,7 +3,7 @@
 namespace fostercommerce\bestsellers\services;
 
 use Craft;
-use craft\commerce\Plugin as CommercePlugin;
+use craft\commerce\Plugin as Commerce;
 use craft\web\Request;
 use DateTime;
 use fostercommerce\bestsellers\models\DateRangeResult;
@@ -198,7 +198,9 @@ class DateRange extends Component
 			return [];
 		}
 
-		$allStatuses = CommercePlugin::getInstance()?->getOrderStatuses()->getAllOrderStatuses() ?? [];
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		$allStatuses = $commerce->getOrderStatuses()->getAllOrderStatuses();
 		$ids = [];
 
 		foreach ($allStatuses as $status) {

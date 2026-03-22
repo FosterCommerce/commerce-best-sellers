@@ -43,8 +43,11 @@ class BackfillOrdersJob extends BaseJob
 		$orders = $ordersQuery->all();
 		$total = count($orders);
 
+		/** @var \fostercommerce\bestsellers\Plugin $plugin */
+		$plugin = Plugin::getInstance();
+
 		foreach ($orders as $i => $order) {
-			Plugin::getInstance()?->sales->logOrderSales($order);
+			$plugin->sales->logOrderSales($order);
 			$this->setProgress($queue, ($i + 1) / $total);
 		}
 	}

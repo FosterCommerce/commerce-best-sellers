@@ -28,7 +28,9 @@ class RebuildDailyStatsJob extends BaseBatchedJob
 	{
 		/** @var string $date */
 		$date = $item;
-		Plugin::getInstance()?->dailyStats->aggregateDay($date);
+		/** @var Plugin $plugin */
+		$plugin = Plugin::getInstance();
+		$plugin->dailyStats->aggregateDay($date);
 	}
 
 	protected function defaultDescription(): ?string

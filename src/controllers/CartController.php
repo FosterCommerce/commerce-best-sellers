@@ -43,10 +43,8 @@ class CartController extends Controller
 			throw new BadRequestHttpException(Craft::t('best-sellers', 'Cart number is required.'));
 		}
 
+		/** @var Commerce $commerce */
 		$commerce = Commerce::getInstance();
-		if (! $commerce) {
-			throw new ServerErrorHttpException(Craft::t('best-sellers', 'Commerce plugin is not available.'));
-		}
 
 		$order = $commerce->getOrders()->getOrderByNumber($number);
 

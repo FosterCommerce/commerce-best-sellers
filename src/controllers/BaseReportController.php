@@ -54,8 +54,8 @@ abstract class BaseReportController extends Controller
 	 */
 	protected function resolveScope(): ReportScope
 	{
+		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
 
 		return $plugin->dateRange->resolveScope();
 	}

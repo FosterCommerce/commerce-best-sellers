@@ -26,8 +26,8 @@ class OrdersController extends BaseReportController
 		$view->registerAssetBundle(ReportsAsset::class);
 
 		$scope = $this->resolveScope();
+		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
 
 		$operationsStats = $plugin->operationsStats;
 		$shippingMethods = $operationsStats->getShippingMethods($scope);
@@ -290,9 +290,11 @@ class OrdersController extends BaseReportController
 	}
 
 	/**
-	 * Raw Query (not OrderQuery) because we only need SUM aggregates across
-	 * all matching rows. An element query would instantiate every Order object
-	 * just to sum a column, which is far slower for large result sets.
+	 * Raw Query (not OrderQuery) because we need multiple SUM aggregates
+	 * in a single query (itemSubtotal, totalTax, totalDiscount, etc.).
+	 * ElementQuery supports ->sum() for a single column, but a custom
+	 * ->select() with multiple SUMs requires a raw Query because
+	 * ElementQuery overrides select() during prepare().
 	 *
 	 * @return Query<array-key, mixed>
 	 */

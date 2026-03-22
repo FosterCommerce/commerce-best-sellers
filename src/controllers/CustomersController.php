@@ -62,8 +62,8 @@ class CustomersController extends BaseReportController
 			$customerTypes = [];
 		}
 
+		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
 		$customerStats = $plugin->customerStats;
 
 		/** @var list<CustomerRow> $allCustomers */
@@ -159,8 +159,8 @@ class CustomersController extends BaseReportController
 			$customerTypes = [];
 		}
 
+		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
 		$customerStats = $plugin->customerStats;
 
 		/** @var list<CustomerRow> $allCustomers */

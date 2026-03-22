@@ -79,8 +79,8 @@ class ProductsController extends BaseReportController
 		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
 		$sortDir = trim($rawSortDir);
 
+		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
-		assert($plugin !== null);
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
@@ -208,8 +208,8 @@ class ProductsController extends BaseReportController
 		$rawSearch = $request->getQueryParam('search', '');
 		$search = trim($rawSearch);
 
+		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
-		assert($plugin !== null);
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {

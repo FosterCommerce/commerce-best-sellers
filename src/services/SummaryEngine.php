@@ -29,8 +29,8 @@ class SummaryEngine extends Component
 	 */
 	public function generate(ReportScope $scope): SummaryResult
 	{
+		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
 
 		$days = RangeLabelBuilder::dayCount($scope->from, $scope->to);
 		$isPartial = RangeLabelBuilder::isPartial($scope->preset, $scope->to);

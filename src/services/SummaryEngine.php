@@ -56,8 +56,6 @@ class SummaryEngine extends Component
 			'yoy_available' => $yoyAvailable,
 			'trailing_chunk_count' => null,
 			'trailing_prorated' => false,
-			'prev_from' => $scope->getPrev()->from,
-			'prev_to' => $scope->getPrev()->to,
 		];
 
 		// DailyStats uses pre-aggregated data (does not filter by status)

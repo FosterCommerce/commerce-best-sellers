@@ -12,8 +12,6 @@ abstract class WarningGenerator
 {
 	private const LOW_CHUNK_COUNT_THRESHOLD = 4;
 
-	private const BUSINESS_DAY_MISMATCH_THRESHOLD = 2;
-
 	/**
 	 * Generate all applicable warnings for a summary.
 	 *
@@ -27,8 +25,6 @@ abstract class WarningGenerator
 	 *   yoy_available: bool,
 	 *   trailing_chunk_count: ?int,
 	 *   trailing_prorated: bool,
-	 *   prev_from: string,
-	 *   prev_to: string,
 	 * } $context
 	 * @return list<string>
 	 */
@@ -66,60 +62,6 @@ abstract class WarningGenerator
 			]);
 		}
 
-		$businessDayWarning = self::checkBusinessDayMismatch(
-			$context['from'],
-			$context['to'],
-			$context['prev_from'],
-			$context['prev_to']
-		);
-		if ($businessDayWarning !== null) {
-			$warnings[] = $businessDayWarning;
-		}
-
 		return $warnings;
-	}
-
-	/**
-	 * Check for business day count mismatch between current and previous periods.
-	 */
-	private static function checkBusinessDayMismatch(
-		string $from,
-		string $to,
-		string $prevFrom,
-		string $prevTo,
-	): ?string {
-		$currentWeekdays = self::countWeekdays($from, $to);
-		$prevWeekdays = self::countWeekdays($prevFrom, $prevTo);
-
-		$diff = abs($currentWeekdays - $prevWeekdays);
-		if ($diff > self::BUSINESS_DAY_MISMATCH_THRESHOLD) {
-			return Craft::t('best-sellers', 'The comparison period has {comp} business days vs. {curr}. This may affect results.', [
-				'comp' => $prevWeekdays,
-				'curr' => $currentWeekdays,
-			]);
-		}
-
-		return null;
-	}
-
-	/**
-	 * Count weekdays (Mon-Fri) in a date range.
-	 */
-	private static function countWeekdays(string $from, string $to): int
-	{
-		$current = new DateTime($from);
-		$end = new DateTime($to);
-		$count = 0;
-
-		while ($current <= $end) {
-			$dow = (int) $current->format('N');
-			if ($dow <= 5) {
-				$count++;
-			}
-
-			$current->modify('+1 day');
-		}
-
-		return $count;
 	}
 }

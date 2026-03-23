@@ -94,8 +94,6 @@ class SummaryEngine extends Component
 		$customersSummary = $this->buildCustomersSummary(
 			$currentStats,
 			$prevStats,
-			$yoyStats,
-			$trailing['stats'],
 			$rangeLabel,
 			$compLabel,
 			$warnings,
@@ -173,8 +171,8 @@ class SummaryEngine extends Component
 		$annotations = $this->buildBaselineAnnotations(
 			'revenue',
 			$prevSignals['revenue'],
-			$yoy !== null ? $this->extractOrderMetrics($yoy) : null,
-			$trailing !== null ? $this->extractOrderMetrics($trailing) : null,
+			$yoy instanceof \fostercommerce\bestsellers\models\PeriodStats ? $this->extractOrderMetrics($yoy) : null,
+			$trailing instanceof \fostercommerce\bestsellers\models\PeriodStats ? $this->extractOrderMetrics($trailing) : null,
 			$currentMetrics,
 		);
 		$sentences = array_merge($sentences, $annotations);
@@ -270,8 +268,6 @@ class SummaryEngine extends Component
 	private function buildCustomersSummary(
 		PeriodStats $current,
 		PeriodStats $prev,
-		?PeriodStats $yoy,
-		?PeriodStats $trailing,
 		string $rangeLabel,
 		string $compLabel,
 		array $warnings,
@@ -332,7 +328,7 @@ class SummaryEngine extends Component
 		$sentences = [$mainSentence];
 
 		// YoY annotation for product revenue
-		if ($yoy !== null) {
+		if ($yoy instanceof \fostercommerce\bestsellers\models\ProductSummary) {
 			$yoyMetrics = [
 				'product_revenue' => $yoy->totalProductRevenue,
 				'unique_products_sold' => $yoy->uniqueProducts,

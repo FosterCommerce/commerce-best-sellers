@@ -23,10 +23,10 @@ class OperationsController extends BaseReportController
 		// Order statuses with their associated emails
 		$allStatuses = $commerce->getOrderStatuses()->getAllOrderStatuses();
 		$statusEmails = [];
-		foreach ($allStatuses as $status) {
-			$emails = $status->getEmails();
+		foreach ($allStatuses as $allRectorPrefix202411Status) {
+			$emails = $allRectorPrefix202411Status->getEmails();
 			$statusEmails[] = [
-				'status' => $status,
+				'status' => $allRectorPrefix202411Status,
 				'emails' => $emails,
 			];
 		}

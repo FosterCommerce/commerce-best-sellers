@@ -203,9 +203,9 @@ class DateRange extends Component
 		$allStatuses = $commerce->getOrderStatuses()->getAllOrderStatuses();
 		$ids = [];
 
-		foreach ($allStatuses as $status) {
-			if (in_array($status->handle, $handles, true)) {
-				$ids[] = (int) $status->id;
+		foreach ($allStatuses as $allRectorPrefix202411Status) {
+			if (in_array($allRectorPrefix202411Status->handle, $handles, true)) {
+				$ids[] = (int) $allRectorPrefix202411Status->id;
 			}
 		}
 

@@ -44,8 +44,8 @@ abstract class TemplateResolver
 	public static function buildSignature(array $signalKeys, array $signals): string
 	{
 		$parts = [];
-		foreach ($signalKeys as $key) {
-			$parts[] = $signals[$key] ?? SignalClassifier::FLAT;
+		foreach ($signalKeys as $signalKey) {
+			$parts[] = $signals[$signalKey] ?? SignalClassifier::FLAT;
 		}
 
 		return implode('|', $parts);

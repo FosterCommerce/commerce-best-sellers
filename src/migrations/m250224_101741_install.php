@@ -16,6 +16,7 @@ class m250224_101741_install extends Install
 
 	public function safeDown(): bool
 	{
-		return parent::safeDown();
+		echo "m250224_101741_install cannot be reverted.\n";
+		return false;
 	}
 }

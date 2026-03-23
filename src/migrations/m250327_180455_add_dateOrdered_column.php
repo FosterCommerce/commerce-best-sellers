@@ -43,11 +43,7 @@ class m250327_180455_add_dateOrdered_column extends Migration
 
 	public function safeDown(): bool
 	{
-		$table = '{{%best_sellers_variant_sales}}';
-		if ($this->db->columnExists($table, 'dateOrdered')) {
-			$this->dropColumn($table, 'dateOrdered');
-		}
-
-		return true;
+		echo "m250327_180455_add_dateOrdered_column cannot be reverted.\n";
+		return false;
 	}
 }

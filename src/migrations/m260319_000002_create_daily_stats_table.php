@@ -34,7 +34,7 @@ class m260319_000002_create_daily_stats_table extends Migration
 
 	public function safeDown(): bool
 	{
-		$this->dropTableIfExists(DailyStat::tableName());
-		return true;
+		echo "m260319_000002_create_daily_stats_table cannot be reverted.\n";
+		return false;
 	}
 }

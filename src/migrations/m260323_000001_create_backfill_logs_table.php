@@ -32,7 +32,7 @@ class m260323_000001_create_backfill_logs_table extends Migration
 
 	public function safeDown(): bool
 	{
-		$this->dropTableIfExists(Table::BACKFILL_LOGS);
-		return true;
+		echo "m260323_000001_create_backfill_logs_table cannot be reverted.\n";
+		return false;
 	}
 }

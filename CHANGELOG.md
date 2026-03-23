@@ -2,6 +2,11 @@
 
 ## 1.1.2
 
+### Changed
+- Migration `safeDown()` methods follow Commerce convention (non-reversible)
+
+## 1.1.1
+
 ### Added
 - Backfill logs table for tracking order processing failures during backfill and daily stats jobs
 - Backfill logs displayed on the Operations page with clear button

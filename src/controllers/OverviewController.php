@@ -9,6 +9,7 @@ use craft\helpers\DateTimeHelper;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\helpers\KpiCards;
 use fostercommerce\bestsellers\Plugin;
+use fostercommerce\bestsellers\records\VariantSale;
 use yii\web\Response;
 
 class OverviewController extends BaseReportController
@@ -150,9 +151,12 @@ class OverviewController extends BaseReportController
 		$prevRawAov = array_column($prevDailyRows, 'averageOrderValue');
 		$prevDailyAov = array_map(floatval(...), $prevRawAov);
 
+		$hasData = VariantSale::find()->exists();
+
 		return $this->renderTemplate('best-sellers/_overview', [
 			'title' => Craft::t('best-sellers', 'Dashboard'),
 			'selectedSubnavItem' => 'overview',
+			'hasData' => $hasData,
 			'from' => $scope->from,
 			'to' => $scope->to,
 			'preset' => $scope->preset,

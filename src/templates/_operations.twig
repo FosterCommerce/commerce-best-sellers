@@ -8,6 +8,68 @@
 
 {% set content %}
 	<div class="bs-reports-container">
+		{% if backfillLogs|length > 0 %}
+			<div class="bs-section">
+				<div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1rem;">
+					<h3 class="bs-section__title" style="margin: 0;">
+						{{ "Backfill Logs ({count})"|t('best-sellers', {count: backfillLogs|length}) }}
+					</h3>
+					<form method="POST" style="margin: 0;">
+						{{ actionInput('best-sellers/operations/clear-logs') }}
+						{{ csrfInput() }}
+						{{ redirectInput(cpUrl('best-sellers/operations')) }}
+						<button type="submit" class="btn small">{{ "Clear All"|t('best-sellers') }}</button>
+					</form>
+				</div>
+				<div class="bs-chart-container" style="border-color: #e74c3c;">
+					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+						<thead>
+							<tr>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Level"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Type"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Reference"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Message"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Date"|t('best-sellers') }}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for entry in backfillLogs %}
+								<tr>
+									<td style="padding: 0.5rem; white-space: nowrap;">
+										{% if entry.level == 'error' %}
+											<span style="color: #e74c3c;">{{ entry.level }}</span>
+										{% elseif entry.level == 'warning' %}
+											<span style="color: #f39c12;">{{ entry.level }}</span>
+										{% else %}
+											<span style="color: #6c757d;">{{ entry.level }}</span>
+										{% endif %}
+									</td>
+									<td style="padding: 0.5rem; white-space: nowrap;">
+										{% if entry.type == 'backfill' %}
+											{{ "Order Backfill"|t('best-sellers') }}
+										{% elseif entry.type == 'daily-stats' %}
+											{{ "Daily Stats"|t('best-sellers') }}
+										{% else %}
+											{{ entry.type }}
+										{% endif %}
+									</td>
+									<td style="padding: 0.5rem; white-space: nowrap;">
+										{% if entry.type == 'backfill' %}
+											<a href="{{ cpUrl('commerce/orders/' ~ entry.reference) }}">{{ 'Order #{id}'|t('best-sellers', {id: entry.reference}) }}</a>
+										{% else %}
+											{{ entry.reference }}
+										{% endif %}
+									</td>
+									<td style="padding: 0.5rem; font-size: 0.85rem;">{{ entry.message }}</td>
+									<td style="padding: 0.5rem; white-space: nowrap; color: #6c757d;">{{ entry.dateCreated }}</td>
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		{% endif %}
+
 		{# Commerce Settings Links #}
 		<div class="bs-section">
 			<h3 class="bs-section__title">{{ "Commerce Settings"|t('best-sellers') }}</h3>

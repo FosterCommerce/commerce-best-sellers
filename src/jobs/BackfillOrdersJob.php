@@ -8,6 +8,7 @@ use craft\queue\BaseJob;
 use DateTime;
 use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
+use Throwable;
 
 class BackfillOrdersJob extends BaseJob
 {
@@ -46,7 +47,13 @@ class BackfillOrdersJob extends BaseJob
 		$plugin = Plugin::getInstance();
 
 		foreach ($orders as $i => $order) {
-			$plugin->sales->logOrderSales($order);
+			try {
+				$plugin->sales->logOrderSales($order);
+			} catch (Throwable $e) {
+				Craft::warning("Failed to process order #{$order->id}: {$e->getMessage()}", 'best-sellers');
+				$plugin->backfillLogs->log('backfill', (string) $order->id, $e->getMessage());
+			}
+
 			$this->setProgress($queue, ($i + 1) / $total);
 		}
 	}

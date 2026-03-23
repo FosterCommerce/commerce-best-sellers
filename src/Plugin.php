@@ -16,6 +16,7 @@ use craft\events\DefineBehaviorsEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\events\RegisterUserPermissionsEvent;
+use craft\services\Gc;
 use craft\services\UserPermissions;
 use craft\services\Utilities;
 use craft\web\twig\variables\CraftVariable;
@@ -24,6 +25,7 @@ use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\behaviors\SalesBehavior;
 use fostercommerce\bestsellers\helpers\Query;
 use fostercommerce\bestsellers\models\Settings;
+use fostercommerce\bestsellers\services\BackfillLogs;
 use fostercommerce\bestsellers\services\CartAbandonment;
 use fostercommerce\bestsellers\services\CustomerStats;
 use fostercommerce\bestsellers\services\DailyStats;
@@ -49,6 +51,7 @@ use yii\base\Event;
  * @property-read OperationsStats $operationsStats
  * @property-read CartAbandonment $cartAbandonment
  * @property-read SummaryEngine $summaryEngine
+ * @property-read BackfillLogs $backfillLogs
  */
 class Plugin extends BasePlugin
 {
@@ -56,7 +59,7 @@ class Plugin extends BasePlugin
 
 	public const PERMISSION_BACKFILL = 'best-sellers:backfill';
 
-	public string $schemaVersion = '1.2.0';
+	public string $schemaVersion = '1.3.0';
 
 	public bool $hasCpSettings = false;
 
@@ -77,6 +80,7 @@ class Plugin extends BasePlugin
 				'operationsStats' => OperationsStats::class,
 				'cartAbandonment' => CartAbandonment::class,
 				'summaryEngine' => SummaryEngine::class,
+				'backfillLogs' => BackfillLogs::class,
 			],
 		];
 	}
@@ -121,6 +125,14 @@ class Plugin extends BasePlugin
 						],
 					],
 				];
+			}
+		);
+
+		Event::on(
+			Gc::class,
+			Gc::EVENT_RUN,
+			function (): void {
+				$this->backfillLogs->prune();
 			}
 		);
 	}
@@ -208,6 +220,12 @@ class Plugin extends BasePlugin
 	{
 		/** @var SummaryEngine */
 		return $this->get('summaryEngine');
+	}
+
+	public function getBackfillLogs(): BackfillLogs
+	{
+		/** @var BackfillLogs */
+		return $this->get('backfillLogs');
 	}
 
 	protected function createSettingsModel(): ?Model
@@ -316,6 +334,7 @@ class Plugin extends BasePlugin
 				$registerUrlRulesEvent->rules['best-sellers/customers/customers-data'] = 'best-sellers/customers/customers-data';
 				$registerUrlRulesEvent->rules['best-sellers/customers/export-csv'] = 'best-sellers/customers/export-csv';
 				$registerUrlRulesEvent->rules['best-sellers/operations'] = 'best-sellers/operations';
+				$registerUrlRulesEvent->rules['best-sellers/operations/clear-logs'] = 'best-sellers/operations/clear-logs';
 
 				// Backward compatibility redirects
 				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/orders';

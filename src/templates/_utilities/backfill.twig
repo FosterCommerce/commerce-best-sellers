@@ -1,31 +1,28 @@
 {% import '_includes/forms' as forms %}
 
-<h2>Backfill Orders</h2>
-<p>
-	Use the fields below to limit which orders get backfilled.
-</p>
+<h2>{{ "Backfill Orders"|t('best-sellers') }}</h2>
+<p>{{ "Import completed orders that were placed before the plugin was installed. Only orders not already recorded will be processed."|t('best-sellers') }}</p>
+<p class="light">{{ "Leave both dates empty to backfill all completed orders. Set a date range to limit which orders are imported."|t('best-sellers') }}</p>
 <form method="POST">
 	{{ actionInput('best-sellers/backfill') }}
 	{{ csrfInput() }}
 	<div class="field">
-		<label for="startDate">Start Date</label>
+		<label for="startDate">{{ "Start Date"|t('best-sellers') }}</label>
 		<input type="date" name="startDate" id="startDate">
 	</div>
 	<div class="field">
-		<label for="endDate">End Date</label>
+		<label for="endDate">{{ "End Date"|t('best-sellers') }}</label>
 		<input type="date" name="endDate" id="endDate">
 	</div>
-	<button type="submit" class="btn submit">Start Backfill</button>
+	<button type="submit" class="btn submit">{{ "Start Backfill"|t('best-sellers') }}</button>
 </form>
 
 <hr style="margin: 2rem 0;">
 
-<h2>Rebuild Daily Stats</h2>
-<p>
-	Rebuild the pre-aggregated daily statistics table from commerce order data. This is useful after a backfill or if stats appear out of sync.
-</p>
+<h2>{{ "Rebuild Daily Stats"|t('best-sellers') }}</h2>
+<p>{{ "Rebuild the pre-aggregated daily statistics table from commerce order data. This is useful after a backfill or if stats appear out of sync."|t('best-sellers') }}</p>
 <form method="POST">
 	{{ actionInput('best-sellers/backfill/rebuild-daily-stats') }}
 	{{ csrfInput() }}
-	<button type="submit" class="btn submit">Rebuild Daily Stats</button>
+	<button type="submit" class="btn submit">{{ "Rebuild Daily Stats"|t('best-sellers') }}</button>
 </form>

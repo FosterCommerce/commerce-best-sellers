@@ -6,6 +6,14 @@
 {% set selectedSubnavItem = 'overview' %}
 
 {% block reportContent %}
+	{% if not hasData %}
+		<div class="bs-empty-state">
+			<p>{{ "No order data has been processed yet. If you have existing orders, run the backfill utility to import historical data."|t('best-sellers') }}</p>
+			{% if currentUser.can('best-sellers:backfill') %}
+				<a href="{{ cpUrl('utilities/best-sellers') }}" class="btn submit">{{ "Go to Backfill Utility"|t('best-sellers') }}</a>
+			{% endif %}
+		</div>
+	{% else %}
 	{# 1. Hero row #}
 	<div class="bs-section bs-section--hero">
 		{{ summaryBlock.render(summaries.orders) }}
@@ -82,8 +90,10 @@
 		{% include 'best-sellers/_includes/widgets/cart-abandonment' %}
 		{% include 'best-sellers/_includes/widgets/top-abandoned-carts' %}
 	</div>
+	{% endif %}
 {% endblock %}
 
+{% if hasData %}
 {% js %}
 document.addEventListener('DOMContentLoaded', function () {
 	var labels = {{ dailyLabels|json_encode|raw }};
@@ -447,3 +457,4 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 });
 {% endjs %}
+{% endif %}

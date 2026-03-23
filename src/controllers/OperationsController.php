@@ -7,6 +7,7 @@ use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
+use fostercommerce\bestsellers\Plugin;
 use yii\web\Response;
 
 class OperationsController extends BaseReportController
@@ -59,6 +60,8 @@ class OperationsController extends BaseReportController
 			])
 			->all();
 
+		$backfillLogs = Plugin::getInstance()->backfillLogs->getAll();
+
 		return $this->renderTemplate('best-sellers/_operations', [
 			'title' => Craft::t('best-sellers', 'Operations'),
 			'selectedSubnavItem' => 'operations',
@@ -66,6 +69,16 @@ class OperationsController extends BaseReportController
 			'statusEmails' => $statusEmails,
 			'allEmails' => $allEmails,
 			'couponUsage' => $couponUsage,
+			'backfillLogs' => $backfillLogs,
 		]);
+	}
+
+	public function actionClearLogs(): Response
+	{
+		$this->requirePostRequest();
+		Plugin::getInstance()->backfillLogs->deleteAll();
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Backfill logs cleared.'));
+
+		return $this->redirectToPostedUrl();
 	}
 }

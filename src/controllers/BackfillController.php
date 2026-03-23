@@ -6,11 +6,13 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
 use craft\db\Query;
+use craft\helpers\DateTimeHelper;
 use craft\helpers\Queue as QueueHelper;
 use craft\web\Controller;
 use craft\web\Request;
 use DateTime;
 use Exception;
+use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
@@ -55,9 +57,15 @@ class BackfillController extends Controller
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
-		// Get date range from form POST data.
-		$startDate = $request->getBodyParam('startDate'); // YYYY-MM-DD
-		$endDate = $request->getBodyParam('endDate');   // YYYY-MM-DD
+		// Craft date fields post arrays; convert to Y-m-d strings.
+		/** @var array<string, string>|string|null $rawStart */
+		$rawStart = $request->getBodyParam('startDate');
+		/** @var array<string, string>|string|null $rawEnd */
+		$rawEnd = $request->getBodyParam('endDate');
+		$startDateTime = DateTimeHelper::toDateTime($rawStart);
+		$endDateTime = DateTimeHelper::toDateTime($rawEnd);
+		$startDate = $startDateTime ? $startDateTime->format('Y-m-d') : null;
+		$endDate = $endDateTime ? $endDateTime->format('Y-m-d') : null;
 
 		// Get processed order IDs.
 		$processedOrderIds = VariantSale::find()
@@ -129,5 +137,69 @@ class BackfillController extends Controller
 
 		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Daily stats rebuild queued.'));
 		return $this->redirectToPostedUrl();
+	}
+
+	/**
+	 * @throws MethodNotAllowedHttpException
+	 * @throws BadRequestHttpException
+	 */
+	public function actionClearOrders(): Response
+	{
+		$this->requirePostRequest();
+
+		Craft::$app->db->createCommand()
+			->truncateTable(Table::VARIANT_SALES)
+			->execute();
+
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Variant sales cleared.'));
+		return $this->redirectToPostedUrl();
+	}
+
+	/**
+	 * @throws MethodNotAllowedHttpException
+	 * @throws BadRequestHttpException
+	 */
+	public function actionClearDailyStats(): Response
+	{
+		$this->requirePostRequest();
+
+		Craft::$app->db->createCommand()
+			->truncateTable(Table::DAILY_STATS)
+			->execute();
+
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Daily stats cleared.'));
+		return $this->redirectToPostedUrl();
+	}
+
+	/**
+	 * @throws MethodNotAllowedHttpException
+	 * @throws BadRequestHttpException
+	 * @throws Exception
+	 */
+	public function actionRefreshOrders(): Response
+	{
+		$this->requirePostRequest();
+
+		Craft::$app->db->createCommand()
+			->truncateTable(Table::VARIANT_SALES)
+			->execute();
+
+		return $this->actionIndex();
+	}
+
+	/**
+	 * @throws MethodNotAllowedHttpException
+	 * @throws BadRequestHttpException
+	 * @throws Exception
+	 */
+	public function actionRefreshDailyStats(): Response
+	{
+		$this->requirePostRequest();
+
+		Craft::$app->db->createCommand()
+			->truncateTable(Table::DAILY_STATS)
+			->execute();
+
+		return $this->actionRebuildDailyStats();
 	}
 }

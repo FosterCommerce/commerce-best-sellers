@@ -204,7 +204,14 @@ For additional examples, see the [Developer Documentation](docs/usage.md).
 | Command | Description |
 |---------|-------------|
 | `./craft best-sellers/backfill` | Queue existing completed orders for processing (batches of 25) |
+| `./craft best-sellers/backfill --start-date=2025-01-01 --end-date=2025-12-31` | Backfill orders within a specific date range |
 | `./craft best-sellers/backfill/daily-stats` | Rebuild the daily stats table from order data |
+| `./craft best-sellers/backfill/daily-stats --date=2026-03-15` | Rebuild daily stats for a single date |
+| `./craft best-sellers/backfill/refresh-orders` | Clear variant sales and reprocess all orders |
+| `./craft best-sellers/backfill/refresh-daily-stats` | Clear daily stats and rebuild from order data |
+| `./craft best-sellers/backfill/clear-orders` | Clear the variant sales table |
+| `./craft best-sellers/backfill/clear-daily-stats` | Clear the daily stats table |
+| `./craft best-sellers/backfill/clear-logs` | Clear all backfill log entries |
 
 Both commands are also available from the **Utilities > Best Sellers** page in the control panel.
 

@@ -1,5 +1,21 @@
 # Release Notes for Best Sellers
 
+## 1.1.1
+
+### Added
+- Backfill logs table for tracking order processing failures during backfill and daily stats jobs
+- Backfill logs displayed on the Operations page with clear button
+- Dashboard empty state notice with link to backfill utility when no data exists
+- Console commands for clearing and refreshing individual data tables: `clear-orders`, `clear-daily-stats`, `clear-logs`, `refresh-orders`, `refresh-daily-stats`
+- Console `--start-date`/`--end-date` options for scoping backfill to a date range
+- Console `--date` option for rebuilding daily stats for a single day
+- Auto-pruning of backfill logs via Craft garbage collection (keeps 500 most recent)
+
+### Changed
+- Backfill utility UI now explains that empty date fields will process all orders
+- All backfill utility strings are translatable
+- Backfill and daily stats jobs now catch errors per-item and continue processing instead of failing the entire batch
+
 ## 1.1.0 - 2026-03-23
 
 ### Added

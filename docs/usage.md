@@ -168,7 +168,20 @@ Process existing completed orders that were placed before the plugin was install
 ./craft best-sellers/backfill
 ```
 
+To limit to a specific date range:
+
+```bash
+./craft best-sellers/backfill --start-date=2025-01-01 --end-date=2025-12-31
+```
+
 Orders are queued in batches of 25. Progress is visible in the Craft queue.
+
+To clear existing variant sales and reprocess from scratch:
+
+```bash
+./craft best-sellers/backfill/refresh-orders
+./craft best-sellers/backfill/refresh-orders --start-date=2025-01-01 --end-date=2025-12-31
+```
 
 ### Rebuild Daily Stats
 
@@ -180,7 +193,30 @@ Rebuild the pre-aggregated daily stats table from order data:
 
 This is useful after running the backfill, or if stats get out of sync. The command automatically detects the date range from your completed orders.
 
-Both commands are also available from the **Utilities > Best Sellers** page in the control panel, where you can optionally specify a date range for the backfill.
+To rebuild stats for a single date (e.g. if one day looks off):
+
+```bash
+./craft best-sellers/backfill/daily-stats --date=2026-03-15
+```
+
+To clear and rebuild the entire daily stats table:
+
+```bash
+./craft best-sellers/backfill/refresh-daily-stats
+./craft best-sellers/backfill/refresh-daily-stats --date=2026-03-15
+```
+
+### Clearing Data
+
+Clear individual tables without reprocessing:
+
+```bash
+./craft best-sellers/backfill/clear-orders
+./craft best-sellers/backfill/clear-daily-stats
+./craft best-sellers/backfill/clear-logs
+```
+
+All commands are also available from the **Utilities > Best Sellers** page in the control panel, where you can optionally specify a date range for the backfill.
 
 ## Events
 

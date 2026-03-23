@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\migrations;
 
 use craft\db\Migration;
+use fostercommerce\bestsellers\records\BackfillLog;
 use fostercommerce\bestsellers\records\DailyStat;
 use fostercommerce\bestsellers\records\VariantSale;
 
@@ -12,12 +13,14 @@ class Install extends Migration
 	{
 		$this->createVariantSalesTable();
 		$this->createDailyStatsTable();
+		$this->createBackfillLogsTable();
 
 		return true;
 	}
 
 	public function safeDown(): bool
 	{
+		$this->dropTableIfExists(BackfillLog::tableName());
 		$this->dropTableIfExists(DailyStat::tableName());
 		$this->dropTableIfExists(VariantSale::tableName());
 		return true;
@@ -78,5 +81,26 @@ class Install extends Migration
 		]);
 
 		$this->createIndex(null, DailyStat::tableName(), ['date'], true);
+	}
+
+	private function createBackfillLogsTable(): void
+	{
+		if ($this->db->tableExists(BackfillLog::tableName())) {
+			return;
+		}
+
+		$this->createTable(BackfillLog::tableName(), [
+			'id' => $this->primaryKey(),
+			'level' => $this->string()->notNull()->defaultValue('error'),
+			'type' => $this->string()->notNull(),
+			'reference' => $this->string()->notNull(),
+			'message' => $this->text()->null(),
+			'dateCreated' => $this->dateTime()->notNull(),
+			'dateUpdated' => $this->dateTime()->notNull(),
+			'uid' => $this->uid(),
+		]);
+
+		$this->createIndex(null, BackfillLog::tableName(), ['level']);
+		$this->createIndex(null, BackfillLog::tableName(), ['type']);
 	}
 }

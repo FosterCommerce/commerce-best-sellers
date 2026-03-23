@@ -48,6 +48,6 @@ class m250327_180455_add_dateOrdered_column extends Migration
 			$this->dropColumn($table, 'dateOrdered');
 		}
 
-		return false;
+		return true;
 	}
 }

@@ -8,8 +8,10 @@ use craft\commerce\elements\Order;
 use craft\db\Query;
 use craft\helpers\Queue as QueueHelper;
 use DateTime;
+use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
+use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -19,28 +21,179 @@ use yii\console\ExitCode;
  */
 class BackfillController extends Controller
 {
+	public ?string $startDate = null;
+
+	public ?string $endDate = null;
+
+	public ?string $date = null;
+
+	public function options($actionID): array
+	{
+		$options = parent::options($actionID);
+		if ($actionID === 'index' || $actionID === 'refresh-orders') {
+			$options[] = 'startDate';
+			$options[] = 'endDate';
+		}
+
+		if ($actionID === 'daily-stats' || $actionID === 'refresh-daily-stats') {
+			$options[] = 'date';
+		}
+
+		return $options;
+	}
+
 	/**
 	 * Backfill previous orders in batches of 25.
 	 *
 	 * Run with: ./craft best-sellers/backfill
+	 *           ./craft best-sellers/backfill --start-date=2025-01-01 --end-date=2025-12-31
 	 */
 	public function actionIndex(int $batchSize = 25): int
 	{
-		// Get IDs of processed orders.
+		return $this->_queueOrders($batchSize);
+	}
+
+	/**
+	 * Clear and reprocess the variant sales table.
+	 *
+	 * Run with: ./craft best-sellers/backfill/refresh-orders
+	 *           ./craft best-sellers/backfill/refresh-orders --start-date=2025-01-01 --end-date=2025-12-31
+	 */
+	public function actionRefreshOrders(int $batchSize = 25): int
+	{
+		$deleteQuery = Craft::$app->db->createCommand();
+		if ($this->startDate && $this->endDate) {
+			$deleteQuery->delete(Table::VARIANT_SALES, [
+				'between', 'dateOrdered', $this->startDate, $this->endDate . ' 23:59:59',
+			]);
+			$this->stdout("Cleared variant sales for {$this->startDate} to {$this->endDate}.\n");
+		} else {
+			$deleteQuery->truncateTable(Table::VARIANT_SALES);
+			$this->stdout("Cleared all variant sales.\n");
+		}
+
+		$deleteQuery->execute();
+
+		return $this->_queueOrders($batchSize);
+	}
+
+	/**
+	 * Rebuild daily stats table from commerce_orders.
+	 *
+	 * Pass --date=YYYY-MM-DD to rebuild a single day.
+	 *
+	 * Run with: ./craft best-sellers/backfill/daily-stats
+	 *           ./craft best-sellers/backfill/daily-stats --date=2026-03-15
+	 */
+	public function actionDailyStats(): int
+	{
+		if ($this->date !== null) {
+			$plugin = Plugin::getInstance();
+			$plugin->dailyStats->aggregateDay($this->date);
+			$this->stdout("Daily stats rebuilt for {$this->date}.\n");
+			return ExitCode::OK;
+		}
+
+		return $this->_rebuildDailyStats();
+	}
+
+	/**
+	 * Clear and rebuild the daily stats table.
+	 *
+	 * Pass --date=YYYY-MM-DD to clear and rebuild a single day.
+	 *
+	 * Run with: ./craft best-sellers/backfill/refresh-daily-stats
+	 *           ./craft best-sellers/backfill/refresh-daily-stats --date=2026-03-15
+	 */
+	public function actionRefreshDailyStats(): int
+	{
+		if ($this->date !== null) {
+			Craft::$app->db->createCommand()
+				->delete(Table::DAILY_STATS, [
+					'date' => $this->date,
+				])
+				->execute();
+			$this->stdout("Cleared daily stats for {$this->date}.\n");
+
+			$plugin = Plugin::getInstance();
+			$plugin->dailyStats->aggregateDay($this->date);
+			$this->stdout("Daily stats rebuilt for {$this->date}.\n");
+			return ExitCode::OK;
+		}
+
+		Craft::$app->db->createCommand()
+			->truncateTable(Table::DAILY_STATS)
+			->execute();
+		$this->stdout("Cleared all daily stats.\n");
+
+		return $this->_rebuildDailyStats();
+	}
+
+	/**
+	 * Clear the variant sales table.
+	 *
+	 * Run with: ./craft best-sellers/backfill/clear-orders
+	 */
+	public function actionClearOrders(): int
+	{
+		Craft::$app->db->createCommand()
+			->truncateTable(Table::VARIANT_SALES)
+			->execute();
+		$this->stdout("Cleared all variant sales.\n");
+
+		return ExitCode::OK;
+	}
+
+	/**
+	 * Clear the daily stats table.
+	 *
+	 * Run with: ./craft best-sellers/backfill/clear-daily-stats
+	 */
+	public function actionClearDailyStats(): int
+	{
+		Craft::$app->db->createCommand()
+			->truncateTable(Table::DAILY_STATS)
+			->execute();
+		$this->stdout("Cleared all daily stats.\n");
+
+		return ExitCode::OK;
+	}
+
+	/**
+	 * Clear all backfill log entries.
+	 *
+	 * Run with: ./craft best-sellers/backfill/clear-logs
+	 */
+	public function actionClearLogs(): int
+	{
+		$count = Plugin::getInstance()->backfillLogs->deleteAll();
+		$this->stdout("Cleared {$count} log entries.\n");
+
+		return ExitCode::OK;
+	}
+
+	private function _queueOrders(int $batchSize): int
+	{
 		$processedOrderIds = VariantSale::find()
 			->select('orderId')
 			->column();
 
-		// Count orders that are completed and not yet processed.
-		$totalOrders = Order::find()
+		$query = Order::find()
 			->isCompleted(true)
-			->andWhere(['not in', 'id', $processedOrderIds])
-			->count();
+			->andWhere(['not in', 'id', $processedOrderIds]);
+
+		if ($this->startDate && $this->endDate) {
+			$query->andWhere(['between', 'dateOrdered', $this->startDate, $this->endDate]);
+		}
+
+		$totalOrders = $query->count();
 
 		for ($offset = 0; $offset < $totalOrders; $offset += $batchSize) {
 			Craft::$app->queue->push(new BackfillOrdersJob([
 				'offset' => $offset,
 				'limit' => $batchSize,
+				'startDate' => $this->startDate,
+				'endDate' => $this->endDate,
 			]));
 			$this->stdout("Queued orders offset {$offset} to " . ($offset + $batchSize - 1) . "\n");
 		}
@@ -49,12 +202,7 @@ class BackfillController extends Controller
 		return ExitCode::OK;
 	}
 
-	/**
-	 * Rebuild daily stats table from commerce_orders.
-	 *
-	 * Run with: ./craft best-sellers/backfill/daily-stats
-	 */
-	public function actionDailyStats(): int
+	private function _rebuildDailyStats(): int
 	{
 		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
 		$row = (new Query())

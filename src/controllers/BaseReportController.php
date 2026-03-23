@@ -3,7 +3,7 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
-use craft\commerce\Plugin as CommercePlugin;
+use craft\commerce\Plugin as Commerce;
 use craft\helpers\MoneyHelper;
 use craft\web\Controller;
 use fostercommerce\bestsellers\models\ReportScope;
@@ -11,16 +11,17 @@ use fostercommerce\bestsellers\Plugin;
 use Money\Currency;
 use Money\Money;
 use RuntimeException;
+use yii\base\Action;
 use yii\web\Response;
 
 abstract class BaseReportController extends Controller
 {
 	protected array|bool|int $allowAnonymous = false;
 
-	private ?Currency $storeCurrency = null;
+	private ?Currency $_storeCurrency = null;
 
 	/**
-	 * @param \yii\base\Action<static> $action
+	 * @param Action<static> $action
 	 */
 	public function beforeAction($action): bool
 	{
@@ -55,20 +56,21 @@ abstract class BaseReportController extends Controller
 	protected function resolveScope(): ReportScope
 	{
 		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
 
 		return $plugin->dateRange->resolveScope();
 	}
 
 	protected function getStoreCurrency(): Currency
 	{
-		if (! $this->storeCurrency instanceof Currency) {
-			$store = CommercePlugin::getInstance()?->getStores()->getPrimaryStore();
+		if (! $this->_storeCurrency instanceof Currency) {
+			/** @var Commerce $commercePlugin */
+			$commercePlugin = Commerce::getInstance();
+			$store = $commercePlugin->getStores()->getPrimaryStore();
 			$code = $store?->getCurrency()?->getCode() ?? 'USD';
-			$this->storeCurrency = new Currency($code);
+			$this->_storeCurrency = new Currency($code);
 		}
 
-		return $this->storeCurrency;
+		return $this->_storeCurrency;
 	}
 
 	/**

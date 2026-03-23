@@ -5,7 +5,7 @@ namespace fostercommerce\bestsellers\controllers;
 use Craft;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
-use craft\commerce\Plugin as CommercePlugin;
+use craft\commerce\Plugin as Commerce;
 use craft\web\Controller;
 use craft\web\Request;
 use craft\web\twig\variables\Paginate;
@@ -13,6 +13,7 @@ use DateTime;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\behaviors\SalesBehavior;
 use fostercommerce\bestsellers\Plugin;
+use yii\base\Action;
 use yii\base\InvalidConfigException;
 use yii\web\Response;
 
@@ -23,7 +24,7 @@ class DashboardController extends Controller
 	protected array|bool|int $allowAnonymous = false;
 
 	/**
-	 * @param \yii\base\Action<static> $action
+	 * @param Action<static> $action
 	 */
 	public function beforeAction($action): bool
 	{
@@ -76,7 +77,7 @@ class DashboardController extends Controller
 		if ($fetchVariants) {
 			$query = Variant::find();
 			if ($productType !== 'all') {
-				$productTypeId = CommercePlugin::getInstance()
+				$productTypeId = Commerce::getInstance()
 					?->productTypes
 					->getProductTypeByHandle($productType)
 					?->id;

@@ -80,7 +80,6 @@ class ProductsController extends BaseReportController
 		$sortDir = trim($rawSortDir);
 
 		$plugin = Plugin::getInstance();
-		assert($plugin !== null);
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
@@ -209,7 +208,6 @@ class ProductsController extends BaseReportController
 		$search = trim($rawSearch);
 
 		$plugin = Plugin::getInstance();
-		assert($plugin !== null);
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {

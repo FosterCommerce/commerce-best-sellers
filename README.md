@@ -4,27 +4,31 @@
 
 Sales analytics and reporting built for Craft Commerce. Track revenue, orders, products, customers, discounts, and carts, all from your control panel.
 
-Best Sellers gives you a clear picture of what's selling, who's buying, and how your store is performing over any date range. No external services, no data leaving your site.
+Best Sellers gives you a clear picture of what's selling, who's buying, and how your store is performing over any date range.
 
 ## Requirements
 
-This plugin requires Craft CMS 5.0.0 or later, Craft Commerce 5.0.0 or later, and PHP 8.2 or later.
+Best Sellers requires Craft CMS 5.0.0, Craft Commerce 5.0.0 and PHP 8.2.
 
-## Installation
+## Setup
 
-To install the plugin, follow these instructions.
+### Installation
+
+To install the plugin, search for “Best Sellers” in the Craft Plugin Store follow these instructions.
+
+Or install via your terminal.
 
 1. Open your terminal and go to your Craft project:
 
         cd /path/to/project
 
-2. Then tell Composer to load the plugin:
+2. Then tell Composer to require the plugin, and Craft to install it:
 
-        composer require fostercommerce/commerce-best-sellers
+        composer require fostercommerce/commerce-best-sellers && php craft install/plugin bestsellers
 
-3. In the Control Panel, go to Settings > Plugins and click the "Install" button for Best Sellers.
+### Prep data
 
-After installing, backfill your existing order data:
+After installing, backfill your existing order data into Best Sellers database tables. These will create queue jobs. Run `best-sellers/backfill` first.
 
 ```bash
 ./craft best-sellers/backfill
@@ -39,103 +43,136 @@ You can also run the backfill from the control panel under **Utilities > Best Se
 
 ### Dashboard
 
-The dashboard provides a full overview of store performance, organized into focused sections with narrative summaries that explain what the numbers mean.
+The dashboard provides a full overview of store performance for any date range, organized into focused sections with narrative summaries that explain what the numbers mean.
 
 **Overview**
-- Narrative summary comparing revenue, orders, and AOV against the previous period, same period last year, and trailing 12-month average
-- KPI cards for Revenue, Orders, AOV, and Repeat Rate with sparkline trends and period-over-period change
-- Revenue/Orders/AOV toggle chart with previous period comparison overlay
+- Revenue, Orders, AOV, and Repeat Rate KPI cards
+- Revenue/Orders/AOV toggle chart with previous period comparison
+- Narrative summary comparing against previous period, same period last year, and trailing 12-month average
 
 **Discounts & Order Composition**
-- KPI cards for Total Discounts, Items Sold, and Avg Items/Order
-- Discounted vs. Full-Price Orders breakdown with order count, revenue, and AOV comparison
-- Most Used Discounts ranked table with order counts linking to filtered orders view
+- Total Discounts, Items Sold, and Avg Items/Order KPI cards
+- Discounted vs. Full-Price Orders breakdown (order count, revenue, AOV)
+- Most Used Discounts ranked table with order counts linking to filtered orders
 - Items Per Order histogram with clickable bars linking to filtered orders
 - Shipping Methods ranked table with order counts linking to filtered orders
 
 **Customers & Retention**
-- KPI cards for Customers, New Customers, and Avg Customer LTV
+- Customers, New Customers, and Avg Customer LTV KPI cards
 - Top Customers by Revenue ranked table
 - Credentialed vs Guest comparison (customer count, LTV, avg orders, total revenue)
 - New vs Returning Customers trend chart
 
 **Product Performance**
-- KPI cards for Unique Products Sold and Product Revenue
+- Unique Products Sold and Product Revenue KPI cards
 - Best Sellers top 10 ranked table with links to product edit pages
 
 **Carts**
 - Cart abandonment rate, abandoned value, and age breakdown (4-24h, 1-7d, 7+d)
-- Highest-Value Abandoned Carts table with customer email, cart value, and age
-- "View" links to Commerce order editor and "Share" links that copy a cart restore URL
+- Highest-Value Abandoned Carts table with customer email, value, age, and cart restore links
 - Anonymous cart toggle for filtering
-- Cart restore action that restores the cart to the visitor's session and redirects to Commerce's configured cart URL
 
 **Global Controls**
-- Date range picker with presets: Today, This Week, This Month, This Year, Past 7/30/90 Days, Past Year, All Time, or custom dates
+- Date range picker with presets (Today, This Week, This Month, This Year, Past 7/30/90 Days, Past Year, All Time, custom)
 - Order Status filter that persists across all report pages via session
-- Past date ranges exclude today (complete days only, matching Google Analytics behavior)
-- Partial period comparisons are prorated for fair comparison (e.g., "This Year" compares Jan 1 through today against the same window last year)
+- Past date ranges exclude today (complete days only)
+- Partial period comparisons are prorated for fair comparison
 
 ### Orders
 
-Browse and search every completed order with filtering and CSV export.
+Browse and search every completed order with filtering.
 
-- Filters: Order Status, Payment Status, Shipping Method, Discount (discounted/full-price and specific discount names by ID)
-- Items Per Order bucket filter (from dashboard chart clicks)
+- Filters: Order Status, Payment Status, Shipping Method, Discount (discounted/full-price and specific discounts by ID), Items Per Order bucket
 - Sortable columns: order number, date, status, merchandise total, tax, discount, shipping, total paid, items sold, payment status
 - Page totals for all currency columns
-- Cross-page filter links from dashboard widgets show a filter banner with "Clear filter" option
+- Dashboard widgets link to pre-filtered views
 - CSV export with all applied filters
 
 ### Products
 
-See which products (or variants) drive the most revenue, with breakdowns by product type.
+See which products or variants are generating the most revenue, with breakdowns by product type.
 
-- Toggle between products and variants
+- Toggle between viewing products or variants
 - Filter by product type
 - Search by title, SKU, or product type
-- Click through to see every order containing a specific product
+- Drill down to every order containing a specific product
 - Sortable by units sold, order count, revenue, or average price
-- CSV export
+- CSV export with all applied filters
 
 ### Customers
 
 Understand who your customers are, how much they spend, and how often they come back.
 
-- Filter by customer type: credentialed or guest
+- Filter by customer type (credentialed or guest)
 - Search by email
 - Sortable by email, status, order count, total spent, AOV, or last purchase date
 - Links to customer profiles in the control panel
-- CSV export
+- CSV export with all applied filters
 
 ### Operations
 
-Store configuration reference and all-time operational data. Lives outside the date range scope.
+Operational overview to help you understand store configuration, email notifications, and coupon usage across all time.
 
 - Commerce Settings quick links (General Settings, Store Settings)
-- Email Notifications: which emails fire on each order status transition, with enabled/disabled indicators and recipient types
+- Order Status Emails table showing which emails fire on each status transition, with enabled/disabled indicators and recipient types
 - All Configured Emails table with name, subject, recipient, template path, and enabled status
 - Coupon Usage (All Time) ranked table with usage counts and total discount per code
 
 ### Cart Restore
 
-Built-in cart restoration for abandoned cart recovery. No third-party dependencies.
+Built-in cart restoration for abandoned cart recovery.
 
-- Shareable URL
+- Shareable restore URL
 - Restores the cart to the visitor's session and redirects to Commerce's `loadCartRedirectUrl`
 - Credentialed customer carts require the account owner to be logged in
 - Logged-in users cannot claim another user's cart
 - Logged-out users can restore inactive/guest carts
 - Styled login-required page when authentication is needed
-- Cart purge expiry info shown in the dashboard
+- Cart purge expiry info shown in the dashboard based on Commerce's `purgeInactiveCartsDuration`
 
 ## Templating
 
-Best Sellers provides Twig variables for displaying sales data on your front end. Show bestseller badges, "X sold" counts, or sort products by popularity.
+Best Sellers provides Twig variables for displaying sales data on your front end.
 
-For full Twig and PHP usage examples, see the [Developer Documentation](docs/usage.md).
+### Units Sold & Revenue
 
-## Querying by Sales Data
+```twig
+{# Units sold for a variant #}
+{{ craft.bestsellers.variantTotalSales(variant.id) }}
+{{ craft.bestsellers.variantTotalSales(variant.id, '30 days ago') }}
+{{ craft.bestsellers.variantTotalSales(variant.id, '2024-01-01', '2024-12-31') }}
+
+{# Revenue for a variant #}
+{{ craft.bestsellers.variantTotalRevenue(variant.id)|commerceCurrency }}
+
+{# Units sold for a product (all variants combined) #}
+{{ craft.bestsellers.productTotalSales(product.id) }}
+
+{# Revenue for a product #}
+{{ craft.bestsellers.productTotalRevenue(product.id)|commerceCurrency }}
+```
+
+### Previous Purchases
+
+```twig
+{# Check if the current user previously purchased a specific product #}
+{% set previousOrder = craft.bestsellers.previousPurchaseByUser(variant.id, currentUser) %}
+{% if previousOrder %}
+    You purchased this on {{ previousOrder.dateOrdered|date('M j, Y') }}
+    <a href="{{ previousOrder.cpEditUrl }}">Order #{{ previousOrder.reference }}</a>
+{% endif %}
+
+{# Get all variants previously purchased by a user #}
+{% set purchasedVariants = craft.bestsellers.previouslyPurchasedProducts(currentUser) %}
+{% if purchasedVariants %}
+    <h3>Your Previously Purchased Products</h3>
+    {% for variant in purchasedVariants.all() %}
+        {{ variant.title }}
+    {% endfor %}
+{% endif %}
+```
+
+### Best Sellers Queries
 
 Best Sellers extends Craft's element queries so you can fetch products or variants sorted by sales:
 
@@ -160,6 +197,8 @@ foreach ($bestSellers as $product) {
 }
 ```
 
+For additional examples, see the [Developer Documentation](docs/usage.md).
+
 ## Console Commands
 
 | Command | Description |
@@ -171,11 +210,11 @@ Both commands are also available from the **Utilities > Best Sellers** page in t
 
 ## Roadmap
 
-- Goal settings (set revenue/order targets and track progress)
+- Goal settings (revenue/order targets with progress tracking)
 - Inventory reports (stock levels, low stock alerts, sell-through rates)
 - Saved reports (save filter configurations for quick access)
 - Extensible reports (API for plugins/modules to add custom report sections, KPI cards, and widgets)
-- Subscription analytics (recurring revenue, churn, MRR tracking for Commerce subscriptions)
+- Subscription analytics (recurring revenue, churn, MRR for Commerce subscriptions)
 - Third-party purchasable support (Digital Products, Donations, and other plugin purchasable types)
 
 ## Credits

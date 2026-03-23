@@ -10,10 +10,15 @@ use craft\helpers\Queue as QueueHelper;
 use craft\web\Controller;
 use craft\web\Request;
 use DateTime;
+use Exception;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
+use yii\base\Action;
+use yii\web\BadRequestHttpException;
+use yii\web\ForbiddenHttpException;
+use yii\web\MethodNotAllowedHttpException;
 use yii\web\Response;
 
 class BackfillController extends Controller
@@ -26,7 +31,8 @@ class BackfillController extends Controller
 	protected array|int|bool $allowAnonymous = false;
 
 	/**
-	 * @param \yii\base\Action<static> $action
+	 * @param Action<static> $action
+	 * @throws ForbiddenHttpException
 	 */
 	public function beforeAction($action): bool
 	{
@@ -39,6 +45,10 @@ class BackfillController extends Controller
 		return true;
 	}
 
+	/**
+	 * @throws MethodNotAllowedHttpException
+	 * @throws BadRequestHttpException
+	 */
 	public function actionIndex(): Response
 	{
 		$this->requirePostRequest();
@@ -85,6 +95,11 @@ class BackfillController extends Controller
 		return $this->redirectToPostedUrl();
 	}
 
+	/**
+	 * @throws BadRequestHttpException
+	 * @throws MethodNotAllowedHttpException
+	 * @throws Exception
+	 */
 	public function actionRebuildDailyStats(): Response
 	{
 		$this->requirePostRequest();

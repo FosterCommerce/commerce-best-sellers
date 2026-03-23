@@ -3,7 +3,7 @@
 namespace fostercommerce\bestsellers\services;
 
 use Craft;
-use craft\commerce\Plugin as CommercePlugin;
+use craft\commerce\Plugin as Commerce;
 use craft\web\Request;
 use DateTime;
 use fostercommerce\bestsellers\models\DateRangeResult;
@@ -158,13 +158,10 @@ class DateRange extends Component
 			$statusIds = is_array($sessionValue) ? $sessionValue : [];
 		}
 
+		$dateRange->prev = $previous;
+
 		return new ReportScope([
-			'from' => $dateRange->from,
-			'to' => $dateRange->to,
-			'fromDT' => $dateRange->fromDT,
-			'toDT' => $dateRange->toDT,
-			'preset' => $dateRange->preset,
-			'prev' => $previous,
+			'dateRange' => $dateRange,
 			'orderStatusIds' => $statusIds,
 		]);
 	}
@@ -201,12 +198,14 @@ class DateRange extends Component
 			return [];
 		}
 
-		$allStatuses = CommercePlugin::getInstance()?->getOrderStatuses()->getAllOrderStatuses() ?? [];
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		$allStatuses = $commerce->getOrderStatuses()->getAllOrderStatuses();
 		$ids = [];
 
-		foreach ($allStatuses as $status) {
-			if (in_array($status->handle, $handles, true)) {
-				$ids[] = (int) $status->id;
+		foreach ($allStatuses as $allRectorPrefix202411Status) {
+			if (in_array($allRectorPrefix202411Status->handle, $handles, true)) {
+				$ids[] = (int) $allRectorPrefix202411Status->id;
 			}
 		}
 

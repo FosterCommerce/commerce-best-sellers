@@ -8,8 +8,10 @@ use craft\helpers\UrlHelper;
 use craft\web\Controller;
 use craft\web\Request;
 use craft\web\View;
-use yii\web\HttpException;
+use yii\web\BadRequestHttpException;
+use yii\web\NotFoundHttpException;
 use yii\web\Response;
+use yii\web\ServerErrorHttpException;
 
 /**
  * Front-end controller for restoring abandoned carts.
@@ -26,7 +28,9 @@ class CartController extends Controller
 	 *
 	 * Usage: /actions/best-sellers/cart/restore?number={orderNumber}
 	 *
-	 * @throws HttpException
+	 * @throws BadRequestHttpException
+	 * @throws NotFoundHttpException
+	 * @throws ServerErrorHttpException
 	 */
 	public function actionRestore(): Response
 	{
@@ -36,22 +40,20 @@ class CartController extends Controller
 		$number = $request->getQueryParam('number', '');
 
 		if ($number === '') {
-			throw new HttpException(400, Craft::t('best-sellers', 'Cart number is required.'));
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'Cart number is required.'));
 		}
 
+		/** @var Commerce $commerce */
 		$commerce = Commerce::getInstance();
-		if (! $commerce) {
-			throw new HttpException(500, Craft::t('best-sellers', 'Commerce plugin is not available.'));
-		}
 
 		$order = $commerce->getOrders()->getOrderByNumber($number);
 
 		if (! $order) {
-			throw new HttpException(404, Craft::t('best-sellers', 'Cart not found.'));
+			throw new NotFoundHttpException(Craft::t('best-sellers', 'Cart not found.'));
 		}
 
 		if ($order->isCompleted) {
-			throw new HttpException(400, Craft::t('best-sellers', 'This order has already been completed.'));
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'This order has already been completed.'));
 		}
 
 		$currentUser = Craft::$app->getUser()->getIdentity();

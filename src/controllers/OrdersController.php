@@ -27,7 +27,6 @@ class OrdersController extends BaseReportController
 
 		$scope = $this->resolveScope();
 		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
 
 		$operationsStats = $plugin->operationsStats;
 		$shippingMethods = $operationsStats->getShippingMethods($scope);
@@ -62,13 +61,13 @@ class OrdersController extends BaseReportController
 
 		$offset = ($page - 1) * self::PER_PAGE;
 
-		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
+		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange->dateRange);
 
 		$totalOrders = (int) $ordersQuery->count();
 		$totalPages = max(1, (int) ceil($totalOrders / self::PER_PAGE));
 
 		// Aggregate totals across all filtered results (before pagination)
-		$totals = $this->buildFilteredTotals($dateRange);
+		$totals = $this->buildFilteredTotals($dateRange->dateRange);
 
 		$orders = $ordersQuery
 			->offset($offset)
@@ -93,7 +92,7 @@ class OrdersController extends BaseReportController
 	public function actionExportCsv(): Response
 	{
 		$dateRange = $this->resolveScope();
-		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange);
+		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange->dateRange);
 
 		$orders = $ordersQuery->all();
 		$rows = $this->buildOrderRows($orders);
@@ -160,6 +159,10 @@ class OrdersController extends BaseReportController
 		], 'orders');
 	}
 
+	/**
+	 * OrderQuery (element query) because we need full Order elements for rendering
+	 * rows with cpEditUrl, status colors, Money objects, etc.
+	 */
 	private function buildFilteredOrdersQuery(DateRangeResult $dateRange): OrderQuery
 	{
 		/** @var Request $request */
@@ -191,6 +194,8 @@ class OrdersController extends BaseReportController
 		$orderItemCounts = [];
 		if ($orders !== []) {
 			$orderIds = array_map(fn ($order): ?int => $order->id, $orders);
+			// Raw Query because we need a simple aggregate from commerce_lineitems,
+			// not Order elements. Faster than loading line item elements.
 			$itemCounts = (new Query())
 				->select([
 					'orderId',
@@ -266,6 +271,7 @@ class OrdersController extends BaseReportController
 		$idSubquery = $this->buildFilteredTotalsQuery($dateRange)
 			->select(['[[id]]']);
 
+		// Raw Query on commerce_lineitems for a single SUM aggregate
 		$totalItemsSold = (int) (new Query())
 			->select(new Expression('COALESCE(SUM([[qty]]), 0)'))
 			->from(CommerceTable::LINEITEMS)
@@ -283,7 +289,11 @@ class OrdersController extends BaseReportController
 	}
 
 	/**
-	 * Build a raw query on the orders table with the same filters as the element query.
+	 * Raw Query (not OrderQuery) because we need multiple SUM aggregates
+	 * in a single query (itemSubtotal, totalTax, totalDiscount, etc.).
+	 * ElementQuery supports ->sum() for a single column, but a custom
+	 * ->select() with multiple SUMs requires a raw Query because
+	 * ElementQuery overrides select() during prepare().
 	 *
 	 * @return Query<array-key, mixed>
 	 */
@@ -308,12 +318,16 @@ class OrdersController extends BaseReportController
 	/**
 	 * Apply shared order filters (status, payment, search, shipping, discounts) to a query.
 	 *
+	 * Accepts both OrderQuery (element query for paginated rows) and raw Query
+	 * (for aggregate totals). Column references must be qualified for OrderQuery
+	 * because it joins craft_elements, craft_addresses, etc., making bare column
+	 * names ambiguous.
+	 *
 	 * @template TQuery of OrderQuery|Query<array-key, mixed>
 	 * @param TQuery $query
 	 */
 	private function applyOrderFilters(OrderQuery|Query $query): void
 	{
-		// Element queries join multiple tables; plain queries have a single table
 		$idCol = $query instanceof OrderQuery ? '[[commerce_orders.id]]' : '[[id]]';
 		$statusIdCol = $query instanceof OrderQuery ? '[[commerce_orders.orderStatusId]]' : '[[orderStatusId]]';
 

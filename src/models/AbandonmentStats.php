@@ -3,9 +3,8 @@
 namespace fostercommerce\bestsellers\models;
 
 use craft\base\Model;
-use JsonSerializable;
 
-class AbandonmentStats extends Model implements JsonSerializable
+class AbandonmentStats extends Model
 {
 	/**
 	 * @var int Total abandoned carts
@@ -51,22 +50,4 @@ class AbandonmentStats extends Model implements JsonSerializable
 	 * @var array<string, AgeBucket> Abandonment breakdown by age bucket
 	 */
 	public array $byAge = [];
-
-	/**
-	 * @return array<string, mixed>
-	 */
-	public function jsonSerialize(): array
-	{
-		return [
-			'totalAbandoned' => $this->totalAbandoned,
-			'totalCompleted' => $this->totalCompleted,
-			'abandonmentRate' => $this->abandonmentRate,
-			'abandonedValue' => $this->abandonedValue,
-			'abandonedValueWithEmail' => $this->abandonedValueWithEmail,
-			'completedValue' => $this->completedValue,
-			'withCustomer' => $this->withCustomer,
-			'withoutCustomer' => $this->withoutCustomer,
-			'byAge' => $this->byAge,
-		];
-	}
 }

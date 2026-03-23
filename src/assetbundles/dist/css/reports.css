@@ -560,19 +560,18 @@
 }
 
 /* Responsive */
-.bs-kpi-grid--3 {
-	grid-template-columns: repeat(3, 1fr);
-}
-
+.bs-kpi-grid--3,
 .bs-kpi-grid--4 {
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(2, 1fr);
 }
 
-@media (max-width: 768px) {
-	.bs-kpi-grid,
-	.bs-kpi-grid--3,
+@media (min-width: 1150px) {
+	.bs-kpi-grid--3 {
+		grid-template-columns: repeat(3, 1fr);
+	}
+
 	.bs-kpi-grid--4 {
-		grid-template-columns: repeat(2, 1fr);
+		grid-template-columns: repeat(4, 1fr);
 	}
 }
 

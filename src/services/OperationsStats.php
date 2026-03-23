@@ -6,11 +6,14 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use fostercommerce\bestsellers\models\ReportScope;
+use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use yii\base\Component;
 use yii\db\Expression;
 
 class OperationsStats extends Component
 {
+	use OrderQueryConditions;
+
 	/**
 	 * Get operations KPIs.
 	 *
@@ -242,29 +245,5 @@ class OperationsStats extends Component
 			'uses' => (int) $row['uses'],
 			'totalDiscount' => (float) $row['totalDiscount'],
 		], $rows);
-	}
-
-	/**
-	 * Build a standard date + status condition for commerce_orders queries.
-	 *
-	 * @return list<mixed>
-	 */
-	private function buildDateCondition(ReportScope $scope, string $tableAlias = ''): array
-	{
-		$prefix = $tableAlias !== '' ? $tableAlias . '.' : '';
-
-		$condition = [
-			'and',
-			['=', "[[{$prefix}isCompleted]]", true],
-			['>=', "[[{$prefix}dateOrdered]]", $scope->fromDT],
-			['<=', "[[{$prefix}dateOrdered]]", $scope->toDT],
-		];
-
-		$statusCondition = $scope->statusCondition($tableAlias);
-		if ($statusCondition !== null) {
-			$condition[] = $statusCondition;
-		}
-
-		return $condition;
 	}
 }

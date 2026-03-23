@@ -30,7 +30,6 @@ class SummaryEngine extends Component
 	public function generate(ReportScope $scope): SummaryResult
 	{
 		$plugin = Plugin::getInstance();
-		assert($plugin instanceof Plugin);
 
 		$days = RangeLabelBuilder::dayCount($scope->from, $scope->to);
 		$isPartial = RangeLabelBuilder::isPartial($scope->preset, $scope->to);
@@ -56,8 +55,6 @@ class SummaryEngine extends Component
 			'yoy_available' => $yoyAvailable,
 			'trailing_chunk_count' => null,
 			'trailing_prorated' => false,
-			'prev_from' => $scope->getPrev()->from,
-			'prev_to' => $scope->getPrev()->to,
 		];
 
 		// DailyStats uses pre-aggregated data (does not filter by status)
@@ -97,8 +94,6 @@ class SummaryEngine extends Component
 		$customersSummary = $this->buildCustomersSummary(
 			$currentStats,
 			$prevStats,
-			$yoyStats,
-			$trailing['stats'],
 			$rangeLabel,
 			$compLabel,
 			$warnings,
@@ -176,8 +171,8 @@ class SummaryEngine extends Component
 		$annotations = $this->buildBaselineAnnotations(
 			'revenue',
 			$prevSignals['revenue'],
-			$yoy !== null ? $this->extractOrderMetrics($yoy) : null,
-			$trailing !== null ? $this->extractOrderMetrics($trailing) : null,
+			$yoy instanceof \fostercommerce\bestsellers\models\PeriodStats ? $this->extractOrderMetrics($yoy) : null,
+			$trailing instanceof \fostercommerce\bestsellers\models\PeriodStats ? $this->extractOrderMetrics($trailing) : null,
 			$currentMetrics,
 		);
 		$sentences = array_merge($sentences, $annotations);
@@ -273,8 +268,6 @@ class SummaryEngine extends Component
 	private function buildCustomersSummary(
 		PeriodStats $current,
 		PeriodStats $prev,
-		?PeriodStats $yoy,
-		?PeriodStats $trailing,
 		string $rangeLabel,
 		string $compLabel,
 		array $warnings,
@@ -335,7 +328,7 @@ class SummaryEngine extends Component
 		$sentences = [$mainSentence];
 
 		// YoY annotation for product revenue
-		if ($yoy !== null) {
+		if ($yoy instanceof \fostercommerce\bestsellers\models\ProductSummary) {
 			$yoyMetrics = [
 				'product_revenue' => $yoy->totalProductRevenue,
 				'unique_products_sold' => $yoy->uniqueProducts,

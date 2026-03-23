@@ -1,0 +1,11 @@
+{# Revenue / Orders / AOV Toggle Chart #}
+<div class="bs-chart-container">
+	<div class="bs-chart-toggle">
+		<button type="button" class="bs-chart-toggle__btn bs-chart-toggle__btn--active" data-chart="revenue">{{ "Revenue"|t('best-sellers') }}</button>
+		<button type="button" class="bs-chart-toggle__btn" data-chart="orders">{{ "Orders"|t('best-sellers') }}</button>
+		<button type="button" class="bs-chart-toggle__btn" data-chart="aov">{{ "AOV"|t('best-sellers') }}</button>
+	</div>
+	<div style="position: relative; height: 350px;">
+		<canvas id="overviewChart"></canvas>
+	</div>
+</div>

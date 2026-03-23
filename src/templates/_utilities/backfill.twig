@@ -17,3 +17,15 @@
 	</div>
 	<button type="submit" class="btn submit">Start Backfill</button>
 </form>
+
+<hr style="margin: 2rem 0;">
+
+<h2>Rebuild Daily Stats</h2>
+<p>
+	Rebuild the pre-aggregated daily statistics table from commerce order data. This is useful after a backfill or if stats appear out of sync.
+</p>
+<form method="POST">
+	{{ actionInput('best-sellers/backfill/rebuild-daily-stats') }}
+	{{ csrfInput() }}
+	<button type="submit" class="btn submit">Rebuild Daily Stats</button>
+</form>

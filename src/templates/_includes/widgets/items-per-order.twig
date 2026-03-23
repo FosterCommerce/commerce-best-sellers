@@ -1,0 +1,11 @@
+{# Items Per Order Histogram #}
+<div class="bs-chart-container">
+	<h3 class="bs-chart-container__title">{{ "Items Per Order"|t('best-sellers') }}</h3>
+	{% if itemsPerOrder.counts|length > 0 %}
+		<div style="position: relative; height: 300px;">
+			<canvas id="itemsPerOrderChart"></canvas>
+		</div>
+	{% else %}
+		<p>{{ "No data available"|t('best-sellers') }}</p>
+	{% endif %}
+</div>

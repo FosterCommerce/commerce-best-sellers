@@ -2,6 +2,7 @@
 {% import "_includes/forms" as forms %}
 
 {% set title = "Best Sellers - " ~ title|t('best-sellers') %}
+{% set selectedSubnavItem = 'dashboard' %}
 
 {% set additionalButtons %}
 	<form id="filter-form" method="get" style="display: flex; flex-direction: row; column-gap: 1rem;">
@@ -71,6 +72,10 @@
 
 {% set products = craft.commerce.products %}
 
+{% css %}
+	{% include 'best-sellers/_includes/plugin-footer-css' %}
+{% endcss %}
+
 {% set content %}
 	<main class="main-content">
 	<h2>{{ "Best Sellers"|t("best-sellers") }}</h2>
@@ -126,6 +131,7 @@
 		</div>
 	{% endif %}
 	</main>
+	{% include 'best-sellers/_includes/plugin-footer' %}
 {% endset %}
 
 {% js %}

@@ -2,8 +2,10 @@
 
 namespace fostercommerce\bestsellers\jobs;
 
+use Craft;
 use craft\commerce\elements\Order;
 use craft\queue\BaseJob;
+use DateTime;
 use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
 
@@ -35,20 +37,24 @@ class BackfillOrdersJob extends BaseJob
 		if ($this->startDate && $this->endDate) {
 			$ordersQuery->andWhere(['between', 'dateOrdered', $this->startDate, $this->endDate]);
 		} else {
-			$ordersQuery->andWhere(['<', 'dateOrdered', (new \DateTime())->format('Y-m-d H:i:s')]);
+			$ordersQuery->andWhere(['<', 'dateOrdered', (new DateTime())->format('Y-m-d H:i:s')]);
 		}
 
 		$orders = $ordersQuery->all();
+		$total = count($orders);
 
-		foreach ($orders as $order) {
-			Plugin::getInstance()?->sales->logOrderSales($order);
+		$plugin = Plugin::getInstance();
+
+		foreach ($orders as $i => $order) {
+			$plugin->sales->logOrderSales($order);
+			$this->setProgress($queue, ($i + 1) / $total);
 		}
-
-		$this->setProgress($queue, 1);
 	}
 
 	protected function defaultDescription(): string
 	{
-		return "Backfilling orders starting at offset {$this->offset}";
+		return Craft::t('best-sellers', 'Backfilling orders starting at offset {offset}', [
+			'offset' => $this->offset,
+		]);
 	}
 }

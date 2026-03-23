@@ -1,0 +1,166 @@
+{% extends '_layouts/cp' %}
+
+{% set selectedSubnavItem = 'operations' %}
+
+{% css %}
+	{% include 'best-sellers/_includes/plugin-footer-css' %}
+{% endcss %}
+
+{% set content %}
+	<div class="bs-reports-container">
+		{# Commerce Settings Links #}
+		<div class="bs-section">
+			<h3 class="bs-section__title">{{ "Commerce Settings"|t('best-sellers') }}</h3>
+			<div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+				<a href="{{ cpUrl('commerce/settings/general', {site: craft.app.sites.currentSite.handle}) }}" class="btn">{{ "General Settings"|t('best-sellers') }}</a>
+				{% if storeId %}
+					<a href="{{ cpUrl('commerce/settings/stores/' ~ storeId, {site: craft.app.sites.currentSite.handle}) }}#settings" class="btn">{{ "Store Settings"|t('best-sellers') }}</a>
+				{% endif %}
+			</div>
+		</div>
+
+		{# Email Notifications #}
+		<div class="bs-section">
+			<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
+				<h3 class="bs-section__title" style="margin: 0;">{{ "Email Notifications"|t('best-sellers') }}</h3>
+				<a href="{{ cpUrl('commerce/settings/emails') }}" class="go" style="font-size: 0.85rem;">{{ "Manage emails"|t('best-sellers') }}</a>
+			</div>
+
+			{% if statusEmails|length > 0 %}
+				<div class="bs-chart-container">
+					<h3 class="bs-chart-container__title">{{ "Order Status Emails"|t('best-sellers') }}</h3>
+					<p style="font-size: 0.85rem; color: #6c757d; margin: 0 0 1rem;">{{ "Emails triggered when an order transitions to each status."|t('best-sellers') }}</p>
+					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+						<thead>
+							<tr>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Status"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Emails Sent"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Recipient"|t('best-sellers') }}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for entry in statusEmails %}
+								<tr>
+									<td style="padding: 0.5rem; white-space: nowrap;">
+										<span class="status {{ entry.status.color }}"></span>
+										{{ entry.status.name }}
+									</td>
+									<td style="padding: 0.5rem;">
+										{% if entry.emails|length > 0 %}
+											{% for email in entry.emails %}
+												<div style="margin-bottom: 0.25rem;">
+													{% if email.enabled %}
+														<span style="color: #27ae60; font-size: 0.75rem;">&#9679;</span>
+													{% else %}
+														<span style="color: #ccc; font-size: 0.75rem;">&#9679;</span>
+													{% endif %}
+													{{ email.name }}
+													{% if not email.enabled %}
+														<span style="color: #999; font-size: 0.8rem;">({{ "disabled"|t('best-sellers') }})</span>
+													{% endif %}
+												</div>
+											{% endfor %}
+										{% else %}
+											<span style="color: #999;">{{ "None"|t('best-sellers') }}</span>
+										{% endif %}
+									</td>
+									<td style="padding: 0.5rem; color: #6c757d;">
+										{% if entry.emails|length > 0 %}
+											{% for email in entry.emails %}
+												<div style="margin-bottom: 0.25rem;">
+													{{ email.recipientType|capitalize }}
+												</div>
+											{% endfor %}
+										{% endif %}
+									</td>
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			{% endif %}
+
+			{% if allEmails|length > 0 %}
+				<div class="bs-chart-container">
+					<h3 class="bs-chart-container__title">{{ "All Configured Emails"|t('best-sellers') }}</h3>
+					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+						<thead>
+							<tr>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Name"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Subject"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "To"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Template"|t('best-sellers') }}</th>
+								<th style="text-align: center; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Enabled"|t('best-sellers') }}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for email in allEmails %}
+								<tr>
+									<td style="padding: 0.5rem; font-weight: 600;">{{ email.name }}</td>
+									<td style="padding: 0.5rem;">{{ email.subject }}</td>
+									<td style="padding: 0.5rem;">{{ email.recipientType|capitalize }}</td>
+									<td style="padding: 0.5rem; font-family: monospace; font-size: 0.8rem; color: #6c757d;">{{ email.templatePath }}</td>
+									<td style="padding: 0.5rem; text-align: center;">
+										{% if email.enabled %}
+											<span style="color: #27ae60;">&#10003;</span>
+										{% else %}
+											<span style="color: #ccc;">&#10005;</span>
+										{% endif %}
+									</td>
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			{% endif %}
+		</div>
+
+		{# Coupon Usage (All Time) #}
+		<div class="bs-section">
+			<h3 class="bs-section__title">{{ "Coupon Usage (All Time)"|t('best-sellers') }}</h3>
+			{% if couponUsage|length > 0 %}
+				<div class="bs-chart-container">
+					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+						<thead>
+							<tr>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Code"|t('best-sellers') }}</th>
+								<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Uses"|t('best-sellers') }}</th>
+								<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Total Discount"|t('best-sellers') }}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% set maxUses = couponUsage|first.uses %}
+							{% for coupon in couponUsage %}
+								{% set pct = maxUses > 0 ? (coupon.uses / maxUses * 100) : 0 %}
+								<tr>
+									<td style="padding: 0.5rem; position: relative;">
+										<span style="position: absolute; top: 2px; left: 0; bottom: 2px; width: {{ pct }}%; background: rgba(0, 115, 170, 0.08); border-radius: 3px;"></span>
+										<span style="position: relative; font-weight: 600;">{{ coupon.code }}</span>
+									</td>
+									<td style="padding: 0.5rem; text-align: right;">{{ coupon.uses|number_format }}</td>
+									<td style="padding: 0.5rem; text-align: right;">{{ coupon.totalDiscount|commerceCurrency }}</td>
+								</tr>
+							{% endfor %}
+						</tbody>
+						<tfoot>
+							<tr>
+								<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ couponUsage|length }} {{ "codes"|t('best-sellers') }}</td>
+								<td style="padding: 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0;">
+									{% set totalUses = 0 %}{% for c in couponUsage %}{% set totalUses = totalUses + c.uses %}{% endfor %}
+									{{ totalUses|number_format }}
+								</td>
+								<td style="padding: 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0;">
+									{% set totalDiscount = 0 %}{% for c in couponUsage %}{% set totalDiscount = totalDiscount + c.totalDiscount %}{% endfor %}
+									{{ totalDiscount|commerceCurrency }}
+								</td>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+			{% else %}
+				<p style="color: #999; font-size: 0.9rem;">{{ "No coupon codes have been used."|t('best-sellers') }}</p>
+			{% endif %}
+		</div>
+	</div>
+	{% include 'best-sellers/_includes/plugin-footer' %}
+{% endset %}

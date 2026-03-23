@@ -1,0 +1,135 @@
+{% extends 'best-sellers/_layouts/reports' %}
+
+{% set title = "Customers"|t('best-sellers') %}
+{% set selectedSubnavItem = 'customers' %}
+
+{% block reportContent %}
+	{# Filters #}
+	<div class="bs-filter-bar" style="margin-bottom: 1rem;">
+		<div class="bs-multiselect" id="customer-type-multiselect">
+			<button type="button" class="bs-multiselect__btn" data-label="{{ 'Customer Type'|t('best-sellers') }}">{{ "Customer Type"|t('best-sellers') }}</button>
+			<div class="bs-multiselect__dropdown">
+				<label><input type="checkbox" value="credentialed"> {{ "Credentialed"|t('best-sellers') }}</label>
+				<label><input type="checkbox" value="guest"> {{ "Guest"|t('best-sellers') }}</label>
+			</div>
+		</div>
+		<div class="bs-filter-bar__item">
+			<input type="text" id="customer-search" class="text fullwidth" placeholder="{{ 'Search customers...'|t('best-sellers') }}" autocomplete="off">
+		</div>
+		<span id="customers-export"></span>
+	</div>
+
+	{# Loading State #}
+	<div id="customers-loading" class="bs-loading">
+		<div class="bs-loading__spinner"></div>
+		<p class="bs-loading__message">{{ "Crunching numbers at elf speed..."|t('best-sellers') }}</p>
+	</div>
+
+	{# Customers Table (hidden until loaded) #}
+	<div id="customers-container" style="display: none;">
+		<div style="overflow-x: auto;">
+			<table class="bs-data-table" id="customers-table">
+				<thead>
+					<tr>
+						<th data-sort="email">{{ "Email"|t('best-sellers') }}</th>
+						<th data-sort="status">{{ "Status"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="orderCount">{{ "# Orders"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="totalSpent">{{ "Total Spent"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="aov">{{ "AOV"|t('best-sellers') }}</th>
+						<th data-sort="lastOrder">{{ "Last Purchase"|t('best-sellers') }}</th>
+					</tr>
+				</thead>
+				<tbody id="customers-tbody"></tbody>
+			</table>
+		</div>
+		<div id="customers-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+	</div>
+{% endblock %}
+
+{% js %}
+document.addEventListener('DOMContentLoaded', function () {
+	var searchInput = document.getElementById('customer-search');
+	var searchTimer = null;
+
+	var customerTypeMulti = BestSellersReports.createMultiSelect({
+		container: document.getElementById('customer-type-multiselect'),
+		onChange: function () { table.reload(); }
+	});
+
+	var table = BestSellersReports.createAjaxTable({
+		loadingEl: document.getElementById('customers-loading'),
+		containerEl: document.getElementById('customers-container'),
+		tbodyEl: document.getElementById('customers-tbody'),
+		paginationEl: document.getElementById('customers-pagination'),
+		actionUrl: 'best-sellers/customers/customers-data',
+		exportUrl: 'best-sellers/customers/export-csv',
+		exportContainerEl: document.getElementById('customers-export'),
+		baseParams: { from: '{{ from }}', to: '{{ to }}', preset: '{{ preset }}' },
+		defaultSort: 'totalSpent',
+		defaultSortDir: 'desc',
+		itemLabel: 'customers',
+		emptyMessage: 'No customers found matching your filters.',
+		buildRow: function (customer) {
+			var row = document.createElement('tr');
+			var emailCell = customer.cpUrl
+				? '<a href="' + customer.cpUrl + '" class="go">' + customer.email + '</a>'
+				: customer.email;
+
+			var statusColors = { credentialed: 'green', guest: '' };
+			var statusLabels = { credentialed: 'Credentialed', guest: 'Guest' };
+			var statusColor = statusColors[customer.status] || '';
+			var statusLabel = statusLabels[customer.status] || customer.status;
+			var statusCell = '<span class="status ' + statusColor + '"></span> ' + statusLabel;
+
+			row.innerHTML =
+				'<td>' + emailCell + '</td>' +
+				'<td>' + statusCell + '</td>' +
+				'<td class="bs-data-table--right">' + customer.orderCount + '</td>' +
+				'<td class="bs-data-table--right">' + customer.totalSpent + '</td>' +
+				'<td class="bs-data-table--right">' + customer.aov + '</td>' +
+				'<td>' + customer.lastOrder + '</td>';
+			return row;
+		},
+		buildTotalsRow: function (totals) {
+			var row = document.createElement('tr');
+			row.innerHTML =
+				'<td>{{ "All Results Total"|t("best-sellers") }}</td>' +
+				'<td></td>' +
+				'<td class="bs-data-table--right">' + totals.orderCount + '</td>' +
+				'<td class="bs-data-table--right">' + totals.totalSpent + '</td>' +
+				'<td></td>' +
+				'<td></td>';
+			return row;
+		},
+		getFilterParams: function () {
+			var params = {};
+			var searchValue = searchInput ? searchInput.value.trim() : '';
+			if (searchValue) { params.search = searchValue; }
+			var customerTypes = customerTypeMulti.getSelected();
+			if (customerTypes.length > 0) { params['customerType[]'] = customerTypes; }
+			return params;
+		},
+		restoreFilterState: function (filters) {
+			if (filters.search && searchInput) { searchInput.value = filters.search; }
+			if (filters['customerType[]']) {
+				var customerTypeContainer = document.getElementById('customer-type-multiselect');
+				var customerTypeCheckboxes = customerTypeContainer.querySelectorAll('input[type="checkbox"]');
+				var customerTypeValues = filters['customerType[]'];
+				customerTypeCheckboxes.forEach(function (checkbox) {
+					checkbox.checked = customerTypeValues.indexOf(checkbox.value) !== -1;
+				});
+				customerTypeMulti.refresh();
+			}
+		}
+	});
+
+	if (searchInput) {
+		searchInput.addEventListener('input', function () {
+			clearTimeout(searchTimer);
+			searchTimer = setTimeout(function () { table.reload(); }, 400);
+		});
+	}
+
+	table.init();
+});
+{% endjs %}

@@ -3,11 +3,22 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
+use craft\db\Query;
+use craft\helpers\Queue as QueueHelper;
 use craft\web\Controller;
 use craft\web\Request;
+use DateTime;
+use Exception;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
+use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
+use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
+use yii\base\Action;
+use yii\web\BadRequestHttpException;
+use yii\web\ForbiddenHttpException;
+use yii\web\MethodNotAllowedHttpException;
 use yii\web\Response;
 
 class BackfillController extends Controller
@@ -19,8 +30,28 @@ class BackfillController extends Controller
 
 	protected array|int|bool $allowAnonymous = false;
 
+	/**
+	 * @param Action<static> $action
+	 * @throws ForbiddenHttpException
+	 */
+	public function beforeAction($action): bool
+	{
+		if (! parent::beforeAction($action)) {
+			return false;
+		}
+
+		$this->requirePermission(Plugin::PERMISSION_BACKFILL);
+
+		return true;
+	}
+
+	/**
+	 * @throws MethodNotAllowedHttpException
+	 * @throws BadRequestHttpException
+	 */
 	public function actionIndex(): Response
 	{
+		$this->requirePostRequest();
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
@@ -43,7 +74,7 @@ class BackfillController extends Controller
 			$query->andWhere(['between', 'dateOrdered', $startDate, $endDate]);
 		} else {
 			// Otherwise, default to orders ordered before now.
-			$query->andWhere(['<', 'dateOrdered', (new \DateTime())->format('Y-m-d H:i:s')]);
+			$query->andWhere(['<', 'dateOrdered', (new DateTime())->format('Y-m-d H:i:s')]);
 		}
 
 		$totalOrders = $query->count();
@@ -58,7 +89,45 @@ class BackfillController extends Controller
 			]));
 		}
 
-		Craft::$app->session->setNotice('Backfill queued for ' . $totalOrders . ' orders.');
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Backfill queued for {count} orders.', [
+			'count' => $totalOrders,
+		]));
+		return $this->redirectToPostedUrl();
+	}
+
+	/**
+	 * @throws BadRequestHttpException
+	 * @throws MethodNotAllowedHttpException
+	 * @throws Exception
+	 */
+	public function actionRebuildDailyStats(): Response
+	{
+		$this->requirePostRequest();
+
+		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
+		$row = (new Query())
+			->select([
+				'minDate' => 'MIN([[dateOrdered]])',
+				'maxDate' => 'MAX([[dateOrdered]])',
+			])
+			->from(CommerceTable::ORDERS)
+			->where(['=', 'isCompleted', true])
+			->one();
+
+		if (! $row || ! $row['minDate']) {
+			Craft::$app->session->setNotice(Craft::t('best-sellers', 'No completed orders found.'));
+			return $this->redirectToPostedUrl();
+		}
+
+		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
+		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
+
+		QueueHelper::push(new RebuildDailyStatsJob([
+			'startDate' => $startDate,
+			'endDate' => $endDate,
+		]));
+
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Daily stats rebuild queued.'));
 		return $this->redirectToPostedUrl();
 	}
 }

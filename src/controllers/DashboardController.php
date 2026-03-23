@@ -3,39 +3,41 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
-use craft\commerce\elements\db\ProductQuery;
-use craft\commerce\elements\db\VariantQuery;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
-use craft\commerce\Plugin as CommercePlugin;
+use craft\commerce\Plugin as Commerce;
 use craft\web\Controller;
 use craft\web\Request;
 use craft\web\twig\variables\Paginate;
 use DateTime;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
-use Illuminate\Support\Collection;
+use fostercommerce\bestsellers\behaviors\SalesBehavior;
+use fostercommerce\bestsellers\Plugin;
+use yii\base\Action;
 use yii\base\InvalidConfigException;
 use yii\web\Response;
 
-/**
- * DashboardController handles the display of best-selling products/variants.
- */
 class DashboardController extends Controller
 {
-	/**
-	 * Number of items to display per page.
-	 *
-	 * @var int
-	 */
 	final public const ITEMS_PER_PAGE = 20;
 
 	protected array|bool|int $allowAnonymous = false;
 
 	/**
-	 * Renders the dashboard index.
-	 *
-	 * Retrieves query parameters, prepares date filters, and fetches best selling products or variants.
-	 *
+	 * @param Action<static> $action
+	 */
+	public function beforeAction($action): bool
+	{
+		if (! parent::beforeAction($action)) {
+			return false;
+		}
+
+		$this->requirePermission(Plugin::PERMISSION_VIEW_REPORTS);
+
+		return true;
+	}
+
+	/**
 	 * @throws InvalidConfigException
 	 */
 	public function actionIndex(): Response
@@ -43,7 +45,6 @@ class DashboardController extends Controller
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
-		// Set default date range: from one month ago to now.
 		$defaultFromDT = new DateTime('-1 month');
 		$defaultToDT = new DateTime('now');
 
@@ -57,7 +58,6 @@ class DashboardController extends Controller
 		$from = trim($fromInput);
 		$to = trim($toInput);
 
-		// Convert to valid datetime strings.
 		$fromDTObj = new DateTime($from);
 		$fromDTObj->setTime(0, 0, 0);
 
@@ -77,7 +77,7 @@ class DashboardController extends Controller
 		if ($fetchVariants) {
 			$query = Variant::find();
 			if ($productType !== 'all') {
-				$productTypeId = CommercePlugin::getInstance()
+				$productTypeId = Commerce::getInstance()
 					?->productTypes
 					->getProductTypeByHandle($productType)
 					?->id;
@@ -90,14 +90,10 @@ class DashboardController extends Controller
 			}
 		}
 
-		// Apply best sellers criteria.
-		/** @var SaleQueryBehavior<array-key, Product|Variant> $query */
-		$query->bestSellers($fromDT, $toDT);
+		/** @var SaleQueryBehavior<array-key, Product|Variant> $bestSellersBehavior */
+		$bestSellersBehavior = $query->getBehavior('bestSellers');
+		$bestSellersBehavior->bestSellers($fromDT, $toDT);
 
-		// Reset the query type.
-		/** @var VariantQuery|ProductQuery $query */
-
-		// New: Apply order status filter if provided.
 		/** @var array<array-key, string> $selectedStatuses */
 		$selectedStatuses = (array) $request->getQueryParam('orderStatuses', []);
 		if (! empty($selectedStatuses)) {
@@ -119,18 +115,12 @@ class DashboardController extends Controller
 		/** @var int $total */
 		$total = $query->count();
 
-		/**
-		 * Maps an element (Product or Variant) to an array of relevant info.
-		 *
-		 * @param Product|Variant $element
-		 * @return array{url: ?string, title: string, sku: string, totalQtySold: int, type: string}
-		 */
 		$map = static function (Product|Variant $element) use ($fetchVariants): array {
 			if ($fetchVariants) {
-				/** @var Variant $element */
+				/** @var (Variant & SalesBehavior) $element */
 				/** @var ?Product $product */
 				$product = $element->getOwner();
-				$totalQtySold = (int) ($product->totalQtySold ?? 0);
+				$totalQtySold = (int) ($element->totalQtySold ?? 0);
 				return [
 					'url' => $product?->getCpEditUrl(),
 					'title' => $product?->title . ': ' . $element->title,
@@ -151,13 +141,19 @@ class DashboardController extends Controller
 			];
 		};
 
-		/** @var Collection<int, array<array-key, Product|Variant>> $page */
-		$page = collect(
-			$query
-				->limit(self::ITEMS_PER_PAGE)
-				->offset($offset)
-				->all()
-		)->map($map);
+		$query->andWhere([
+			'not', [
+				'totalQtySold' => null,
+			],
+		]);
+
+		/** @var array<int, Product|Variant> $elements */
+		$elements = $query
+			->limit(self::ITEMS_PER_PAGE)
+			->offset($offset)
+			->all();
+
+		$page = array_map($map, $elements);
 
 		$pagination = Craft::createObject([
 			'class' => Paginate::class,
@@ -168,8 +164,7 @@ class DashboardController extends Controller
 			'totalPages' => ceil($total / self::ITEMS_PER_PAGE),
 		]);
 
-		// Prepare title text with translation in mind.
-		$titleText = $productsOrVariants === 'variants' ? 'Variants' : 'Products';
+		$titleText = $productsOrVariants === 'variants' ? Craft::t('best-sellers', 'Variants') : Craft::t('best-sellers', 'Products');
 
 		return $this->renderTemplate('best-sellers/_dashboard', [
 			'items' => $page,

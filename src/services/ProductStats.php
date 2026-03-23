@@ -1,0 +1,490 @@
+<?php
+
+namespace fostercommerce\bestsellers\services;
+
+use Craft;
+use craft\commerce\db\Table as CommerceTable;
+use craft\db\Query;
+use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\models\ProductRow;
+use fostercommerce\bestsellers\models\ProductSummary;
+use fostercommerce\bestsellers\models\ReportScope;
+use yii\base\Component;
+use yii\db\Expression;
+
+class ProductStats extends Component
+{
+	/**
+	 * Get top products by revenue or units.
+	 *
+	 * @return list<ProductRow>
+	 */
+	public function getTopProducts(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, ?string $productTypeHandle = null): array
+	{
+		$query = (new Query())
+			->select([
+				'productId' => '[[variantSales.productId]]',
+				'productTitle' => '[[variantSales.productTitle]]',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
+				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'productType' => '[[productTypes.name]]',
+			])
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->innerJoin([
+				'products' => CommerceTable::PRODUCTS,
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => CommerceTable::PRODUCTTYPES,
+			], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->groupBy('[[variantSales.productId]], [[variantSales.productTitle]], [[productTypes.name]]');
+
+		$this->applyStatusFilter($query, $scope);
+
+		if ($productTypeHandle && $productTypeHandle !== 'all') {
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandle,
+			]);
+		}
+
+		$orderColumn = $sortBy === 'units' ? 'unitsSold' : 'revenue';
+		$query->orderBy([
+			$orderColumn => SORT_DESC,
+		])->limit($limit);
+
+		/** @var list<array{productId: int|string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string}> $rows */
+		$rows = $query->all();
+
+		return array_map(fn (array $row): ProductRow => new ProductRow([
+			'productId' => (int) $row['productId'],
+			'productTitle' => $row['productTitle'],
+			'unitsSold' => (int) $row['unitsSold'],
+			'orderCount' => (int) $row['orderCount'],
+			'revenue' => (float) $row['revenue'],
+			'avgPrice' => (float) $row['avgPrice'],
+			'productType' => $row['productType'],
+		]), $rows);
+	}
+
+	/**
+	 * Get top variants by revenue or units.
+	 *
+	 * @return list<ProductRow>
+	 */
+	public function getTopVariants(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, ?string $productTypeHandle = null): array
+	{
+		$query = (new Query())
+			->select([
+				'productId' => '[[variantSales.productId]]',
+				'variantId' => '[[variantSales.variantId]]',
+				'variantTitle' => '[[variantSales.variantTitle]]',
+				'variantSku' => '[[variantSales.variantSku]]',
+				'productTitle' => '[[variantSales.productTitle]]',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
+				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'productType' => '[[productTypes.name]]',
+			])
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->innerJoin([
+				'products' => CommerceTable::PRODUCTS,
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => CommerceTable::PRODUCTTYPES,
+			], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->groupBy('[[variantSales.productId]], [[variantSales.variantId]], [[variantSales.variantTitle]], [[variantSales.variantSku]], [[variantSales.productTitle]], [[productTypes.name]]');
+
+		$this->applyStatusFilter($query, $scope);
+
+		if ($productTypeHandle && $productTypeHandle !== 'all') {
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandle,
+			]);
+		}
+
+		$orderColumn = $sortBy === 'units' ? 'unitsSold' : 'revenue';
+		$query->orderBy([
+			$orderColumn => SORT_DESC,
+		])->limit($limit);
+
+		/** @var list<array{productId: int|string, variantId: int|string, variantTitle: string, variantSku: string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string}> $rows */
+		$rows = $query->all();
+
+		return array_map(fn (array $row): ProductRow => new ProductRow([
+			'productId' => (int) $row['productId'],
+			'productTitle' => $row['productTitle'],
+			'unitsSold' => (int) $row['unitsSold'],
+			'orderCount' => (int) $row['orderCount'],
+			'revenue' => (float) $row['revenue'],
+			'avgPrice' => (float) $row['avgPrice'],
+			'productType' => $row['productType'],
+			'variantId' => (int) $row['variantId'],
+			'variantTitle' => $row['variantTitle'],
+			'variantSku' => $row['variantSku'],
+		]), $rows);
+	}
+
+	/**
+	 * Get daily revenue for the top N products (for trend chart).
+	 *
+	 * @return array{labels: list<string>, datasets: array<int, array{label: string, data: list<float>}>}
+	 */
+	public function getTopProductsTrend(ReportScope $scope, bool $variants = false, int $limit = 5): array
+	{
+		$db = Craft::$app->getDb();
+		$isMysql = $db->getIsMysql();
+		$dayExpr = $isMysql ? 'DATE([[variantSales.dateOrdered]])' : 'CAST([[variantSales.dateOrdered]] AS DATE)';
+
+		$idCol = $variants ? 'variantId' : 'productId';
+		$titleCol = $variants ? 'variantTitle' : 'productTitle';
+
+		// Get top N by total revenue
+		$selectFields = [
+			'itemId' => "[[variantSales.{$idCol}]]",
+			'title' => "[[variantSales.{$titleCol}]]",
+		];
+		$groupFields = "[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]";
+
+		if ($variants) {
+			$selectFields['productTitle'] = '[[variantSales.productTitle]]';
+			$groupFields .= ', [[variantSales.productTitle]]';
+		}
+
+		$topQuery = (new Query())
+			->select($selectFields)
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->groupBy($groupFields)
+			->orderBy([
+				'SUM([[variantSales.lineItemTotal]])' => SORT_DESC,
+			])
+			->limit($limit);
+
+		$this->applyStatusFilter($topQuery, $scope);
+
+		$topItems = $topQuery->all();
+
+		if (empty($topItems)) {
+			return [
+				'labels' => [],
+				'datasets' => [],
+			];
+		}
+
+		$itemIds = array_column($topItems, 'itemId');
+		$titleMap = [];
+		/** @var array{itemId: string, title: string, productTitle?: string} $topItem */
+		foreach ($topItems as $topItem) {
+			$title = $topItem['title'];
+			if ($variants && ! empty($topItem['productTitle'])) {
+				$title = $topItem['productTitle'] . ': ' . $title;
+			}
+
+			$titleMap[$topItem['itemId']] = $title;
+		}
+
+		// Get daily revenue for these items
+		$dailyQuery = (new Query())
+			->select([
+				'day' => $dayExpr,
+				'itemId' => "[[variantSales.{$idCol}]]",
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+			])
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->andWhere(['in', "[[variantSales.{$idCol}]]", $itemIds])
+			->groupBy([$dayExpr, "[[variantSales.{$idCol}]]"])
+			->orderBy([
+				'day' => SORT_ASC,
+			]);
+
+		$this->applyStatusFilter($dailyQuery, $scope);
+
+		$rows = $dailyQuery->all();
+
+		// Collect all unique days
+		$allDays = [];
+		$byItem = [];
+		/** @var array{day: string, itemId: string, revenue: string} $row */
+		foreach ($rows as $row) {
+			$allDays[$row['day']] = true;
+			$byItem[$row['itemId']][$row['day']] = (float) $row['revenue'];
+		}
+
+		ksort($allDays);
+		$labels = array_keys($allDays);
+
+		$datasets = [];
+		foreach ($itemIds as $itemId) {
+			$data = [];
+			foreach ($labels as $label) {
+				$data[] = $byItem[$itemId][$label] ?? 0;
+			}
+
+			$datasets[] = [
+				'label' => $titleMap[$itemId] ?? "#{$itemId}",
+				'data' => $data,
+			];
+		}
+
+		return [
+			'labels' => $labels,
+			'datasets' => $datasets,
+		];
+	}
+
+	/**
+	 * Get Pareto (cumulative revenue concentration) data.
+	 *
+	 * @return array{labels: list<string>, values: list<float>, cumulative: list<float>}
+	 */
+	public function getParetoData(ReportScope $scope, bool $variants = false, ?string $productTypeHandle = null): array
+	{
+		$idCol = $variants ? 'variantId' : 'productId';
+		$titleCol = $variants ? 'variantTitle' : 'productTitle';
+
+		$query = (new Query())
+			->select([
+				'title' => "[[variantSales.{$titleCol}]]",
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+			])
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->innerJoin([
+				'products' => CommerceTable::PRODUCTS,
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => CommerceTable::PRODUCTTYPES,
+			], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
+			->orderBy([
+				'revenue' => SORT_DESC,
+			]);
+
+		$this->applyStatusFilter($query, $scope);
+
+		if ($productTypeHandle && $productTypeHandle !== 'all') {
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandle,
+			]);
+		}
+
+		$rows = $query->all();
+
+		if (empty($rows)) {
+			return [
+				'labels' => [],
+				'values' => [],
+				'cumulative' => [],
+			];
+		}
+
+		$totalRevenue = array_sum(array_column($rows, 'revenue'));
+		$labels = [];
+		$values = [];
+		$cumulative = [];
+		$runningTotal = 0;
+
+		/** @var array{title: string, revenue: string} $row */
+		foreach ($rows as $row) {
+			$labels[] = $row['title'];
+			$rev = (float) $row['revenue'];
+			$values[] = $rev;
+			$runningTotal += $rev;
+			$cumulative[] = $totalRevenue > 0 ? round(($runningTotal / $totalRevenue) * 100, 1) : 0;
+		}
+
+		return [
+			'labels' => $labels,
+			'values' => $values,
+			'cumulative' => $cumulative,
+		];
+	}
+
+	/**
+	 * Get price vs units data for scatter chart.
+	 *
+	 * @return array<int, array{label: string, price: float, units: int}>
+	 */
+	public function getPriceVsUnits(ReportScope $scope, bool $variants = false, ?string $productTypeHandle = null): array
+	{
+		$idCol = $variants ? 'variantId' : 'productId';
+		$titleCol = $variants ? 'variantTitle' : 'productTitle';
+
+		$query = (new Query())
+			->select([
+				'title' => "[[variantSales.{$titleCol}]]",
+				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
+			])
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->innerJoin([
+				'products' => CommerceTable::PRODUCTS,
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => CommerceTable::PRODUCTTYPES,
+			], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
+			->orderBy([
+				'unitsSold' => SORT_DESC,
+			]);
+
+		$this->applyStatusFilter($query, $scope);
+
+		if ($productTypeHandle && $productTypeHandle !== 'all') {
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandle,
+			]);
+		}
+
+		/** @var array<int, array{title: string, avgPrice: string, unitsSold: string}> $queryRows */
+		$queryRows = $query->all();
+
+		return array_map(fn (array $row): array => [
+			'label' => $row['title'],
+			'price' => round((float) $row['avgPrice'], 2),
+			'units' => (int) $row['unitsSold'],
+		], $queryRows);
+	}
+
+	/**
+	 * Get product summary stats for KPI cards.
+	 */
+	public function getSummaryStats(ReportScope $scope): ProductSummary
+	{
+		$dateConditions = [
+			'and',
+			['>=', '[[variantSales.dateOrdered]]', $scope->fromDT],
+			['<=', '[[variantSales.dateOrdered]]', $scope->toDT],
+		];
+
+		$uniqueQuery = (new Query())
+			->select('COUNT(DISTINCT [[variantSales.productId]])')
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->where($dateConditions);
+		$this->applyStatusFilter($uniqueQuery, $scope);
+		$uniqueProducts = (int) $uniqueQuery->scalar();
+
+		$topQuery = (new Query())
+			->select([
+				'title' => '[[variantSales.productTitle]]',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
+				'revenue' => new Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'),
+			])
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->where($dateConditions)
+			->groupBy('[[variantSales.productId]], [[variantSales.productTitle]]')
+			->orderBy([
+				'unitsSold' => SORT_DESC,
+			])
+			->limit(1);
+		$this->applyStatusFilter($topQuery, $scope);
+
+		/** @var array{title: string, unitsSold: string, revenue: string}|false $topProduct */
+		$topProduct = $topQuery->one();
+
+		$revenueQuery = (new Query())
+			->select(new Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'))
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->where($dateConditions);
+		$this->applyStatusFilter($revenueQuery, $scope);
+		$totalProductRevenue = (float) $revenueQuery->scalar();
+
+		return new ProductSummary([
+			'uniqueProducts' => $uniqueProducts,
+			'bestSeller' => $topProduct ? $topProduct['title'] : '-',
+			'bestSellerUnits' => $topProduct ? (int) $topProduct['unitsSold'] : 0,
+			'totalProductRevenue' => $totalProductRevenue,
+		]);
+	}
+
+	/**
+	 * Revenue by product type.
+	 *
+	 * @return array<int, array{productType: string, revenue: float, unitsSold: int}>
+	 */
+	public function getRevenueByType(ReportScope $scope): array
+	{
+		$query = (new Query())
+			->select([
+				'productType' => '[[productTypes.name]]',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'unitsSold' => 'SUM([[variantSales.qty]])',
+			])
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->innerJoin([
+				'products' => CommerceTable::PRODUCTS,
+			], '[[variantSales.productId]] = [[products.id]]')
+			->innerJoin([
+				'productTypes' => CommerceTable::PRODUCTTYPES,
+			], '[[products.typeId]] = [[productTypes.id]]')
+			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
+			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->groupBy('[[productTypes.name]]')
+			->orderBy([
+				'revenue' => SORT_DESC,
+			]);
+
+		$this->applyStatusFilter($query, $scope);
+
+		/** @var array<int, array{productType: string, revenue: float, unitsSold: int}> $rows */
+		$rows = $query->all();
+
+		return $rows;
+	}
+
+	/**
+	 * Conditionally join commerce_orders and apply status filter to a variant_sales query.
+	 *
+	 * Only adds the join when a status filter is active, avoiding performance impact otherwise.
+	 *
+	 * @param Query<array-key, mixed> $query
+	 */
+	private function applyStatusFilter(Query $query, ReportScope $scope): void
+	{
+		if (! $scope->hasStatusFilter()) {
+			return;
+		}
+
+		$query->innerJoin(
+			[
+				'orders' => CommerceTable::ORDERS,
+			],
+			'[[variantSales.orderId]] = [[orders.id]]',
+		);
+		/** @var array<mixed> $condition */
+		$condition = $scope->statusCondition('orders');
+		$query->andWhere($condition);
+	}
+}

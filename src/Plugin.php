@@ -15,6 +15,8 @@ use craft\events\CancelableEvent;
 use craft\events\DefineBehaviorsEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterUrlRulesEvent;
+use craft\events\RegisterUserPermissionsEvent;
+use craft\services\UserPermissions;
 use craft\services\Utilities;
 use craft\web\twig\variables\CraftVariable;
 use craft\web\UrlManager;
@@ -22,18 +24,39 @@ use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\behaviors\SalesBehavior;
 use fostercommerce\bestsellers\helpers\Query;
 use fostercommerce\bestsellers\models\Settings;
+use fostercommerce\bestsellers\services\CartAbandonment;
+use fostercommerce\bestsellers\services\CustomerStats;
+use fostercommerce\bestsellers\services\DailyStats;
+use fostercommerce\bestsellers\services\DateRange;
+use fostercommerce\bestsellers\services\OperationsStats;
+use fostercommerce\bestsellers\services\ProductStats;
 use fostercommerce\bestsellers\services\Sales;
+use fostercommerce\bestsellers\services\SummaryEngine;
 use fostercommerce\bestsellers\utilities\BackfillUtility;
 use fostercommerce\bestsellers\variables\BestSellersVariable;
 use yii\base\Event;
 
 /**
+ * @method static Plugin getInstance()
+ * @method Settings getSettings()
+ *
  * @property-read Settings $settings
  * @property-read Sales $sales
+ * @property-read DailyStats $dailyStats
+ * @property-read DateRange $dateRange
+ * @property-read ProductStats $productStats
+ * @property-read CustomerStats $customerStats
+ * @property-read OperationsStats $operationsStats
+ * @property-read CartAbandonment $cartAbandonment
+ * @property-read SummaryEngine $summaryEngine
  */
 class Plugin extends BasePlugin
 {
-	public string $schemaVersion = '1.0.0';
+	public const PERMISSION_VIEW_REPORTS = 'best-sellers:viewReports';
+
+	public const PERMISSION_BACKFILL = 'best-sellers:backfill';
+
+	public string $schemaVersion = '1.2.0';
 
 	public bool $hasCpSettings = false;
 
@@ -47,6 +70,13 @@ class Plugin extends BasePlugin
 		return [
 			'components' => [
 				'sales' => Sales::class,
+				'dailyStats' => DailyStats::class,
+				'dateRange' => DateRange::class,
+				'productStats' => ProductStats::class,
+				'customerStats' => CustomerStats::class,
+				'operationsStats' => OperationsStats::class,
+				'cartAbandonment' => CartAbandonment::class,
+				'summaryEngine' => SummaryEngine::class,
 			],
 		];
 	}
@@ -57,12 +87,6 @@ class Plugin extends BasePlugin
 
 		$this->attachEventHandlers();
 
-		// Any code that creates an element query or loads Twig should be deferred until
-		// after Craft is fully initialized, to avoid conflicts with other plugins/modules
-		Craft::$app->onInit(function (): void {
-			// ...
-		});
-
 		// Register the backfill utility
 		Event::on(
 			Utilities::class,
@@ -72,12 +96,6 @@ class Plugin extends BasePlugin
 			}
 		);
 
-		// Register services if not already done
-		$this->setComponents([
-			'sales' => Sales::class,
-		]);
-
-		// Register the variable so it becomes available as craft.bestsellers
 		Event::on(
 			CraftVariable::class,
 			CraftVariable::EVENT_INIT,
@@ -87,6 +105,24 @@ class Plugin extends BasePlugin
 				$variable->set('bestsellers', BestSellersVariable::class);
 			}
 		);
+
+		Event::on(
+			UserPermissions::class,
+			UserPermissions::EVENT_REGISTER_PERMISSIONS,
+			static function (RegisterUserPermissionsEvent $event): void {
+				$event->permissions[] = [
+					'heading' => Craft::t('best-sellers', 'Best Sellers'),
+					'permissions' => [
+						self::PERMISSION_VIEW_REPORTS => [
+							'label' => Craft::t('best-sellers', 'View reports'),
+						],
+						self::PERMISSION_BACKFILL => [
+							'label' => Craft::t('best-sellers', 'Backfill order data'),
+						],
+					],
+				];
+			}
+		);
 	}
 
 	/**
@@ -94,20 +130,84 @@ class Plugin extends BasePlugin
 	 */
 	public function getCpNavItem(): ?array
 	{
+		if (! Craft::$app->getUser()->checkPermission(self::PERMISSION_VIEW_REPORTS)) {
+			return null;
+		}
+
 		$navItem = parent::getCpNavItem();
-		$navItem['label'] = 'Best Sellers';
+		$navItem['label'] = Craft::t('best-sellers', 'Best Sellers');
 		$navItem['url'] = 'best-sellers';
 		$navItem['subnav'] = [
-			'dashboard' => [
-				'label' => 'Best Sellers',
+			'overview' => [
+				'label' => Craft::t('best-sellers', 'Dashboard'),
 				'url' => 'best-sellers/',
 			],
-			'reports' => [
-				'label' => 'Reports',
-				'url' => 'best-sellers/reports',
+			'orders' => [
+				'label' => Craft::t('best-sellers', 'Orders'),
+				'url' => 'best-sellers/orders',
+			],
+			'products' => [
+				'label' => Craft::t('best-sellers', 'Products'),
+				'url' => 'best-sellers/products',
+			],
+			'customers' => [
+				'label' => Craft::t('best-sellers', 'Customers'),
+				'url' => 'best-sellers/customers',
+			],
+			'operations' => [
+				'label' => Craft::t('best-sellers', 'Operations'),
+				'url' => 'best-sellers/operations',
 			],
 		];
 		return $navItem;
+	}
+
+	public function getSales(): Sales
+	{
+		/** @var Sales */
+		return $this->get('sales');
+	}
+
+	public function getDailyStats(): DailyStats
+	{
+		/** @var DailyStats */
+		return $this->get('dailyStats');
+	}
+
+	public function getDateRange(): DateRange
+	{
+		/** @var DateRange */
+		return $this->get('dateRange');
+	}
+
+	public function getProductStats(): ProductStats
+	{
+		/** @var ProductStats */
+		return $this->get('productStats');
+	}
+
+	public function getCustomerStats(): CustomerStats
+	{
+		/** @var CustomerStats */
+		return $this->get('customerStats');
+	}
+
+	public function getOperationsStats(): OperationsStats
+	{
+		/** @var OperationsStats */
+		return $this->get('operationsStats');
+	}
+
+	public function getCartAbandonment(): CartAbandonment
+	{
+		/** @var CartAbandonment */
+		return $this->get('cartAbandonment');
+	}
+
+	public function getSummaryEngine(): SummaryEngine
+	{
+		/** @var SummaryEngine */
+		return $this->get('summaryEngine');
 	}
 
 	protected function createSettingsModel(): ?Model
@@ -188,6 +288,11 @@ class Plugin extends BasePlugin
 				/** @var Order $order */
 				$order = $event->sender;
 				$this->sales->logOrderSales($order);
+
+				// Aggregate daily stats for the order's date
+				if ($order->dateOrdered) {
+					$this->dailyStats->aggregateDay($order->dateOrdered->format('Y-m-d'));
+				}
 			}
 		);
 	}
@@ -198,8 +303,24 @@ class Plugin extends BasePlugin
 			UrlManager::class,
 			UrlManager::EVENT_REGISTER_CP_URL_RULES,
 			static function (RegisterUrlRulesEvent $registerUrlRulesEvent): void {
-				$registerUrlRulesEvent->rules['best-sellers'] = 'best-sellers/dashboard';
-				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/reports';
+				$registerUrlRulesEvent->rules['best-sellers'] = 'best-sellers/overview';
+				$registerUrlRulesEvent->rules['best-sellers/orders'] = 'best-sellers/orders';
+				$registerUrlRulesEvent->rules['best-sellers/orders/orders-data'] = 'best-sellers/orders/orders-data';
+				$registerUrlRulesEvent->rules['best-sellers/orders/export-csv'] = 'best-sellers/orders/export-csv';
+				$registerUrlRulesEvent->rules['best-sellers/products'] = 'best-sellers/products';
+				$registerUrlRulesEvent->rules['best-sellers/products/orders'] = 'best-sellers/products/orders';
+				$registerUrlRulesEvent->rules['best-sellers/products/products-data'] = 'best-sellers/products/products-data';
+				$registerUrlRulesEvent->rules['best-sellers/products/product-orders-data'] = 'best-sellers/products/product-orders-data';
+				$registerUrlRulesEvent->rules['best-sellers/products/export-csv'] = 'best-sellers/products/export-csv';
+				$registerUrlRulesEvent->rules['best-sellers/customers'] = 'best-sellers/customers';
+				$registerUrlRulesEvent->rules['best-sellers/customers/customers-data'] = 'best-sellers/customers/customers-data';
+				$registerUrlRulesEvent->rules['best-sellers/customers/export-csv'] = 'best-sellers/customers/export-csv';
+				$registerUrlRulesEvent->rules['best-sellers/operations'] = 'best-sellers/operations';
+
+				// Backward compatibility redirects
+				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/orders';
+				$registerUrlRulesEvent->rules['best-sellers/sales'] = 'best-sellers/orders';
+				$registerUrlRulesEvent->rules['best-sellers/dashboard'] = 'best-sellers/products';
 			}
 		);
 	}

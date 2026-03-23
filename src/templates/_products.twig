@@ -1,0 +1,146 @@
+{% extends 'best-sellers/_layouts/reports' %}
+
+{% set title = "Products"|t('best-sellers') %}
+{% set selectedSubnavItem = 'products' %}
+
+{% block reportContent %}
+	{# Filters #}
+	<div class="bs-filter-bar" style="margin-bottom: 1rem;">
+		<div class="bs-filter-bar__item">
+			<select id="products-or-variants" class="text fullwidth">
+				<option value="products" {% if productsOrVariants == 'products' %}selected{% endif %}>{{ "Products"|t('best-sellers') }}</option>
+				<option value="variants" {% if productsOrVariants == 'variants' %}selected{% endif %}>{{ "Variants"|t('best-sellers') }}</option>
+			</select>
+		</div>
+		{% set allProductTypes = craft.commerce.productTypes.allProductTypes %}
+		{% if allProductTypes|length > 1 %}
+			<div class="bs-filter-bar__item">
+				{% set productTypes = [{
+					label: 'All product types',
+					value: 'all',
+				}]|merge(allProductTypes|map(type => {
+					label: type.name,
+					value: type.handle,
+				})) %}
+				<select id="product-type-filter" class="text fullwidth">
+					{% for pt in productTypes %}
+						<option value="{{ pt.value }}" {% if productType == pt.value %}selected{% endif %}>{{ pt.label }}</option>
+					{% endfor %}
+				</select>
+			</div>
+		{% endif %}
+		<div class="bs-filter-bar__item">
+			<input type="text" id="product-search" class="text fullwidth" placeholder="{{ 'Search...'|t('best-sellers') }}" autocomplete="off">
+		</div>
+		<span id="products-export"></span>
+	</div>
+
+	{# Loading State #}
+	<div id="products-loading" class="bs-loading">
+		<div class="bs-loading__spinner"></div>
+		<p class="bs-loading__message">{{ "Fetching your data from the vault..."|t('best-sellers') }}</p>
+	</div>
+
+	{# Products Table (hidden until loaded) #}
+	<div id="products-container" style="display: none;">
+		<div style="overflow-x: auto;">
+			<table class="bs-data-table" id="products-table">
+				<thead>
+					<tr>
+						<th data-sort="productTitle">{{ "Product"|t('best-sellers') }}</th>
+						<th data-sort="sku">{{ "Default SKU"|t('best-sellers') }}</th>
+						<th data-sort="productType">{{ "Type"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="unitsSold">{{ "Units Sold"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="revenue">{{ "Revenue"|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="avgPrice">{{ "Avg Price"|t('best-sellers') }}</th>
+						<th style="width: 32px; text-align: center;"><span data-icon="world" aria-label="{{ 'Link'|t('best-sellers') }}"></span></th>
+					</tr>
+				</thead>
+				<tbody id="products-tbody"></tbody>
+			</table>
+		</div>
+		<div id="products-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+	</div>
+{% endblock %}
+
+{% js %}
+document.addEventListener('DOMContentLoaded', function () {
+	var searchInput = document.getElementById('product-search');
+	var productsOrVariantsSelect = document.getElementById('products-or-variants');
+	var productTypeFilter = document.getElementById('product-type-filter');
+	var searchTimer = null;
+
+	var table = BestSellersReports.createAjaxTable({
+		loadingEl: document.getElementById('products-loading'),
+		containerEl: document.getElementById('products-container'),
+		tbodyEl: document.getElementById('products-tbody'),
+		paginationEl: document.getElementById('products-pagination'),
+		actionUrl: 'best-sellers/products/products-data',
+		exportUrl: 'best-sellers/products/export-csv',
+		exportContainerEl: document.getElementById('products-export'),
+		baseParams: { from: '{{ from }}', to: '{{ to }}', preset: '{{ preset }}' },
+		defaultSort: 'revenue',
+		defaultSortDir: 'desc',
+		itemLabel: 'products',
+		emptyMessage: 'No product sales data for this period.',
+		buildRow: function (item) {
+			var row = document.createElement('tr');
+			var titleCell = item.cpEditUrl
+				? '<a href="' + item.cpEditUrl + '" class="go">' + item.displayTitle + '</a>'
+				: item.displayTitle;
+			var linkCell = item.frontEndUrl
+				? '<a href="' + item.frontEndUrl + '" target="_blank" rel="noopener" class="bs-external-link"><span data-icon="world"></span></a>'
+				: '';
+			var ordersLink = '<a href="' + item.ordersUrl + '" class="light" style="text-decoration:underline">in ' + item.orderCount + ' orders</a>';
+
+			row.innerHTML =
+				'<td>' + titleCell + '</td>' +
+				'<td>' + item.sku + '</td>' +
+				'<td>' + item.productType + '</td>' +
+				'<td class="bs-data-table--right">' + item.unitsSold + ' ' + ordersLink + '</td>' +
+				'<td class="bs-data-table--right">' + item.revenue + '</td>' +
+				'<td class="bs-data-table--right">' + item.avgPrice + '</td>' +
+				'<td style="text-align:center">' + linkCell + '</td>';
+			return row;
+		},
+		buildTotalsRow: function (totals) {
+			var row = document.createElement('tr');
+			row.innerHTML =
+				'<td>{{ "All Results Total"|t("best-sellers") }}</td>' +
+				'<td></td>' +
+				'<td></td>' +
+				'<td class="bs-data-table--right">' + totals.unitsSold + '</td>' +
+				'<td class="bs-data-table--right">' + totals.revenue + '</td>' +
+				'<td></td>' +
+				'<td></td>';
+			return row;
+		},
+		getFilterParams: function () {
+			var params = {};
+			params.productsOrVariants = productsOrVariantsSelect ? productsOrVariantsSelect.value : 'products';
+			if (productTypeFilter) { params.productType = productTypeFilter.value; }
+			var searchValue = searchInput ? searchInput.value.trim() : '';
+			if (searchValue) { params.search = searchValue; }
+			return params;
+		},
+		restoreFilterState: function (filters) {
+			if (filters.search && searchInput) { searchInput.value = filters.search; }
+			if (filters.productsOrVariants && productsOrVariantsSelect) { productsOrVariantsSelect.value = filters.productsOrVariants; }
+			if (filters.productType && productTypeFilter) { productTypeFilter.value = filters.productType; }
+		}
+	});
+
+	function reloadTable() { table.reload(); }
+
+	if (searchInput) {
+		searchInput.addEventListener('input', function () {
+			clearTimeout(searchTimer);
+			searchTimer = setTimeout(reloadTable, 400);
+		});
+	}
+	if (productsOrVariantsSelect) productsOrVariantsSelect.addEventListener('change', reloadTable);
+	if (productTypeFilter) productTypeFilter.addEventListener('change', reloadTable);
+
+	table.init();
+});
+{% endjs %}

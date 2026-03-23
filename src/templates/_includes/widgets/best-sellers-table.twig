@@ -1,0 +1,42 @@
+{# Best Sellers Top 10 #}
+{% set maxUnits = bestSellers|first.unitsSold %}
+<div class="bs-chart-container">
+	<h3 class="bs-chart-container__title">{{ "Best Sellers"|t('best-sellers') }}</h3>
+	<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+		<tbody>
+			{% for item in bestSellers %}
+				{% set pct = maxUnits > 0 ? (item.unitsSold / maxUnits * 100) : 0 %}
+				{% set productEl = bestSellerElements[item.productId] ?? null %}
+				<tr>
+					<td style="padding: 0.4rem 0; color: #999; width: 2rem;">{{ loop.index }}.</td>
+					<td style="padding: 0.4rem 0.5rem; position: relative;">
+						<span style="position: absolute; top: 2px; left: 0; bottom: 2px; width: {{ pct }}%; background: rgba(0, 115, 170, 0.08); border-radius: 3px;"></span>
+						<span style="position: relative;">
+							{% if productEl %}
+								<a href="{{ productEl.cpEditUrl }}" class="go">{{ item.productTitle }}</a>
+							{% else %}
+								{{ item.productTitle }}
+							{% endif %}
+						</span>
+					</td>
+					<td style="padding: 0.4rem 0.5rem; text-align: right; white-space: nowrap;">{{ item.unitsSold }} {{ "units"|t('best-sellers') }}</td>
+					<td style="padding: 0.4rem 0; text-align: right; white-space: nowrap;">{{ item.revenue|commerceCurrency }}</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+		<tfoot>
+			<tr>
+				<td style="padding: 0.4rem 0; border-top: 2px solid #e0e0e0;"></td>
+				<td style="padding: 0.4rem 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ "Top"|t('best-sellers') }} {{ bestSellers|length }}</td>
+				<td style="padding: 0.4rem 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0; white-space: nowrap;">
+					{% set totalUnits = 0 %}{% for i in bestSellers %}{% set totalUnits = totalUnits + i.unitsSold %}{% endfor %}
+					{{ totalUnits|number_format }} {{ "units"|t('best-sellers') }}
+				</td>
+				<td style="padding: 0.4rem 0; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0; white-space: nowrap;">
+					{% set totalRev = 0 %}{% for i in bestSellers %}{% set totalRev = totalRev + i.revenue %}{% endfor %}
+					{{ totalRev|commerceCurrency }}
+				</td>
+			</tr>
+		</tfoot>
+	</table>
+</div>

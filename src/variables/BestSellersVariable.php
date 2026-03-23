@@ -2,12 +2,14 @@
 
 namespace fostercommerce\bestsellers\variables;
 
+use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\db\VariantQuery;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Variant;
 use craft\db\Query;
 use craft\elements\User;
-use fostercommerce\bestsellers\records\VariantSale;
+use DateTime;
+use fostercommerce\bestsellers\db\Table;
 
 class BestSellersVariable
 {
@@ -21,26 +23,36 @@ class BestSellersVariable
 	public function variantTotalSales(int $variantId, ?string $startDate = null, ?string $endDate = null): int
 	{
 		$query = (new Query())
-			->from(VariantSale::tableName())
+			->from(Table::VARIANT_SALES)
 			->where([
 				'variantId' => $variantId,
 			]);
 
-		if ($startDate !== null) {
-			// Parse the date into a proper format
-			$start = (new \DateTime($startDate))->format('Y-m-d H:i:s');
-			$query->andWhere(['>=', 'dateOrdered', $start]);
-		}
+		$this->applyDateFilter($query, $startDate, $endDate);
 
-		if ($endDate !== null) {
-			$end = (new \DateTime($endDate))->format('Y-m-d H:i:s');
-			$query->andWhere(['<=', 'dateOrdered', $end]);
-		}
-
-		/** @var int $sum */
+		/** @var string|int|null|false $sum */
 		$sum = $query->sum('qty');
 
-		return $sum;
+		return (int) ($sum ?? 0);
+	}
+
+	/**
+	 * Returns the total revenue (sum of lineItemTotal) for a given variant ID.
+	 */
+	public function variantTotalRevenue(int $variantId, ?string $startDate = null, ?string $endDate = null): float
+	{
+		$query = (new Query())
+			->from(Table::VARIANT_SALES)
+			->where([
+				'variantId' => $variantId,
+			]);
+
+		$this->applyDateFilter($query, $startDate, $endDate);
+
+		/** @var string|int|null|false $sum */
+		$sum = $query->sum('lineItemTotal');
+
+		return (float) ($sum ?? 0);
 	}
 
 	/**
@@ -53,65 +65,82 @@ class BestSellersVariable
 	public function productTotalSales(int $productId, ?string $startDate = null, ?string $endDate = null): int
 	{
 		$query = (new Query())
-			->from(VariantSale::tableName())
+			->from(Table::VARIANT_SALES)
 			->where([
 				'productId' => $productId,
 			]);
 
-		if ($startDate !== null) {
-			$start = (new \DateTime($startDate))->format('Y-m-d H:i:s');
-			$query->andWhere(['>=', 'dateOrdered', $start]);
-		}
+		$this->applyDateFilter($query, $startDate, $endDate);
 
-		if ($endDate !== null) {
-			$end = (new \DateTime($endDate))->format('Y-m-d H:i:s');
-			$query->andWhere(['<=', 'dateOrdered', $end]);
-		}
-
-		/** @var int $sum */
+		/** @var string|int|null|false $sum */
 		$sum = $query->sum('qty');
 
-		return $sum;
+		return (int) ($sum ?? 0);
 	}
 
 	/**
-	 * Returns the most recent purchase info for the user
-	 * for a given purchasable ID.
+	 * Returns the total revenue (sum of lineItemTotal) for a given product ID.
+	 */
+	public function productTotalRevenue(int $productId, ?string $startDate = null, ?string $endDate = null): float
+	{
+		$query = (new Query())
+			->from(Table::VARIANT_SALES)
+			->where([
+				'productId' => $productId,
+			]);
+
+		$this->applyDateFilter($query, $startDate, $endDate);
+
+		/** @var string|int|null|false $sum */
+		$sum = $query->sum('lineItemTotal');
+
+		return (float) ($sum ?? 0);
+	}
+
+	/**
+	 * Returns the most recent completed order containing a given purchasable for a user.
 	 */
 	public function previousPurchaseByUser(int $purchasableId, User $user): ?Order
 	{
-		// query for most recent completed order with this purchasable
-		$query = Order::find()
+		/** @var Order|null $order */
+		$order = Order::find()
 			->customer($user)
 			->isCompleted()
-			->innerJoin('{{%commerce_lineitems}} lineitems', '[[commerce_orders.id]] = [[lineitems.orderId]]')
+			->innerJoin(
+				[
+					'lineitems' => CommerceTable::LINEITEMS,
+				],
+				'[[commerce_orders.id]] = [[lineitems.orderId]]'
+			)
 			->andWhere([
-				'lineitems.purchasableId' => $purchasableId,
+				'[[lineitems.purchasableId]]' => $purchasableId,
 			])
 			->orderBy([
 				'dateOrdered' => SORT_DESC,
 			])
-			->limit(1);
-
-		/** @var ?Order */
-		$order = $query->one();
-
-		if (empty($order)) {
-			return null;
-		}
+			->limit(1)
+			->one();
 
 		return $order;
 	}
 
 	/**
-	 * @return VariantQuery <array-key,Variant>|null
+	 * Returns a query for all variants previously purchased by a user,
+	 * ordered by most recent purchase.
+	 *
+	 * @return VariantQuery<array-key, Variant>|null
 	 */
 	public function previouslyPurchasedProducts(User $user): ?VariantQuery
 	{
-		$purchasableIds = (new Query())
-			->select('l.purchasableId')
-			->from('{{%commerce_orders}} o')
-			->leftJoin('{{%commerce_lineitems}} l', '[[o.id]] = [[l.orderId]]')
+		/** @var list<array{purchasableId: int|null}> $rows */
+		$rows = (new Query())
+			->select('[[l.purchasableId]]')
+			->from([
+				'o' => CommerceTable::ORDERS,
+			])
+			->leftJoin([
+				'l' => CommerceTable::LINEITEMS,
+			], '[[o.id]] = [[l.orderId]]')
 			->where([
 				'[[o.isCompleted]]' => true,
 			])
@@ -119,23 +148,38 @@ class BestSellersVariable
 				'[[o.customerId]]' => $user->id,
 			])
 			->andWhere([
-				'not',
-				[
-					'l.purchasableId' => null,
-				],
+				'not', [
+					'[[l.purchasableId]]' => null,
+				]])
+			->orderBy([
+				'[[o.dateOrdered]]' => SORT_DESC,
 			])
-			->orderBy('o.dateOrdered desc')
 			->all();
 
-		if (empty($purchasableIds)) {
+		if ($rows === []) {
 			return null;
 		}
 
-		/** @var array<int,array{purchasableId: ?int}> $purchasableIds */
-		$purchasables = array_map(fn ($row): mixed => $row['purchasableId'], $purchasableIds);
+		$purchasableIds = array_map(fn (array $row): int|null => $row['purchasableId'], $rows);
 
 		return Variant::find()
-			->id($purchasables)
+			->id($purchasableIds)
 			->fixedOrder();
+	}
+
+	/**
+	 * @param Query<array-key, mixed> $query
+	 */
+	private function applyDateFilter(Query $query, ?string $startDate, ?string $endDate): void
+	{
+		if ($startDate !== null) {
+			$start = (new DateTime($startDate))->format('Y-m-d H:i:s');
+			$query->andWhere(['>=', 'dateOrdered', $start]);
+		}
+
+		if ($endDate !== null) {
+			$end = (new DateTime($endDate))->format('Y-m-d H:i:s');
+			$query->andWhere(['<=', 'dateOrdered', $end]);
+		}
 	}
 }

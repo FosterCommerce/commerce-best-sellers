@@ -7,9 +7,9 @@ use craft\db\Query as DbQuery;
 use craft\elements\db\ElementQuery;
 use craft\helpers\Db;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
-use fostercommerce\bestsellers\records\VariantSale;
+use fostercommerce\bestsellers\db\Table;
 
-class Query
+abstract class Query
 {
 	/**
 	 * @template TKey of array-key
@@ -23,42 +23,49 @@ class Query
 			return;
 		}
 
+		/** @var SaleQueryBehavior<TKey, TElement> $behavior */
+		$behavior = $query->getBehavior('bestSellers');
+
+		if (! $behavior->getIncludeBestSellersData()) {
+			return;
+		}
+
 		$withQuery = (new DbQuery())
 			->select([
 				$id,
-				'totalQtySold' => 'SUM(qty)',
+				'totalQtySold' => 'COALESCE(SUM(qty), 0)',
+				'totalRevenue' => 'COALESCE(SUM(lineItemTotal), 0)',
 			])
-			->from(VariantSale::tableName())
+			->from(Table::VARIANT_SALES)
 			->groupBy($id);
 
-		// Behavior types aren't inferred
-		/** @var SaleQueryBehavior<TKey, TElement> $query */
-		if ($query->bestSellersFrom !== null) {
-			$withQuery->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersFrom)]);
+		if ($behavior->bestSellersFrom !== null) {
+			$withQuery->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($behavior->bestSellersFrom)]);
 		}
 
-		if ($query->bestSellersTo !== null) {
-			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($query->bestSellersTo)]);
+		if ($behavior->bestSellersTo !== null) {
+			$withQuery->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($behavior->bestSellersTo)]);
 		}
 
-		// We need to reset the type here
-		/** @var ElementQuery<TKey, TElement> $query */
-		$query
-			->query
-			?->addSelect(['variant_sales_cte.totalQtySold'])
-			->withQuery($withQuery, 'variant_sales_cte')
-			->leftJoin(
-				'variant_sales_cte',
-				$joinCondition,
-			);
-
+		// Attach CTE only to subQuery (handles filtering/sorting).
+		// The outer query selects totalQtySold from the subquery results.
 		$query
 			->subQuery
-			?->addSelect(['variant_sales_cte.totalQtySold'])
+			?->addSelect([
+				'variant_sales_cte.totalQtySold',
+				'variant_sales_cte.totalRevenue',
+			])
 			->withQuery($withQuery, 'variant_sales_cte')
 			->leftJoin(
 				'variant_sales_cte',
 				$joinCondition,
 			);
+
+		$query
+			->query
+			?->addSelect([
+				'subquery.totalQtySold',
+				'subquery.totalRevenue',
+			]);
 	}
 }

@@ -1,0 +1,156 @@
+{# Global date picker for reports pages - uses Craft's native date range picker #}
+
+<form id="bs-date-form" method="get" style="display: flex; align-items: center; gap: 0.5rem;">
+	<input type="hidden" id="bs-startDate" name="from" value="{{ from }}" data-start-date>
+	<input type="hidden" id="bs-endDate" name="to" value="{{ to }}" data-end-date>
+	<input type="hidden" id="bs-dateRange" name="preset" value="{{ preset|default('past30Days') }}" data-date-range>
+
+	{# Preserve other query params through date changes #}
+	{% for key, value in craft.app.request.queryParams %}
+		{% if key not in ['from', 'to', 'preset', 'orderStatuses'] %}
+			{% if value is iterable %}
+				{% for v in value %}
+					<input type="hidden" name="{{ key }}[]" value="{{ v }}">
+				{% endfor %}
+			{% else %}
+				<input type="hidden" name="{{ key }}" value="{{ value }}">
+			{% endif %}
+		{% endif %}
+	{% endfor %}
+
+	{% block filtersBefore %}{% endblock %}
+
+	<div data-date-range-picker></div>
+
+	{% set allOrderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
+	{% if allOrderStatuses|length > 0 %}
+		<button type="button" class="btn menubtn" id="bs-scope-status-btn" style="margin-left: 0.5rem;">
+			{{ "Order statuses"|t('best-sellers') }}
+			{% if scope is defined and scope and scope.hasStatusFilter() %}
+				<span class="bs-multiselect__badge">{{ scope.orderStatusIds|length }}</span>
+			{% endif %}
+		</button>
+		<div class="bs-scope-dropdown" id="bs-scope-status-dropdown">
+			{% for status in allOrderStatuses %}
+				<label>
+					<input type="checkbox" name="orderStatuses[]" value="{{ status.handle }}"
+						{% if scope is defined and scope and status.id in scope.orderStatusIds %}checked{% endif %}>
+					<span class="status {{ status.color }}"></span> {{ status.name }}
+				</label>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	{% block filtersAfter %}{% endblock %}
+</form>
+
+{% js %}
+(function() {
+	var initialized = false;
+
+	var options = {
+		selected: '{{ preset|default("past30Days") }}',
+		onChange: function(start, end, handle) {
+			if (!initialized) {
+				return;
+			}
+
+			var $startDate = document.getElementById('bs-startDate');
+			var $endDate = document.getElementById('bs-endDate');
+			var $dateRange = document.getElementById('bs-dateRange');
+
+			$startDate.value = '';
+			$endDate.value = '';
+			$dateRange.value = '';
+
+			if (start) {
+				$startDate.value = start.getFullYear() + '-' + (start.getMonth() + 1) + '-' + start.getDate();
+			}
+
+			if (end) {
+				$endDate.value = end.getFullYear() + '-' + (end.getMonth() + 1) + '-' + end.getDate();
+			}
+
+			if (handle) {
+				$dateRange.value = handle;
+			}
+
+			document.getElementById('bs-date-form').submit();
+		}
+	};
+
+	{% if preset == 'custom' and from %}
+		options['startDate'] = new Date({{ from|date('Y') }}, {{ from|date('m') - 1 }}, {{ from|date('d') }});
+	{% endif %}
+
+	{% if preset == 'custom' and to %}
+		options['endDate'] = new Date({{ to|date('Y') }}, {{ to|date('m') - 1 }}, {{ to|date('d') }});
+	{% endif %}
+
+	var $container = document.querySelector('[data-date-range-picker]');
+	if ($container && Craft.ui.createDateRangePicker) {
+		Craft.ui.createDateRangePicker(options).appendTo($container);
+	}
+
+	initialized = true;
+
+	// Order status scope filter
+	var statusBtn = document.getElementById('bs-scope-status-btn');
+	var statusDropdown = document.getElementById('bs-scope-status-dropdown');
+	if (statusBtn && statusDropdown) {
+		var statusDirty = false;
+
+		// Move dropdown to body so it's not clipped by header overflow
+		document.body.appendChild(statusDropdown);
+
+		statusBtn.addEventListener('click', function (e) {
+			e.stopPropagation();
+			var rect = statusBtn.getBoundingClientRect();
+			statusDropdown.style.top = (rect.bottom + 4) + 'px';
+			statusDropdown.style.right = (window.innerWidth - rect.right) + 'px';
+			statusDropdown.classList.toggle('is-open');
+		});
+
+		function closeAndSubmit() {
+			if (!statusDropdown.classList.contains('is-open')) return;
+			statusDropdown.classList.remove('is-open');
+			if (statusDirty) {
+				// Sync checkbox values back into the form before submitting
+				var form = document.getElementById('bs-date-form');
+				form.querySelectorAll('input[name="orderStatuses[]"], input[name="orderStatuses"]').forEach(function (el) {
+					el.remove();
+				});
+				var checked = statusDropdown.querySelectorAll('input[type="checkbox"]:checked');
+				if (checked.length > 0) {
+					checked.forEach(function (cb) {
+						var hidden = document.createElement('input');
+						hidden.type = 'hidden';
+						hidden.name = 'orderStatuses[]';
+						hidden.value = cb.value;
+						form.appendChild(hidden);
+					});
+				} else {
+					var clear = document.createElement('input');
+					clear.type = 'hidden';
+					clear.name = 'orderStatuses';
+					clear.value = '';
+					form.appendChild(clear);
+				}
+				form.submit();
+			}
+		}
+
+		document.addEventListener('click', closeAndSubmit);
+
+		statusDropdown.addEventListener('click', function (e) {
+			e.stopPropagation();
+		});
+
+		statusDropdown.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+			checkbox.addEventListener('change', function () {
+				statusDirty = true;
+			});
+		});
+	}
+})();
+{% endjs %}

@@ -1,0 +1,30 @@
+{% extends '_layouts/cp' %}
+{% do view.registerTranslations('best-sellers', [
+	'Showing {start}\u2013{end} of {total} {label}',
+	'Previous',
+	'Next',
+	'Export CSV',
+	'Failed to load data: {error}',
+]) %}
+
+{% set selectedSubnavItem = selectedSubnavItem ?? 'overview' %}
+
+{% set additionalButtons %}
+	{% include 'best-sellers/_includes/date-picker' with {
+		from: from,
+		to: to,
+		preset: preset,
+		scope: scope ?? null,
+	} only %}
+{% endset %}
+
+{% css %}
+	{% include 'best-sellers/_includes/plugin-footer-css' %}
+{% endcss %}
+
+{% set content %}
+	<div class="bs-reports-container">
+		{% block reportContent %}{% endblock %}
+	</div>
+	{% include 'best-sellers/_includes/plugin-footer' %}
+{% endset %}

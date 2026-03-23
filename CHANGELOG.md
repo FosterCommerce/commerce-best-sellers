@@ -1,5 +1,10 @@
 # Release Notes for Best Sellers
 
+## 1.1.2
+
+### Changed
+- Migration `safeDown()` methods follow Commerce convention (non-reversible)
+
 ## 1.1.1
 
 ### Added

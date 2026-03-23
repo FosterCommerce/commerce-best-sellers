@@ -28,20 +28,7 @@ class m260319_000001_add_revenue_columns extends Migration
 
 	public function safeDown(): bool
 	{
-		$table = VariantSale::tableName();
-
-		if ($this->db->columnExists($table, 'lineItemPrice')) {
-			$this->dropColumn($table, 'lineItemPrice');
-		}
-
-		if ($this->db->columnExists($table, 'lineItemTotal')) {
-			$this->dropColumn($table, 'lineItemTotal');
-		}
-
-		if ($this->db->columnExists($table, 'discount')) {
-			$this->dropColumn($table, 'discount');
-		}
-
-		return true;
+		echo "m260319_000001_add_revenue_columns cannot be reverted.\n";
+		return false;
 	}
 }

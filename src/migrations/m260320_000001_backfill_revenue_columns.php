@@ -55,15 +55,7 @@ class m260320_000001_backfill_revenue_columns extends Migration
 
 	public function safeDown(): bool
 	{
-		$this->update(
-			VariantSale::tableName(),
-			[
-				'lineItemPrice' => null,
-				'lineItemTotal' => null,
-				'discount' => 0,
-			]
-		);
-
-		return true;
+		echo "m260320_000001_backfill_revenue_columns cannot be reverted.\n";
+		return false;
 	}
 }

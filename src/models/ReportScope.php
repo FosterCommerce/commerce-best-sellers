@@ -112,4 +112,17 @@ class ReportScope extends Model
 			'orderStatusIds' => $this->orderStatusIds,
 		]);
 	}
+
+	/**
+	 * @return array<array-key, mixed>
+	 */
+	protected function defineRules(): array
+	{
+		$rules = parent::defineRules();
+		$rules[] = [['orderStatusIds'],
+			'each',
+			'rule' => ['integer']];
+
+		return $rules;
+	}
 }

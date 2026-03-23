@@ -44,4 +44,19 @@ class DateRangeResult extends Model
 		assert($this->prev instanceof self, 'Previous period not set');
 		return $this->prev;
 	}
+
+	/**
+	 * @return array<array-key, mixed>
+	 */
+	protected function defineRules(): array
+	{
+		$rules = parent::defineRules();
+		$rules[] = [['from', 'to'], 'required'];
+		$rules[] = [['from', 'to'],
+			'date',
+			'format' => 'php:Y-m-d'];
+		$rules[] = [['preset'], 'string'];
+
+		return $rules;
+	}
 }

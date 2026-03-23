@@ -11,16 +11,17 @@ use fostercommerce\bestsellers\Plugin;
 use Money\Currency;
 use Money\Money;
 use RuntimeException;
+use yii\base\Action;
 use yii\web\Response;
 
 abstract class BaseReportController extends Controller
 {
 	protected array|bool|int $allowAnonymous = false;
 
-	private ?Currency $storeCurrency = null;
+	private ?Currency $_storeCurrency = null;
 
 	/**
-	 * @param \yii\base\Action<static> $action
+	 * @param Action<static> $action
 	 */
 	public function beforeAction($action): bool
 	{
@@ -54,7 +55,6 @@ abstract class BaseReportController extends Controller
 	 */
 	protected function resolveScope(): ReportScope
 	{
-		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
 
 		return $plugin->dateRange->resolveScope();
@@ -62,15 +62,15 @@ abstract class BaseReportController extends Controller
 
 	protected function getStoreCurrency(): Currency
 	{
-		if (! $this->storeCurrency instanceof Currency) {
+		if (! $this->_storeCurrency instanceof Currency) {
 			/** @var Commerce $commercePlugin */
 			$commercePlugin = Commerce::getInstance();
 			$store = $commercePlugin->getStores()->getPrimaryStore();
 			$code = $store?->getCurrency()?->getCode() ?? 'USD';
-			$this->storeCurrency = new Currency($code);
+			$this->_storeCurrency = new Currency($code);
 		}
 
-		return $this->storeCurrency;
+		return $this->_storeCurrency;
 	}
 
 	/**

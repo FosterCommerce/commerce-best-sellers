@@ -26,7 +26,6 @@ class OrdersController extends BaseReportController
 		$view->registerAssetBundle(ReportsAsset::class);
 
 		$scope = $this->resolveScope();
-		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
 
 		$operationsStats = $plugin->operationsStats;

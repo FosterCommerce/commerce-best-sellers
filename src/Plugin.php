@@ -37,6 +37,9 @@ use fostercommerce\bestsellers\variables\BestSellersVariable;
 use yii\base\Event;
 
 /**
+ * @method static Plugin getInstance()
+ * @method Settings getSettings()
+ *
  * @property-read Settings $settings
  * @property-read Sales $sales
  * @property-read DailyStats $dailyStats
@@ -157,6 +160,54 @@ class Plugin extends BasePlugin
 			],
 		];
 		return $navItem;
+	}
+
+	public function getSales(): Sales
+	{
+		/** @var Sales */
+		return $this->get('sales');
+	}
+
+	public function getDailyStats(): DailyStats
+	{
+		/** @var DailyStats */
+		return $this->get('dailyStats');
+	}
+
+	public function getDateRange(): DateRange
+	{
+		/** @var DateRange */
+		return $this->get('dateRange');
+	}
+
+	public function getProductStats(): ProductStats
+	{
+		/** @var ProductStats */
+		return $this->get('productStats');
+	}
+
+	public function getCustomerStats(): CustomerStats
+	{
+		/** @var CustomerStats */
+		return $this->get('customerStats');
+	}
+
+	public function getOperationsStats(): OperationsStats
+	{
+		/** @var OperationsStats */
+		return $this->get('operationsStats');
+	}
+
+	public function getCartAbandonment(): CartAbandonment
+	{
+		/** @var CartAbandonment */
+		return $this->get('cartAbandonment');
+	}
+
+	public function getSummaryEngine(): SummaryEngine
+	{
+		/** @var SummaryEngine */
+		return $this->get('summaryEngine');
 	}
 
 	protected function createSettingsModel(): ?Model

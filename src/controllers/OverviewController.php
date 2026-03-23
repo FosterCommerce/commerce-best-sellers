@@ -19,7 +19,6 @@ class OverviewController extends BaseReportController
 		$view->registerAssetBundle(ReportsAsset::class);
 
 		$scope = $this->resolveScope();
-		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
 		$dailyStats = $plugin->dailyStats;
 

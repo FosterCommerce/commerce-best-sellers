@@ -62,7 +62,6 @@ class CustomersController extends BaseReportController
 			$customerTypes = [];
 		}
 
-		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
 		$customerStats = $plugin->customerStats;
 
@@ -159,7 +158,6 @@ class CustomersController extends BaseReportController
 			$customerTypes = [];
 		}
 
-		/** @var Plugin $plugin */
 		$plugin = Plugin::getInstance();
 		$customerStats = $plugin->customerStats;
 

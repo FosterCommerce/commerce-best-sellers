@@ -9,6 +9,7 @@ use craft\web\Controller;
 use craft\web\Request;
 use DateTime;
 use fostercommerce\bestsellers\Plugin;
+use yii\base\Action;
 use yii\base\InvalidConfigException;
 use yii\web\Response;
 
@@ -17,7 +18,7 @@ class ReportsController extends Controller
 	protected array|bool|int $allowAnonymous = false;
 
 	/**
-	 * @param \yii\base\Action<static> $action
+	 * @param Action<static> $action
 	 */
 	public function beforeAction($action): bool
 	{

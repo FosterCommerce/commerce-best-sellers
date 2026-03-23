@@ -1,6 +1,6 @@
 # Release Notes for Best Sellers
 
-## Unreleased
+## 1.1.1
 
 ### Added
 - Backfill logs table for tracking order processing failures during backfill and daily stats jobs

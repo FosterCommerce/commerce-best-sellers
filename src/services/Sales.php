@@ -39,7 +39,7 @@ class Sales extends Component
 			->flatMap(function (LineItem $lineItem) use ($order): array {
 				$purchasable = LineItemHelper::getPurchasable($lineItem);
 
-				if ($purchasable === null) {
+				if (! $purchasable instanceof PurchasableInterface) {
 					// Custom line items have no purchasable by design; skip.
 					// For purchasable line items whose element has been deleted,
 					// fall back to snapshot data so revenue still reports.
@@ -122,20 +122,20 @@ class Sales extends Component
 		$qtys = $bundle->getQtys();
 
 		$components = [];
-		foreach ($childPurchasables as $child) {
-			if (! $child instanceof Variant) {
+		foreach ($childPurchasables as $childPurchasable) {
+			if (! $childPurchasable instanceof Variant) {
 				continue;
 			}
 
-			$childQty = (int) ($qtys[$child->id] ?? 1);
+			$childQty = (int) ($qtys[$childPurchasable->id] ?? 1);
 			if ($childQty <= 0) {
 				continue;
 			}
 
 			$components[] = [
-				'variant' => $child,
+				'variant' => $childPurchasable,
 				'childQty' => $childQty,
-				'weight' => max(0.0, (float) $child->price) * $childQty,
+				'weight' => max(0.0, (float) $childPurchasable->price) * $childQty,
 			];
 		}
 
@@ -147,7 +147,7 @@ class Sales extends Component
 		$totalUnits = array_sum(array_column($components, 'childQty'));
 		$lineSubtotal = (float) $lineItem->subtotal;
 		$lineDiscount = abs((float) $lineItem->promotionalAmount);
-		$lineQty = (int) $lineItem->qty;
+		$lineQty = $lineItem->qty;
 		$dateOrdered = Db::prepareDateForDb($order->dateOrdered);
 		$dateCreated = Db::prepareDateForDb(new DateTime());
 
@@ -161,11 +161,7 @@ class Sales extends Component
 			$variant = $component['variant'];
 			$rowQty = $lineQty * $component['childQty'];
 
-			if ($totalWeight > 0.0) {
-				$share = $component['weight'] / $totalWeight;
-			} else {
-				$share = $component['childQty'] / $totalUnits;
-			}
+			$share = $totalWeight > 0.0 ? $component['weight'] / $totalWeight : $component['childQty'] / $totalUnits;
 
 			if ($index === $lastIndex) {
 				$rowTotal = round($lineSubtotal - $allocatedSubtotal, 4);
@@ -194,7 +190,7 @@ class Sales extends Component
 				'lineItemTotal' => $rowTotal,
 				'discount' => $rowDiscount,
 				'sourceBundleId' => $bundle->id,
-				'sourceBundleTitle' => (string) ($bundle->title ?? ''),
+				'sourceBundleTitle' => $bundle->title ?? '',
 				'orderId' => $order->id,
 				'dateOrdered' => $dateOrdered,
 				'dateCreated' => $dateCreated,

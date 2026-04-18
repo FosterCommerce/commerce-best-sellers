@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\helpers\UrlHelper;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\models\CustomerRow;
@@ -112,7 +113,7 @@ class CustomersController extends BaseReportController
 				'totalSpent' => $this->formatCurrency($pageItem->totalSpent),
 				'aov' => $this->formatCurrency($pageItem->aov),
 				'lastOrder' => $pageItem->lastOrder !== null ? substr($pageItem->lastOrder, 0, 10) : '',
-				'cpUrl' => $pageItem->customerId !== null ? Craft::$app->getUrlManager()->createUrl('users/' . $pageItem->customerId) : null,
+				'cpUrl' => $pageItem->customerId !== null ? UrlHelper::cpUrl('users/' . $pageItem->customerId) : null,
 			];
 		}
 

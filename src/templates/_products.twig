@@ -88,6 +88,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			var titleCell = item.cpEditUrl
 				? '<a href="' + item.cpEditUrl + '" class="go">' + item.displayTitle + '</a>'
 				: item.displayTitle;
+			if (item.fromBundle) {
+				titleCell += ' <span class="bs-bundle-marker" title="{{ "Sold as part of a bundle"|t('best-sellers') }}" aria-label="{{ "Sold as part of a bundle"|t('best-sellers') }}">⧉</span>';
+			}
 			var linkCell = item.frontEndUrl
 				? '<a href="' + item.frontEndUrl + '" target="_blank" rel="noopener" class="bs-external-link"><span data-icon="world"></span></a>'
 				: '';

@@ -403,6 +403,13 @@
 	color: #0073aa;
 }
 
+/* Bundle-source marker */
+.bs-bundle-marker {
+	color: #8f98a3;
+	cursor: help;
+	margin-left: 0.25em;
+}
+
 /* Multi-select filter dropdown */
 .bs-multiselect {
 	position: relative;

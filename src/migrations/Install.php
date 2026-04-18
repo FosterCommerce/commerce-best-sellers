@@ -36,6 +36,7 @@ class Install extends Migration
 			'id' => $this->primaryKey(),
 			'productId' => $this->integer(),
 			'productTitle' => $this->string(),
+			'productTypeId' => $this->integer()->null(),
 			'variantId' => $this->integer(),
 			'variantTitle' => $this->string(),
 			'variantSku' => $this->string(),
@@ -43,17 +44,22 @@ class Install extends Migration
 			'lineItemPrice' => $this->decimal(14, 4)->null(),
 			'lineItemTotal' => $this->decimal(14, 4)->null(),
 			'discount' => $this->decimal(14, 4)->defaultValue(0),
+			'sourceBundleId' => $this->integer()->null(),
+			'sourceBundleTitle' => $this->string()->null(),
 			'orderId' => $this->integer(),
 			'dateOrdered' => $this->dateTime()->notNull(),
 			'dateCreated' => $this->dateTime()->notNull(),
 		]);
 
-		$this->addForeignKey(null, VariantSale::tableName(), ['productId'], '{{%commerce_products}}', ['id'], 'CASCADE', null);
-		$this->addForeignKey(null, VariantSale::tableName(), ['variantId'], '{{%commerce_variants}}', ['id'], 'CASCADE', null);
+		// productId and variantId are not FK-constrained: variant_sales rows
+		// must survive purchasable deletion so historical revenue is retained
+		// and the deleted-purchasable snapshot fallback can insert dead-FK IDs.
 		$this->addForeignKey(null, VariantSale::tableName(), ['orderId'], '{{%commerce_orders}}', ['id'], 'CASCADE', null);
 
 		$this->createIndex(null, VariantSale::tableName(), ['productId', 'dateCreated']);
 		$this->createIndex(null, VariantSale::tableName(), ['variantId', 'dateCreated']);
+		$this->createIndex(null, VariantSale::tableName(), ['productTypeId']);
+		$this->createIndex(null, VariantSale::tableName(), ['sourceBundleId']);
 		$this->createIndex(null, VariantSale::tableName(), ['orderId']);
 		$this->createIndex(null, VariantSale::tableName(), ['dateOrdered']);
 	}

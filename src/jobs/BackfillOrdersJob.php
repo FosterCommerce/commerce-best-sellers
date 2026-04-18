@@ -7,7 +7,6 @@ use craft\commerce\elements\Order;
 use craft\queue\BaseJob;
 use DateTime;
 use fostercommerce\bestsellers\Plugin;
-use fostercommerce\bestsellers\records\VariantSale;
 use Throwable;
 
 class BackfillOrdersJob extends BaseJob
@@ -23,17 +22,11 @@ class BackfillOrdersJob extends BaseJob
 
 	public function execute($queue): void
 	{
-		// Get IDs of processed orders.
-		$processedOrderIds = VariantSale::find()
-			->select('orderId')
-			->column();
-
 		$ordersQuery = Order::find()
 			->orderBy('id ASC')
 			->offset($this->offset)
 			->limit($this->limit)
-			->isCompleted(true)
-			->andWhere(['not in', 'id', $processedOrderIds]);
+			->isCompleted(true);
 
 		if ($this->startDate && $this->endDate) {
 			$ordersQuery->andWhere(['between', 'dateOrdered', $this->startDate, $this->endDate]);

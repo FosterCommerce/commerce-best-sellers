@@ -1,5 +1,19 @@
 # Release Notes for Best Sellers
 
+## 1.1.3
+
+### Added
+- Support for the webdna Commerce Bundles plugin: bundle line items are expanded into their child variants and revenue is allocated across them by price weight
+- `fromBundle` marker on product and variant rows to indicate units that were sold as part of a bundle
+- Snapshot fallback so line items whose purchasable has been deleted still contribute revenue and identifiers to reports
+- `productTypeId` column on variant sales, denormalized from the product at the time of sale
+
+### Changed
+- Removed `productId`/`variantId` foreign keys on variant sales so rows survive purchasable deletion
+- Product type joins now use the denormalized `productTypeId` and show "Unknown" when the product type is missing
+- Backfill order queries no longer pre-fetch processed order IDs; duplicate processing is short-circuited inside the sales logger
+- Customer report links now use `UrlHelper::cpUrl()` to produce control panel URLs
+
 ## 1.1.2
 
 ### Changed

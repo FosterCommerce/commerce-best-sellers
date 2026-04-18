@@ -12,7 +12,6 @@ use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
-use fostercommerce\bestsellers\records\VariantSale;
 use yii\console\Controller;
 use yii\console\ExitCode;
 
@@ -174,13 +173,10 @@ class BackfillController extends Controller
 
 	private function _queueOrders(int $batchSize): int
 	{
-		$processedOrderIds = VariantSale::find()
-			->select('orderId')
-			->column();
-
+		// Already-processed orders are short-circuited inside Sales::logOrderSales,
+		// so the offset/limit pagination is stable across job runs.
 		$query = Order::find()
-			->isCompleted(true)
-			->andWhere(['not in', 'id', $processedOrderIds]);
+			->isCompleted(true);
 
 		if ($this->startDate && $this->endDate) {
 			$query->andWhere(['between', 'dateOrdered', $this->startDate, $this->endDate]);

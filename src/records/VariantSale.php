@@ -9,6 +9,7 @@ use fostercommerce\bestsellers\db\Table;
  * @property int $id
  * @property int $productId
  * @property string $productTitle
+ * @property int|null $productTypeId
  * @property int $variantId
  * @property string $variantTitle
  * @property string $variantSku
@@ -16,6 +17,8 @@ use fostercommerce\bestsellers\db\Table;
  * @property float|null $lineItemPrice
  * @property float|null $lineItemTotal
  * @property float $discount
+ * @property int|null $sourceBundleId
+ * @property string|null $sourceBundleTitle
  * @property int $orderId
  * @property string $dateOrdered
  * @property string $dateCreated

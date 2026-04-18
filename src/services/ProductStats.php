@@ -29,20 +29,22 @@ class ProductStats extends Component
 				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
-				'productType' => '[[productTypes.name]]',
+				'productType' => "COALESCE([[productTypes.name]], 'Unknown')",
+				'fromBundle' => 'MAX(CASE WHEN [[variantSales.sourceBundleId]] IS NOT NULL THEN 1 ELSE 0 END)',
 			])
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
-			->innerJoin([
-				'products' => CommerceTable::PRODUCTS,
-			], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin([
+			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
-			], '[[products.typeId]] = [[productTypes.id]]')
+			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
-			->groupBy('[[variantSales.productId]], [[variantSales.productTitle]], [[productTypes.name]]');
+			->groupBy([
+				'[[variantSales.productId]]',
+				'[[variantSales.productTitle]]',
+				new Expression("COALESCE([[productTypes.name]], 'Unknown')"),
+			]);
 
 		$this->applyStatusFilter($query, $scope);
 
@@ -57,7 +59,7 @@ class ProductStats extends Component
 			$orderColumn => SORT_DESC,
 		])->limit($limit);
 
-		/** @var list<array{productId: int|string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string}> $rows */
+		/** @var list<array{productId: int|string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string, fromBundle: int|string}> $rows */
 		$rows = $query->all();
 
 		return array_map(fn (array $row): ProductRow => new ProductRow([
@@ -68,6 +70,7 @@ class ProductStats extends Component
 			'revenue' => (float) $row['revenue'],
 			'avgPrice' => (float) $row['avgPrice'],
 			'productType' => $row['productType'],
+			'fromBundle' => (bool) $row['fromBundle'],
 		]), $rows);
 	}
 
@@ -89,20 +92,25 @@ class ProductStats extends Component
 				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
-				'productType' => '[[productTypes.name]]',
+				'productType' => "COALESCE([[productTypes.name]], 'Unknown')",
+				'fromBundle' => 'MAX(CASE WHEN [[variantSales.sourceBundleId]] IS NOT NULL THEN 1 ELSE 0 END)',
 			])
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
-			->innerJoin([
-				'products' => CommerceTable::PRODUCTS,
-			], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin([
+			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
-			], '[[products.typeId]] = [[productTypes.id]]')
+			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
-			->groupBy('[[variantSales.productId]], [[variantSales.variantId]], [[variantSales.variantTitle]], [[variantSales.variantSku]], [[variantSales.productTitle]], [[productTypes.name]]');
+			->groupBy([
+				'[[variantSales.productId]]',
+				'[[variantSales.variantId]]',
+				'[[variantSales.variantTitle]]',
+				'[[variantSales.variantSku]]',
+				'[[variantSales.productTitle]]',
+				new Expression("COALESCE([[productTypes.name]], 'Unknown')"),
+			]);
 
 		$this->applyStatusFilter($query, $scope);
 
@@ -117,7 +125,7 @@ class ProductStats extends Component
 			$orderColumn => SORT_DESC,
 		])->limit($limit);
 
-		/** @var list<array{productId: int|string, variantId: int|string, variantTitle: string, variantSku: string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string}> $rows */
+		/** @var list<array{productId: int|string, variantId: int|string, variantTitle: string, variantSku: string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string, fromBundle: int|string}> $rows */
 		$rows = $query->all();
 
 		return array_map(fn (array $row): ProductRow => new ProductRow([
@@ -131,6 +139,7 @@ class ProductStats extends Component
 			'variantId' => (int) $row['variantId'],
 			'variantTitle' => $row['variantTitle'],
 			'variantSku' => $row['variantSku'],
+			'fromBundle' => (bool) $row['fromBundle'],
 		]), $rows);
 	}
 
@@ -267,12 +276,9 @@ class ProductStats extends Component
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
-			->innerJoin([
-				'products' => CommerceTable::PRODUCTS,
-			], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin([
+			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
-			], '[[products.typeId]] = [[productTypes.id]]')
+			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
 			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
@@ -339,12 +345,9 @@ class ProductStats extends Component
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
-			->innerJoin([
-				'products' => CommerceTable::PRODUCTS,
-			], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin([
+			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
-			], '[[products.typeId]] = [[productTypes.id]]')
+			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
 			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
@@ -436,22 +439,21 @@ class ProductStats extends Component
 	{
 		$query = (new Query())
 			->select([
-				'productType' => '[[productTypes.name]]',
+				'productType' => "COALESCE([[productTypes.name]], 'Unknown')",
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
-			->innerJoin([
-				'products' => CommerceTable::PRODUCTS,
-			], '[[variantSales.productId]] = [[products.id]]')
-			->innerJoin([
+			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
-			], '[[products.typeId]] = [[productTypes.id]]')
+			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
 			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
 			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
-			->groupBy('[[productTypes.name]]')
+			->groupBy([
+				new Expression("COALESCE([[productTypes.name]], 'Unknown')"),
+			])
 			->orderBy([
 				'revenue' => SORT_DESC,
 			]);

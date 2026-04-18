@@ -55,4 +55,9 @@ class ProductRow extends Model
 	 * @var string|null Variant SKU
 	 */
 	public ?string $variantSku = null;
+
+	/**
+	 * @var bool True when any units rolled up into this row were sold as part of a bundle.
+	 */
+	public bool $fromBundle = false;
 }

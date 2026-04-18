@@ -59,7 +59,7 @@ class Plugin extends BasePlugin
 
 	public const PERMISSION_BACKFILL = 'best-sellers:backfill';
 
-	public string $schemaVersion = '1.3.0';
+	public string $schemaVersion = '1.4.0';
 
 	public bool $hasCpSettings = false;
 

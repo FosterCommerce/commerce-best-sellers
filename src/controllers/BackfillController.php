@@ -16,7 +16,6 @@ use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
-use fostercommerce\bestsellers\records\VariantSale;
 use yii\base\Action;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
@@ -67,15 +66,11 @@ class BackfillController extends Controller
 		$startDate = $startDateTime ? $startDateTime->format('Y-m-d') : null;
 		$endDate = $endDateTime ? $endDateTime->format('Y-m-d') : null;
 
-		// Get processed order IDs.
-		$processedOrderIds = VariantSale::find()
-			->select('orderId')
-			->column();
-
 		// Build query filtering by isCompleted and date range.
+		// Already-processed orders are short-circuited inside Sales::logOrderSales,
+		// so the offset/limit pagination is stable across job runs.
 		$query = Order::find()
-			->isCompleted(true)
-			->andWhere(['not in', 'id', $processedOrderIds]);
+			->isCompleted(true);
 
 		// If both dates are provided, filter orders between them.
 		if ($startDate && $endDate) {

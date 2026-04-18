@@ -160,6 +160,7 @@ class ProductsController extends BaseReportController
 				'revenue' => $this->formatCurrency((float) $pageItem->revenue),
 				'avgPrice' => $this->formatCurrency((float) $pageItem->avgPrice),
 				'ordersUrl' => $ordersUrl,
+				'fromBundle' => $pageItem->fromBundle,
 			];
 		}
 

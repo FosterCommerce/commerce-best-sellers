@@ -1,5 +1,10 @@
 # Release Notes for Best Sellers
 
+## 1.1.4
+
+### Changed
+- Use `moneyphp/money` for bundle allocation and stats averages to prevent float drift
+
 ## 1.1.3
 
 ### Added

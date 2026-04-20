@@ -6,6 +6,7 @@ use Craft;
 use craft\db\Query;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\helpers\summary\DeltaCalculator;
 use fostercommerce\bestsellers\helpers\summary\RangeLabelBuilder;
 use fostercommerce\bestsellers\helpers\summary\SignalClassifier;
@@ -712,13 +713,13 @@ class SummaryEngine extends Component
 		}
 
 		$avgStats = new PeriodStats([
-			'totalRevenue' => round($avgRevenue, 2),
+			'totalRevenue' => MoneyMath::toFloat(MoneyMath::toMoney($avgRevenue)),
 			'totalOrders' => (int) round($avgOrders),
 			'uniqueCustomers' => (int) round($avgCustomers),
 			'newCustomers' => (int) round($avgNewCustomers),
 			'returningCustomers' => (int) round($avgReturning),
 			'totalItemsSold' => (int) round($avgItemsSold),
-			'averageOrderValue' => $avgOrders > 0 ? round($avgRevenue / $avgOrders, 2) : 0,
+			'averageOrderValue' => MoneyMath::toFloat(MoneyMath::average($avgRevenue, $avgOrders)),
 			'averageItemsPerOrder' => $avgOrders > 0 ? round($avgItemsSold / $avgOrders, 2) : 0,
 		]);
 

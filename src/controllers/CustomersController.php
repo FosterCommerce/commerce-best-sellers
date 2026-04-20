@@ -3,11 +3,13 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\helpers\MoneyHelper;
 use craft\helpers\UrlHelper;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\models\CustomerRow;
 use fostercommerce\bestsellers\Plugin;
+use Money\Money;
 use yii\web\Response;
 
 class CustomersController extends BaseReportController
@@ -118,15 +120,15 @@ class CustomersController extends BaseReportController
 		}
 
 		$totalOrderCount = 0;
-		$totalSpentSum = 0.0;
+		$totalSpent = new Money(0, $this->getStoreCurrency());
 		foreach ($allCustomers as $allCustomer) {
 			$totalOrderCount += $allCustomer->orderCount;
-			$totalSpentSum += $allCustomer->totalSpent;
+			$totalSpent = $totalSpent->add($this->toMoney($allCustomer->totalSpent));
 		}
 
 		$totals = [
 			'orderCount' => number_format($totalOrderCount),
-			'totalSpent' => $this->formatCurrency($totalSpentSum),
+			'totalSpent' => $this->formatMoney($totalSpent),
 		];
 
 		return $this->asJson([
@@ -176,18 +178,18 @@ class CustomersController extends BaseReportController
 
 		$csvRows = [];
 		$totalOrderCount = 0;
-		$totalSpentSum = 0.0;
+		$totalSpent = new Money(0, $this->getStoreCurrency());
 
 		foreach ($allCustomers as $allCustomer) {
 			$totalOrderCount += $allCustomer->orderCount;
-			$totalSpentSum += $allCustomer->totalSpent;
+			$totalSpent = $totalSpent->add($this->toMoney($allCustomer->totalSpent));
 
 			$csvRows[] = [
 				'email' => $allCustomer->email,
 				'status' => ucfirst($allCustomer->status),
 				'orders' => $allCustomer->orderCount,
-				'totalSpent' => round($allCustomer->totalSpent, 2),
-				'aov' => round($allCustomer->aov, 2),
+				'totalSpent' => MoneyHelper::toDecimal($this->toMoney($allCustomer->totalSpent)),
+				'aov' => MoneyHelper::toDecimal($this->toMoney($allCustomer->aov)),
 				'lastOrder' => $allCustomer->lastOrder !== null ? substr($allCustomer->lastOrder, 0, 10) : '',
 			];
 		}
@@ -196,7 +198,7 @@ class CustomersController extends BaseReportController
 			'email' => 'TOTAL',
 			'status' => '',
 			'orders' => $totalOrderCount,
-			'totalSpent' => round($totalSpentSum, 2),
+			'totalSpent' => MoneyHelper::toDecimal($totalSpent),
 			'aov' => '',
 			'lastOrder' => '',
 		];

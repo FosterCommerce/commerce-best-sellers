@@ -6,6 +6,7 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\models\ProductSummary;
 use fostercommerce\bestsellers\models\ReportScope;
@@ -368,7 +369,7 @@ class ProductStats extends Component
 
 		return array_map(fn (array $row): array => [
 			'label' => $row['title'],
-			'price' => round((float) $row['avgPrice'], 2),
+			'price' => MoneyMath::toFloat(MoneyMath::toMoney($row['avgPrice'])),
 			'units' => (int) $row['unitsSold'],
 		], $queryRows);
 	}

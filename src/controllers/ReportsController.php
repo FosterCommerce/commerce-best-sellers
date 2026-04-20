@@ -8,6 +8,7 @@ use craft\db\Query;
 use craft\web\Controller;
 use craft\web\Request;
 use DateTime;
+use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\Plugin;
 use yii\base\Action;
 use yii\base\InvalidConfigException;
@@ -124,7 +125,7 @@ class ReportsController extends Controller
 		$totalOrders = (int) ($orderStats['totalOrders'] ?? 0);
 		$totalRevenue = (float) ($orderStats['totalRevenue'] ?? 0);
 		$totalCustomers = (int) ($orderStats['totalCustomers'] ?? 0);
-		$averageOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0;
+		$averageOrderValue = MoneyMath::toFloat(MoneyMath::average($totalRevenue, $totalOrders));
 
 		$totalItemsSold = (int) (new Query())
 			->select([

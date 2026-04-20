@@ -5,6 +5,7 @@ namespace fostercommerce\bestsellers\services;
 use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use yii\base\Component;
@@ -35,7 +36,7 @@ class OperationsStats extends Component
 			->one();
 
 		$totalOrders = (int) ($orderStats['totalOrders'] ?? 0);
-		$avgDiscount = round((float) ($orderStats['avgDiscount'] ?? 0), 2);
+		$avgDiscount = MoneyMath::toFloat(MoneyMath::toMoney((float) ($orderStats['avgDiscount'] ?? 0)));
 		$withCoupon = (int) ($orderStats['withCoupon'] ?? 0);
 		$pctWithCoupon = $totalOrders > 0 ? round(($withCoupon / $totalOrders) * 100, 1) : 0;
 
@@ -192,12 +193,12 @@ class OperationsStats extends Component
 			'discounted' => [
 				'orders' => $discountedOrders,
 				'revenue' => $discountedRevenue,
-				'aov' => $discountedOrders > 0 ? round($discountedRevenue / $discountedOrders, 2) : 0,
+				'aov' => MoneyMath::toFloat(MoneyMath::average($discountedRevenue, $discountedOrders)),
 			],
 			'fullPrice' => [
 				'orders' => $fullPriceOrders,
 				'revenue' => $fullPriceRevenue,
-				'aov' => $fullPriceOrders > 0 ? round($fullPriceRevenue / $fullPriceOrders, 2) : 0,
+				'aov' => MoneyMath::toFloat(MoneyMath::average($fullPriceRevenue, $fullPriceOrders)),
 			],
 		];
 	}

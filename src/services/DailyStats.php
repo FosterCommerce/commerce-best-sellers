@@ -6,6 +6,7 @@ use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\models\PeriodStats;
 use fostercommerce\bestsellers\records\DailyStat;
 use yii\base\Component;
@@ -104,7 +105,7 @@ class DailyStats extends Component
 			$returningCustomers = max(0, $uniqueCustomers - $newCustomers);
 		}
 
-		$averageOrderValue = $totalOrders > 0 ? round($totalRevenue / $totalOrders, 4) : 0;
+		$averageOrderValue = MoneyMath::toFloat(MoneyMath::average($totalRevenue, $totalOrders));
 		$averageItemsPerOrder = $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0;
 
 		$row = [
@@ -193,7 +194,7 @@ class DailyStats extends Component
 			'uniqueCustomers' => (int) ($row['uniqueCustomers'] ?? 0),
 			'newCustomers' => (int) ($row['newCustomers'] ?? 0),
 			'returningCustomers' => (int) ($row['returningCustomers'] ?? 0),
-			'averageOrderValue' => $totalOrders > 0 ? round($totalRevenue / $totalOrders, 2) : 0,
+			'averageOrderValue' => MoneyMath::toFloat(MoneyMath::average($totalRevenue, $totalOrders)),
 			'averageItemsPerOrder' => $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0,
 		]);
 	}

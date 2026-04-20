@@ -6,6 +6,7 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use craft\db\Table as CraftTable;
+use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\models\CustomerKpis;
 use fostercommerce\bestsellers\models\CustomerRow;
 use fostercommerce\bestsellers\models\LtvComparison;
@@ -248,7 +249,7 @@ class CustomerStats extends Component
 				'status' => $isGuest ? 'guest' : 'credentialed',
 				'orderCount' => $orderCount,
 				'totalSpent' => $totalSpent,
-				'aov' => $orderCount > 0 ? round($totalSpent / $orderCount, 2) : 0,
+				'aov' => MoneyMath::toFloat(MoneyMath::average($totalSpent, $orderCount)),
 				'lastOrder' => $row['lastOrder'],
 			]);
 		}, $rows);
@@ -370,13 +371,13 @@ class CustomerStats extends Component
 			'credentialed' => new LtvSegment([
 				'count' => $credentialedCount,
 				'totalRevenue' => (float) $credentialedRevenue,
-				'avgLtv' => $credentialedCount > 0 ? round($credentialedRevenue / $credentialedCount, 2) : 0,
+				'avgLtv' => MoneyMath::toFloat(MoneyMath::average($credentialedRevenue, $credentialedCount)),
 				'avgOrders' => $credentialedCount > 0 ? round($credentialedOrders / $credentialedCount, 2) : 0,
 			]),
 			'guest' => new LtvSegment([
 				'count' => $guestCount,
 				'totalRevenue' => (float) $guestRevenue,
-				'avgLtv' => $guestCount > 0 ? round($guestRevenue / $guestCount, 2) : 0,
+				'avgLtv' => MoneyMath::toFloat(MoneyMath::average($guestRevenue, $guestCount)),
 				'avgOrders' => $guestCount > 0 ? round($guestOrders / $guestCount, 2) : 0,
 			]),
 		]);

@@ -11,10 +11,11 @@ use Money\Money;
 /**
  * Money-safe math for stats and reports.
  *
- * Stats queries return aggregates as PHP floats from SQL SUM/AVG. Dividing or
- * accumulating those floats and then rounding is drift-prone. These helpers
- * perform the one-time boundary conversion into Money, do the math in minor
- * units, and hand back a string (DB/CSV) or float (model fields).
+ * MoneyMath does not add math that moneyphp or Craft Commerce lack; it removes
+ * duplication by bundling the store-currency lookup, zero-divisor guard, and
+ * minor-unit boundary conversion that every stats service would otherwise
+ * repeat, so aggregates stay subunit-correct across currencies (USD=2, JPY=0,
+ * BHD=3) without falling back to a hardcoded `round($x, 2)`.
  */
 final class MoneyMath
 {

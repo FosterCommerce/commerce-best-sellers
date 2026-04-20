@@ -12,7 +12,8 @@
   "require": {
     "php": ">=8.2",
     "craftcms/cms": "^5.0.0",
-    "craftcms/commerce": "^5.0.0"
+    "craftcms/commerce": "^5.0.0",
+    "moneyphp/money": "^4.0"
   },
 	"require-dev": {
 		"fostercommerce/rector": "dev-main",

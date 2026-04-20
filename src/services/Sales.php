@@ -14,6 +14,10 @@ use DateTime;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\LineItemHelper;
 use fostercommerce\bestsellers\records\VariantSale;
+use Money\Currencies\ISOCurrencies;
+use Money\Currency as MoneyCurrency;
+use Money\Formatter\DecimalMoneyFormatter;
+use Money\Money;
 use yii\base\Component;
 
 class Sales extends Component
@@ -115,10 +119,14 @@ class Sales extends Component
 	private function expandBundleLineItem(LineItem $lineItem, PurchasableInterface $bundle, Order $order): array
 	{
 		// getPurchasables() and getQtys() are defined on the webdna Bundle element,
-		// not PurchasableInterface. We reach it only after is_a(BUNDLE_CLASS) passes.
-		/** @phpstan-ignore-next-line method.notFound */
+		// not PurchasableInterface. method_exists() narrows the type for PHPStan.
+		if (! method_exists($bundle, 'getPurchasables') || ! method_exists($bundle, 'getQtys')) {
+			return [];
+		}
+
+		/** @var list<PurchasableInterface> $childPurchasables */
 		$childPurchasables = $bundle->getPurchasables();
-		/** @phpstan-ignore-next-line method.notFound */
+		/** @var array<int, int|string> $qtys */
 		$qtys = $bundle->getQtys();
 
 		$components = [];
@@ -143,37 +151,48 @@ class Sales extends Component
 			return [];
 		}
 
+		$currencyCode = strtoupper((string) $order->currency);
+		if ($currencyCode === '') {
+			return [];
+		}
+
+		$currencies = new ISOCurrencies();
+		$currency = new MoneyCurrency($currencyCode);
+		$subunit = $currencies->subunitFor($currency);
+		$formatter = new DecimalMoneyFormatter($currencies);
+
+		// Commerce's LineItem::getSubtotal() returns a float already rounded to
+		// currency precision; quantize once into Money here, then do all
+		// allocation in minor units so there is no drift.
+		$lineSubtotal = self::floatToMoney((float) $lineItem->subtotal, $currency, $subunit);
+		$lineDiscount = self::floatToMoney(abs((float) $lineItem->promotionalAmount), $currency, $subunit);
+
 		$totalWeight = array_sum(array_column($components, 'weight'));
 		$totalUnits = array_sum(array_column($components, 'childQty'));
-		$lineSubtotal = (float) $lineItem->subtotal;
-		$lineDiscount = abs((float) $lineItem->promotionalAmount);
+
+		$ratios = array_map(
+			static fn (array $component): float => $totalWeight > 0.0
+				? $component['weight'] / $totalWeight
+				: $component['childQty'] / $totalUnits,
+			$components,
+		);
+
+		$subtotalParts = $lineSubtotal->allocate($ratios);
+		$discountParts = $lineDiscount->allocate($ratios);
+
 		$lineQty = $lineItem->qty;
 		$dateOrdered = Db::prepareDateForDb($order->dateOrdered);
 		$dateCreated = Db::prepareDateForDb(new DateTime());
+		$zero = new Money(0, $currency);
 
 		$rows = [];
-		$allocatedSubtotal = 0.0;
-		$allocatedDiscount = 0.0;
-		$lastIndex = count($components) - 1;
-
 		foreach ($components as $index => $component) {
 			/** @var Variant $variant */
 			$variant = $component['variant'];
 			$rowQty = $lineQty * $component['childQty'];
-
-			$share = $totalWeight > 0.0 ? $component['weight'] / $totalWeight : $component['childQty'] / $totalUnits;
-
-			if ($index === $lastIndex) {
-				$rowTotal = round($lineSubtotal - $allocatedSubtotal, 4);
-				$rowDiscount = round($lineDiscount - $allocatedDiscount, 4);
-			} else {
-				$rowTotal = round($lineSubtotal * $share, 4);
-				$rowDiscount = round($lineDiscount * $share, 4);
-				$allocatedSubtotal += $rowTotal;
-				$allocatedDiscount += $rowDiscount;
-			}
-
-			$rowPrice = $rowQty > 0 ? round($rowTotal / $rowQty, 4) : 0.0;
+			$rowTotal = $subtotalParts[$index];
+			$rowDiscount = $discountParts[$index];
+			$rowPrice = $rowQty > 0 ? $rowTotal->divide((string) $rowQty) : $zero;
 
 			/** @var Product $product */
 			$product = $variant->getOwner();
@@ -186,9 +205,9 @@ class Sales extends Component
 				'variantTitle' => $variant->title,
 				'variantSku' => $variant->sku,
 				'qty' => $rowQty,
-				'lineItemPrice' => $rowPrice,
-				'lineItemTotal' => $rowTotal,
-				'discount' => $rowDiscount,
+				'lineItemPrice' => $formatter->format($rowPrice),
+				'lineItemTotal' => $formatter->format($rowTotal),
+				'discount' => $formatter->format($rowDiscount),
 				'sourceBundleId' => $bundle->id,
 				'sourceBundleTitle' => $bundle->title ?? '',
 				'orderId' => $order->id,
@@ -198,6 +217,11 @@ class Sales extends Component
 		}
 
 		return $rows;
+	}
+
+	private static function floatToMoney(float $amount, MoneyCurrency $currency, int $subunit): Money
+	{
+		return new Money((int) round($amount * (10 ** $subunit)), $currency);
 	}
 
 	/**

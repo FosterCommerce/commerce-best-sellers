@@ -164,8 +164,8 @@ class Sales extends Component
 		// Commerce's LineItem::getSubtotal() returns a float already rounded to
 		// currency precision; quantize once into Money here, then do all
 		// allocation in minor units so there is no drift.
-		$lineSubtotal = self::floatToMoney((float) $lineItem->subtotal, $currency, $subunit);
-		$lineDiscount = self::floatToMoney(abs((float) $lineItem->promotionalAmount), $currency, $subunit);
+		$lineSubtotal = $this->floatToMoney((float) $lineItem->subtotal, $currency, $subunit);
+		$lineDiscount = $this->floatToMoney(abs((float) $lineItem->promotionalAmount), $currency, $subunit);
 
 		$totalWeight = array_sum(array_column($components, 'weight'));
 		$totalUnits = array_sum(array_column($components, 'childQty'));
@@ -219,7 +219,7 @@ class Sales extends Component
 		return $rows;
 	}
 
-	private static function floatToMoney(float $amount, MoneyCurrency $currency, int $subunit): Money
+	private function floatToMoney(float $amount, MoneyCurrency $currency, int $subunit): Money
 	{
 		return new Money((int) round($amount * (10 ** $subunit)), $currency);
 	}

@@ -9,6 +9,7 @@ use craft\db\Query;
 use craft\helpers\Queue as QueueHelper;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
@@ -200,15 +201,18 @@ class BackfillController extends Controller
 
 	private function _rebuildDailyStats(): int
 	{
-		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
-		$row = (new Query())
+		$rangeQuery = (new Query())
 			->select([
-				'minDate' => 'MIN([[dateOrdered]])',
-				'maxDate' => 'MAX([[dateOrdered]])',
+				'minDate' => 'MIN([[orders.dateOrdered]])',
+				'maxDate' => 'MAX([[orders.dateOrdered]])',
 			])
-			->from(CommerceTable::ORDERS)
-			->where(['=', 'isCompleted', true])
-			->one();
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->where(['=', '[[orders.isCompleted]]', true]);
+
+		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
+		$row = NotTrashed::join($rangeQuery, 'orders')->one();
 
 		if (! $row || ! $row['minDate']) {
 			$this->stdout("No completed orders found.\n");

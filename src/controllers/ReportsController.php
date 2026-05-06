@@ -9,6 +9,7 @@ use craft\web\Controller;
 use craft\web\Request;
 use DateTime;
 use fostercommerce\bestsellers\helpers\MoneyMath;
+use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\Plugin;
 use yii\base\Action;
 use yii\base\InvalidConfigException;
@@ -105,29 +106,33 @@ class ReportsController extends Controller
 	 */
 	private function getPeriodMetrics(string $fromDT, string $toDT): array
 	{
-		$orderStats = (new Query())
+		$dateCondition = [
+			'and',
+			['=', '[[orders.isCompleted]]', true],
+			['>=', '[[orders.dateOrdered]]', $fromDT],
+			['<=', '[[orders.dateOrdered]]', $toDT],
+		];
+
+		$orderStatsQuery = (new Query())
 			->select([
 				'totalOrders' => 'COUNT(*)',
-				'totalRevenue' => 'COALESCE(SUM([[totalPrice]]), 0)',
-				'totalCustomers' => 'COUNT(DISTINCT [[customerId]])',
+				'totalRevenue' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
+				'totalCustomers' => 'COUNT(DISTINCT [[orders.customerId]])',
 			])
-			->from(CommerceTable::ORDERS)
-			->where([
-				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
+			->from([
+				'orders' => CommerceTable::ORDERS,
 			])
-			->one();
+			->where($dateCondition);
 
 		/** @var array{totalOrders: string, totalRevenue: string, totalCustomers: string}|false $orderStats */
+		$orderStats = NotTrashed::join($orderStatsQuery, 'orders')->one();
 
 		$totalOrders = (int) ($orderStats['totalOrders'] ?? 0);
 		$totalRevenue = (float) ($orderStats['totalRevenue'] ?? 0);
 		$totalCustomers = (int) ($orderStats['totalCustomers'] ?? 0);
 		$averageOrderValue = MoneyMath::toFloat(MoneyMath::average($totalRevenue, $totalOrders));
 
-		$totalItemsSold = (int) (new Query())
+		$itemsQuery = (new Query())
 			->select([
 				'totalItems' => 'COALESCE(SUM([[lineItems.qty]]), 0)',
 			])
@@ -137,13 +142,9 @@ class ReportsController extends Controller
 			->innerJoin([
 				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
-			->where([
-				'and',
-				['=', '[[orders.isCompleted]]', true],
-				['>=', '[[orders.dateOrdered]]', $fromDT],
-				['<=', '[[orders.dateOrdered]]', $toDT],
-			])
-			->scalar();
+			->where($dateCondition);
+
+		$totalItemsSold = (int) NotTrashed::join($itemsQuery, 'orders')->scalar();
 
 		$avgItemsPerOrder = $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0;
 
@@ -166,27 +167,30 @@ class ReportsController extends Controller
 		$isMysql = $db->getIsMysql();
 
 		$dayExpression = $isMysql
-			? 'DATE([[dateOrdered]])'
-			: 'CAST([[dateOrdered]] AS DATE)';
+			? 'DATE([[orders.dateOrdered]])'
+			: 'CAST([[orders.dateOrdered]] AS DATE)';
 
-		$rows = (new Query())
+		$rowsQuery = (new Query())
 			->select([
 				'day' => $dayExpression,
 				'orderCount' => 'COUNT(*)',
-				'revenue' => 'COALESCE(SUM([[totalPrice]]), 0)',
+				'revenue' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 			])
-			->from(CommerceTable::ORDERS)
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where([
 				'and',
-				['=', '[[isCompleted]]', true],
-				['>=', '[[dateOrdered]]', $fromDT],
-				['<=', '[[dateOrdered]]', $toDT],
+				['=', '[[orders.isCompleted]]', true],
+				['>=', '[[orders.dateOrdered]]', $fromDT],
+				['<=', '[[orders.dateOrdered]]', $toDT],
 			])
 			->groupBy($dayExpression)
 			->orderBy([
 				'day' => SORT_ASC,
-			])
-			->all();
+			]);
+
+		$rows = NotTrashed::join($rowsQuery, 'orders')->all();
 
 		$labels = [];
 		$orders = [];

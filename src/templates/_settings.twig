@@ -1,6 +1,36 @@
-{# @var plugin \fostercommerce\bestsellers\Plugin #}
-{# @var settings \fostercommerce\bestsellers\models\Settings #}
+{% extends '_layouts/cp' %}
 
 {% import '_includes/forms.twig' as forms %}
 
-{# ... #}
+{% set selectedSubnavItem = 'settings' %}
+{% set fullPageForm = true %}
+
+{% set crumbs = [
+	{ label: 'Best Sellers'|t('best-sellers'), url: cpUrl('best-sellers') },
+] %}
+
+{% set allOrderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
+{% set statusOptions = [] %}
+{% for status in allOrderStatuses %}
+	{% set statusOptions = statusOptions|merge([{
+		label: status.name,
+		value: status.handle,
+	}]) %}
+{% endfor %}
+
+{% block content %}
+	{{ actionInput('best-sellers/settings/save') }}
+	{{ redirectInput('best-sellers/settings') }}
+
+	{{ forms.checkboxGroupField({
+		first: true,
+		label: 'Default order statuses'|t('best-sellers'),
+		instructions: 'Statuses pre-selected in the global order status filter when first opening a report. Users can override the selection per session.'|t('best-sellers'),
+		id: 'defaultOrderStatusHandles',
+		name: 'defaultOrderStatusHandles',
+		attribute: 'defaultOrderStatusHandles',
+		options: statusOptions,
+		values: settings.defaultOrderStatusHandles,
+		errors: settings.getErrors('defaultOrderStatusHandles'),
+	}) }}
+{% endblock %}

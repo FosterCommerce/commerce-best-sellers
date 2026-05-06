@@ -13,6 +13,7 @@ use craft\web\Request;
 use DateTime;
 use Exception;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
@@ -107,15 +108,18 @@ class BackfillController extends Controller
 	{
 		$this->requirePostRequest();
 
-		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
-		$row = (new Query())
+		$rangeQuery = (new Query())
 			->select([
-				'minDate' => 'MIN([[dateOrdered]])',
-				'maxDate' => 'MAX([[dateOrdered]])',
+				'minDate' => 'MIN([[orders.dateOrdered]])',
+				'maxDate' => 'MAX([[orders.dateOrdered]])',
 			])
-			->from(CommerceTable::ORDERS)
-			->where(['=', 'isCompleted', true])
-			->one();
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->where(['=', '[[orders.isCompleted]]', true]);
+
+		/** @var array{minDate: ?string, maxDate: ?string}|false $row */
+		$row = NotTrashed::join($rangeQuery, 'orders')->one();
 
 		if (! $row || ! $row['minDate']) {
 			Craft::$app->session->setNotice(Craft::t('best-sellers', 'No completed orders found.'));

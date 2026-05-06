@@ -1,6 +1,6 @@
 # Release Notes for Best Sellers
 
-## 1.2.0
+## 1.2.0 - 2026-05-06
 
 ### Added
 - Settings page under the Best Sellers control panel nav for configuring plugin defaults
@@ -10,12 +10,12 @@
 ### Fixed
 - Report and backfill queries now exclude soft-deleted orders
 
-## 1.1.4
+## 1.1.4 - 2026-04-20
 
 ### Changed
 - Use `moneyphp/money` for bundle allocation and stats averages to prevent float drift
 
-## 1.1.3
+## 1.1.3 - 2026-04-18
 
 ### Added
 - Support for the webdna Commerce Bundles plugin: bundle line items are expanded into their child variants and revenue is allocated across them by price weight
@@ -29,12 +29,12 @@
 - Backfill order queries no longer pre-fetch processed order IDs; duplicate processing is short-circuited inside the sales logger
 - Customer report links now use `UrlHelper::cpUrl()` to produce control panel URLs
 
-## 1.1.2
+## 1.1.2 - 2026-03-23
 
 ### Changed
 - Migration `safeDown()` methods follow Commerce convention (non-reversible)
 
-## 1.1.1
+## 1.1.1 - 2026-03-23
 
 ### Added
 - Backfill logs table for tracking order processing failures during backfill and daily stats jobs
@@ -63,16 +63,16 @@
 - Front-end text string are translatable
 - Postgres compatible
 
-## 1.0.2
+## 1.0.2 - 2025-03-29
 
 - Fix best sellers query to use dateOrdered
 
 
-## 1.0.1
+## 1.0.1 - 2025-03-28
 
 - Fix db query error
 
 
-## 1.0.0
+## 1.0.0 - 2025-03-28
 
 - Initial release

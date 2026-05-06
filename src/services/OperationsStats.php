@@ -6,6 +6,7 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use fostercommerce\bestsellers\helpers\MoneyMath;
+use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use yii\base\Component;
@@ -22,18 +23,21 @@ class OperationsStats extends Component
 	 */
 	public function getOperationsKpis(ReportScope $scope): array
 	{
-		$dateCondition = $this->buildDateCondition($scope);
+		$dateCondition = $this->buildDateCondition($scope, 'orders');
 
-		/** @var array{totalOrders: string, avgDiscount: string, withCoupon: string}|false $orderStats */
-		$orderStats = (new Query())
+		$orderStatsQuery = (new Query())
 			->select([
 				'totalOrders' => 'COUNT(*)',
-				'avgDiscount' => 'COALESCE(AVG(ABS([[totalDiscount]])), 0)',
-				'withCoupon' => "SUM(CASE WHEN [[couponCode]] IS NOT NULL AND [[couponCode]] != '' THEN 1 ELSE 0 END)",
+				'avgDiscount' => 'COALESCE(AVG(ABS([[orders.totalDiscount]])), 0)',
+				'withCoupon' => "SUM(CASE WHEN [[orders.couponCode]] IS NOT NULL AND [[orders.couponCode]] != '' THEN 1 ELSE 0 END)",
 			])
-			->from(CommerceTable::ORDERS)
-			->where($dateCondition)
-			->one();
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->where($dateCondition);
+
+		/** @var array{totalOrders: string, avgDiscount: string, withCoupon: string}|false $orderStats */
+		$orderStats = NotTrashed::join($orderStatsQuery, 'orders')->one();
 
 		$totalOrders = (int) ($orderStats['totalOrders'] ?? 0);
 		$avgDiscount = MoneyMath::toFloat(MoneyMath::toMoney((float) ($orderStats['avgDiscount'] ?? 0)));
@@ -41,8 +45,7 @@ class OperationsStats extends Component
 		$pctWithCoupon = $totalOrders > 0 ? round(($withCoupon / $totalOrders) * 100, 1) : 0;
 
 		// Total items sold
-		$itemsDateCondition = $this->buildDateCondition($scope, 'orders');
-		$totalItemsSold = (int) (new Query())
+		$itemsQuery = (new Query())
 			->select('COALESCE(SUM([[lineItems.qty]]), 0)')
 			->from([
 				'lineItems' => CommerceTable::LINEITEMS,
@@ -50,26 +53,30 @@ class OperationsStats extends Component
 			->innerJoin([
 				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
-			->where($itemsDateCondition)
-			->scalar();
+			->where($dateCondition);
+
+		$totalItemsSold = (int) NotTrashed::join($itemsQuery, 'orders')->scalar();
 
 		$avgItemsPerOrder = $totalOrders > 0 ? round($totalItemsSold / $totalOrders, 2) : 0;
 
 		// Top shipping method
-		/** @var array{method: string, cnt: string}|false $topShipping */
-		$topShipping = (new Query())
+		$topShippingQuery = (new Query())
 			->select([
-				'method' => "CASE WHEN [[shippingMethodName]] IS NULL OR [[shippingMethodName]] = '' THEN 'None' ELSE [[shippingMethodName]] END",
+				'method' => "CASE WHEN [[orders.shippingMethodName]] IS NULL OR [[orders.shippingMethodName]] = '' THEN 'None' ELSE [[orders.shippingMethodName]] END",
 				'cnt' => 'COUNT(*)',
 			])
-			->from(CommerceTable::ORDERS)
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where($dateCondition)
-			->groupBy('[[shippingMethodName]]')
+			->groupBy('[[orders.shippingMethodName]]')
 			->orderBy([
 				'cnt' => SORT_DESC,
 			])
-			->limit(1)
-			->one();
+			->limit(1);
+
+		/** @var array{method: string, cnt: string}|false $topShipping */
+		$topShipping = NotTrashed::join($topShippingQuery, 'orders')->one();
 
 		$topShippingMethod = $topShipping ? ($topShipping['method'] ?: 'None') : 'None';
 
@@ -90,7 +97,7 @@ class OperationsStats extends Component
 	{
 		$dateCondition = $this->buildDateCondition($scope, 'orders');
 
-		$orders = (new Query())
+		$ordersQuery = (new Query())
 			->select([
 				'itemCount' => 'SUM([[lineItems.qty]])',
 			])
@@ -101,8 +108,9 @@ class OperationsStats extends Component
 				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where($dateCondition)
-			->groupBy('[[orders.id]]')
-			->column();
+			->groupBy('[[orders.id]]');
+
+		$orders = NotTrashed::join($ordersQuery, 'orders')->column();
 
 		$buckets = [
 			'1' => 0,
@@ -143,22 +151,25 @@ class OperationsStats extends Component
 	 */
 	public function getShippingMethods(ReportScope $scope): array
 	{
-		$dateCondition = $this->buildDateCondition($scope);
+		$dateCondition = $this->buildDateCondition($scope, 'orders');
 
-		/** @var array<int, array{method: string, count: int, revenue: float}> $rows */
-		$rows = (new Query())
+		$query = (new Query())
 			->select([
-				'method' => "CASE WHEN [[shippingMethodName]] IS NULL OR [[shippingMethodName]] = '' THEN 'None' ELSE [[shippingMethodName]] END",
+				'method' => "CASE WHEN [[orders.shippingMethodName]] IS NULL OR [[orders.shippingMethodName]] = '' THEN 'None' ELSE [[orders.shippingMethodName]] END",
 				'count' => 'COUNT(*)',
-				'revenue' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
+				'revenue' => 'COALESCE(SUM([[orders.totalShippingCost]]), 0)',
 			])
-			->from(CommerceTable::ORDERS)
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where($dateCondition)
-			->groupBy('[[shippingMethodName]]')
+			->groupBy('[[orders.shippingMethodName]]')
 			->orderBy([
 				'count' => SORT_DESC,
-			])
-			->all();
+			]);
+
+		/** @var array<int, array{method: string, count: int, revenue: float}> $rows */
+		$rows = NotTrashed::join($query, 'orders')->all();
 
 		return $rows;
 	}
@@ -170,19 +181,22 @@ class OperationsStats extends Component
 	 */
 	public function getDiscountedVsFullPrice(ReportScope $scope): array
 	{
-		$dateCondition = $this->buildDateCondition($scope);
+		$dateCondition = $this->buildDateCondition($scope, 'orders');
+
+		$query = (new Query())
+			->select([
+				'discountedOrders' => 'SUM(CASE WHEN [[orders.totalDiscount]] < 0 THEN 1 ELSE 0 END)',
+				'discountedRevenue' => 'COALESCE(SUM(CASE WHEN [[orders.totalDiscount]] < 0 THEN [[orders.totalPrice]] ELSE 0 END), 0)',
+				'fullPriceOrders' => 'SUM(CASE WHEN [[orders.totalDiscount]] >= 0 OR [[orders.totalDiscount]] IS NULL THEN 1 ELSE 0 END)',
+				'fullPriceRevenue' => 'COALESCE(SUM(CASE WHEN [[orders.totalDiscount]] >= 0 OR [[orders.totalDiscount]] IS NULL THEN [[orders.totalPrice]] ELSE 0 END), 0)',
+			])
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->where($dateCondition);
 
 		/** @var array{discountedOrders: string, discountedRevenue: string, fullPriceOrders: string, fullPriceRevenue: string}|false $row */
-		$row = (new Query())
-			->select([
-				'discountedOrders' => 'SUM(CASE WHEN [[totalDiscount]] < 0 THEN 1 ELSE 0 END)',
-				'discountedRevenue' => 'COALESCE(SUM(CASE WHEN [[totalDiscount]] < 0 THEN [[totalPrice]] ELSE 0 END), 0)',
-				'fullPriceOrders' => 'SUM(CASE WHEN [[totalDiscount]] >= 0 OR [[totalDiscount]] IS NULL THEN 1 ELSE 0 END)',
-				'fullPriceRevenue' => 'COALESCE(SUM(CASE WHEN [[totalDiscount]] >= 0 OR [[totalDiscount]] IS NULL THEN [[totalPrice]] ELSE 0 END), 0)',
-			])
-			->from(CommerceTable::ORDERS)
-			->where($dateCondition)
-			->one();
+		$row = NotTrashed::join($query, 'orders')->one();
 
 		$discountedOrders = (int) ($row['discountedOrders'] ?? 0);
 		$discountedRevenue = (float) ($row['discountedRevenue'] ?? 0);
@@ -217,8 +231,7 @@ class OperationsStats extends Component
 			? "JSON_EXTRACT([[adj.sourceSnapshot]], '$.id')"
 			: "(([[adj.sourceSnapshot]])::json->>'id')::int";
 
-		/** @var list<array{discountId: string|null, name: string, uses: string, totalDiscount: string}> $rows */
-		$rows = (new Query())
+		$query = (new Query())
 			->select([
 				'discountId' => new Expression($idExprSql),
 				'name' => '[[adj.name]]',
@@ -237,8 +250,10 @@ class OperationsStats extends Component
 			->orderBy([
 				'uses' => SORT_DESC,
 			])
-			->limit($limit)
-			->all();
+			->limit($limit);
+
+		/** @var list<array{discountId: string|null, name: string, uses: string, totalDiscount: string}> $rows */
+		$rows = NotTrashed::join($query, 'orders')->all();
 
 		return array_map(fn (array $row): array => [
 			'discountId' => $row['discountId'] !== null ? (int) $row['discountId'] : null,

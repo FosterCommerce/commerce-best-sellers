@@ -7,6 +7,7 @@ use craft\db\Query;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\MoneyMath;
+use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\models\PeriodStats;
 use fostercommerce\bestsellers\records\DailyStat;
 use yii\base\Component;
@@ -23,25 +24,28 @@ class DailyStats extends Component
 
 		$dateCondition = [
 			'and',
-			['=', '[[isCompleted]]', true],
-			['>=', '[[dateOrdered]]', $dateStart],
-			['<=', '[[dateOrdered]]', $dateEnd],
+			['=', '[[orders.isCompleted]]', true],
+			['>=', '[[orders.dateOrdered]]', $dateStart],
+			['<=', '[[orders.dateOrdered]]', $dateEnd],
 		];
 
 		// Order-level aggregates
-		/** @var array{totalOrders: string, totalRevenue: string, totalDiscount: string, totalShipping: string, totalTax: string, uniqueCustomers: string}|false $orderStats */
-		$orderStats = (new Query())
+		$orderStatsQuery = (new Query())
 			->select([
 				'totalOrders' => 'COUNT(*)',
-				'totalRevenue' => 'COALESCE(SUM([[totalPrice]]), 0)',
-				'totalDiscount' => 'COALESCE(SUM([[totalDiscount]]), 0)',
-				'totalShipping' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
-				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
-				'uniqueCustomers' => 'COUNT(DISTINCT [[email]])',
+				'totalRevenue' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
+				'totalDiscount' => 'COALESCE(SUM([[orders.totalDiscount]]), 0)',
+				'totalShipping' => 'COALESCE(SUM([[orders.totalShippingCost]]), 0)',
+				'totalTax' => 'COALESCE(SUM([[orders.totalTax]]), 0)',
+				'uniqueCustomers' => 'COUNT(DISTINCT [[orders.email]])',
 			])
-			->from(CommerceTable::ORDERS)
-			->where($dateCondition)
-			->one();
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->where($dateCondition);
+
+		/** @var array{totalOrders: string, totalRevenue: string, totalDiscount: string, totalShipping: string, totalTax: string, uniqueCustomers: string}|false $orderStats */
+		$orderStats = NotTrashed::join($orderStatsQuery, 'orders')->one();
 
 		$totalOrders = (int) ($orderStats['totalOrders'] ?? 0);
 		$totalRevenue = (float) ($orderStats['totalRevenue'] ?? 0);
@@ -51,7 +55,7 @@ class DailyStats extends Component
 		$uniqueCustomers = (int) ($orderStats['uniqueCustomers'] ?? 0);
 
 		// Items sold (JOIN query, must qualify columns)
-		$totalItemsSold = (int) (new Query())
+		$itemsQuery = (new Query())
 			->select(['COALESCE(SUM([[lineItems.qty]]), 0)'])
 			->from([
 				'lineItems' => CommerceTable::LINEITEMS,
@@ -59,44 +63,49 @@ class DailyStats extends Component
 			->innerJoin([
 				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
-			->where([
-				'and',
-				['=', '[[orders.isCompleted]]', true],
-				['>=', '[[orders.dateOrdered]]', $dateStart],
-				['<=', '[[orders.dateOrdered]]', $dateEnd],
-			])
-			->scalar();
+			->where($dateCondition);
+
+		$totalItemsSold = (int) NotTrashed::join($itemsQuery, 'orders')->scalar();
 
 		// New vs returning customers (tracked by email across all time)
-		$customerEmails = (new Query())
-			->select('DISTINCT [[email]]')
-			->from(CommerceTable::ORDERS)
+		$customerEmailsQuery = (new Query())
+			->select('DISTINCT [[orders.email]]')
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where($dateCondition)
 			->andWhere([
 				'not', [
-					'[[email]]' => null,
+					'[[orders.email]]' => null,
 				]])
-			->andWhere(['!=', '[[email]]', ''])
-			->column();
+			->andWhere(['!=', '[[orders.email]]', '']);
+
+		$customerEmails = NotTrashed::join($customerEmailsQuery, 'orders')->column();
 
 		$newCustomers = 0;
 		$returningCustomers = 0;
 
-		if (! empty($customerEmails)) {
+		if ($customerEmails !== []) {
+			$firstOrdersSubquery = (new Query())
+				->select([
+					'email' => '[[orders.email]]',
+					'firstOrder' => 'MIN([[orders.dateOrdered]])',
+				])
+				->from([
+					'orders' => CommerceTable::ORDERS,
+				])
+				->where([
+					'and',
+					['=', '[[orders.isCompleted]]', true],
+					['in', '[[orders.email]]', $customerEmails],
+				])
+				->groupBy('[[orders.email]]');
+
+			$firstOrdersSubquery = NotTrashed::join($firstOrdersSubquery, 'orders');
+
 			$newCustomers = (int) (new Query())
 				->from([
-					'firstOrders' => (new Query())
-						->select([
-							'email' => '[[email]]',
-							'firstOrder' => 'MIN([[dateOrdered]])',
-						])
-						->from(CommerceTable::ORDERS)
-						->where([
-							'and',
-							['=', '[[isCompleted]]', true],
-							['in', '[[email]]', $customerEmails],
-						])
-						->groupBy('[[email]]'),
+					'firstOrders' => $firstOrdersSubquery,
 				])
 				->andWhere(['>=', 'firstOrder', $dateStart])
 				->andWhere(['<=', 'firstOrder', $dateEnd])

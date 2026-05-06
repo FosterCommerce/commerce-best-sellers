@@ -7,6 +7,7 @@ use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use craft\db\Table as CraftTable;
 use fostercommerce\bestsellers\helpers\MoneyMath;
+use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\models\CustomerKpis;
 use fostercommerce\bestsellers\models\CustomerRow;
 use fostercommerce\bestsellers\models\LtvComparison;
@@ -24,48 +25,58 @@ class CustomerStats extends Component
 	 */
 	public function getCustomerKpis(ReportScope $scope): CustomerKpis
 	{
-		$dateCondition = $this->buildDateCondition($scope);
+		$dateCondition = $this->buildDateCondition($scope, 'orders');
 
-		$total = (int) (new Query())
-			->select('COUNT(DISTINCT [[email]])')
-			->from(CommerceTable::ORDERS)
+		$totalQuery = (new Query())
+			->select('COUNT(DISTINCT [[orders.email]])')
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where($dateCondition)
 			->andWhere([
 				'not', [
-					'[[email]]' => null,
+					'[[orders.email]]' => null,
 				]])
-			->andWhere(['!=', '[[email]]', ''])
-			->scalar();
+			->andWhere(['!=', '[[orders.email]]', '']);
+
+		$total = (int) NotTrashed::join($totalQuery, 'orders')->scalar();
 
 		// Emails who ordered in this period
-		$customerEmails = (new Query())
-			->select('DISTINCT [[email]]')
-			->from(CommerceTable::ORDERS)
+		$customerEmailsQuery = (new Query())
+			->select('DISTINCT [[orders.email]]')
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where($dateCondition)
 			->andWhere([
 				'not', [
-					'[[email]]' => null,
+					'[[orders.email]]' => null,
 				]])
-			->andWhere(['!=', '[[email]]', ''])
-			->column();
+			->andWhere(['!=', '[[orders.email]]', '']);
+
+		$customerEmails = NotTrashed::join($customerEmailsQuery, 'orders')->column();
 
 		$new = 0;
 		$returning = 0;
 
-		if (! empty($customerEmails)) {
+		if ($customerEmails !== []) {
 			// Find emails whose first-ever completed order is within this period
 			$firstOrderQuery = (new Query())
 				->select([
-					'email' => '[[email]]',
-					'firstOrder' => 'MIN([[dateOrdered]])',
+					'email' => '[[orders.email]]',
+					'firstOrder' => 'MIN([[orders.dateOrdered]])',
 				])
-				->from(CommerceTable::ORDERS)
+				->from([
+					'orders' => CommerceTable::ORDERS,
+				])
 				->where([
 					'and',
-					['=', '[[isCompleted]]', true],
-					['in', '[[email]]', $customerEmails],
+					['=', '[[orders.isCompleted]]', true],
+					['in', '[[orders.email]]', $customerEmails],
 				])
-				->groupBy('[[email]]');
+				->groupBy('[[orders.email]]');
+
+			$firstOrderQuery = NotTrashed::join($firstOrderQuery, 'orders');
 
 			$new = (int) (new Query())
 				->from([
@@ -99,24 +110,27 @@ class CustomerStats extends Component
 		$isMysql = $db->getIsMysql();
 
 		$dayExpression = $isMysql
-			? 'DATE([[dateOrdered]])'
-			: 'CAST([[dateOrdered]] AS DATE)';
+			? 'DATE([[orders.dateOrdered]])'
+			: 'CAST([[orders.dateOrdered]] AS DATE)';
 
-		$dateCondition = $this->buildDateCondition($scope);
+		$dateCondition = $this->buildDateCondition($scope, 'orders');
 
 		// Get emails who ordered in the range
-		$customerEmails = (new Query())
-			->select('DISTINCT [[email]]')
-			->from(CommerceTable::ORDERS)
+		$customerEmailsQuery = (new Query())
+			->select('DISTINCT [[orders.email]]')
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where($dateCondition)
 			->andWhere([
 				'not', [
-					'[[email]]' => null,
+					'[[orders.email]]' => null,
 				]])
-			->andWhere(['!=', '[[email]]', ''])
-			->column();
+			->andWhere(['!=', '[[orders.email]]', '']);
 
-		if (empty($customerEmails)) {
+		$customerEmails = NotTrashed::join($customerEmailsQuery, 'orders')->column();
+
+		if ($customerEmails === []) {
 			return [
 				'labels' => [],
 				'new' => [],
@@ -125,19 +139,22 @@ class CustomerStats extends Component
 		}
 
 		// Get first-ever order date for these emails (across all time)
-		$firstOrders = (new Query())
+		$firstOrdersQuery = (new Query())
 			->select([
-				'email' => '[[email]]',
-				'firstOrder' => 'MIN([[dateOrdered]])',
+				'email' => '[[orders.email]]',
+				'firstOrder' => 'MIN([[orders.dateOrdered]])',
 			])
-			->from(CommerceTable::ORDERS)
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where([
 				'and',
-				['=', '[[isCompleted]]', true],
-				['in', '[[email]]', $customerEmails],
+				['=', '[[orders.isCompleted]]', true],
+				['in', '[[orders.email]]', $customerEmails],
 			])
-			->groupBy('[[email]]')
-			->all();
+			->groupBy('[[orders.email]]');
+
+		$firstOrders = NotTrashed::join($firstOrdersQuery, 'orders')->all();
 
 		$firstOrderMap = [];
 		foreach ($firstOrders as $firstOrder) {
@@ -146,19 +163,22 @@ class CustomerStats extends Component
 		}
 
 		// Get all orders in the range grouped by day and email
-		$orders = (new Query())
+		$ordersQuery = (new Query())
 			->select([
 				'day' => $dayExpression,
-				'email' => '[[email]]',
+				'email' => '[[orders.email]]',
 			])
-			->from(CommerceTable::ORDERS)
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
 			->where($dateCondition)
 			->andWhere([
 				'not', [
-					'[[email]]' => null,
+					'[[orders.email]]' => null,
 				]])
-			->andWhere(['!=', '[[email]]', ''])
-			->all();
+			->andWhere(['!=', '[[orders.email]]', '']);
+
+		$orders = NotTrashed::join($ordersQuery, 'orders')->all();
 
 		// Group by day
 		$byDay = [];
@@ -232,7 +252,7 @@ class CustomerStats extends Component
 			])
 			->limit($limit);
 
-		$rows = $query->all();
+		$rows = NotTrashed::join($query, 'orders')->all();
 
 		return array_map(function ($row): CustomerRow {
 			/** @var array{email: string, customerId: ?string, userActive: ?string, orderCount: string, totalSpent: string, lastOrder: ?string} $row */
@@ -262,8 +282,7 @@ class CustomerStats extends Component
 	 */
 	public function getTopShippingLocations(ReportScope $scope, int $limit = 10): array
 	{
-		/** @var array<int, array{country: string, state: string, count: string}> $rows */
-		$rows = (new Query())
+		$query = (new Query())
 			->select([
 				'country' => '[[addresses.countryCode]]',
 				'state' => "COALESCE([[addresses.administrativeArea]], '')",
@@ -284,8 +303,10 @@ class CustomerStats extends Component
 			->orderBy([
 				'count' => SORT_DESC,
 			])
-			->limit($limit)
-			->all();
+			->limit($limit);
+
+		/** @var array<int, array{country: string, state: string, count: string}> $rows */
+		$rows = NotTrashed::join($query, 'orders')->all();
 
 		return array_map(fn (array $row): array => [
 			'country' => $row['country'],
@@ -307,7 +328,7 @@ class CustomerStats extends Component
 		$dateCondition[] = ['!=', '[[orders.email]]', ''];
 
 		// Credentialed: has an active user account
-		$credentialedRows = (new Query())
+		$credentialedQuery = (new Query())
 			->select([
 				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'orderCount' => 'COUNT(*)',
@@ -325,11 +346,12 @@ class CustomerStats extends Component
 			->andWhere([
 				'[[users.active]]' => true,
 			])
-			->groupBy('[[orders.email]]')
-			->all();
+			->groupBy('[[orders.email]]');
+
+		$credentialedRows = NotTrashed::join($credentialedQuery, 'orders')->all();
 
 		// Guest: no customerId OR inactive user
-		$guestRows = (new Query())
+		$guestQuery = (new Query())
 			->select([
 				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'orderCount' => 'COUNT(*)',
@@ -356,8 +378,9 @@ class CustomerStats extends Component
 					'[[users.id]]' => null,
 				],
 			])
-			->groupBy('[[orders.email]]')
-			->all();
+			->groupBy('[[orders.email]]');
+
+		$guestRows = NotTrashed::join($guestQuery, 'orders')->all();
 
 		$credentialedCount = count($credentialedRows);
 		$credentialedRevenue = array_sum(array_column($credentialedRows, 'totalSpent'));

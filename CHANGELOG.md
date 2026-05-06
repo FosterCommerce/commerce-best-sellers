@@ -1,5 +1,10 @@
 # Release Notes for Best Sellers
 
+## 1.1.5
+
+### Fixed
+- Report and backfill queries now exclude soft-deleted orders
+
 ## 1.1.4
 
 ### Changed

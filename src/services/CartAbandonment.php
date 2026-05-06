@@ -5,6 +5,7 @@ namespace fostercommerce\bestsellers\services;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use DateTime;
+use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\models\AbandonmentStats;
 use fostercommerce\bestsellers\models\AgeBucket;
 use fostercommerce\bestsellers\models\ReportScope;
@@ -40,8 +41,7 @@ class CartAbandonment extends Component
 	{
 		$cutoff = (new DateTime())->modify('-4 hours')->format('Y-m-d H:i:s');
 
-		/** @var list<array{id: string, number: string, email: string|null, totalPrice: string, dateUpdated: string}> $rows */
-		$rows = (new Query())
+		$query = (new Query())
 			->select([
 				'orders.[[id]]',
 				'orders.[[number]]',
@@ -70,8 +70,10 @@ class CartAbandonment extends Component
 			->orderBy([
 				'orders.[[totalPrice]]' => SORT_DESC,
 			])
-			->limit($limit)
-			->all();
+			->limit($limit);
+
+		/** @var list<array{id: string, number: string, email: string|null, totalPrice: string, dateUpdated: string}> $rows */
+		$rows = NotTrashed::join($query, 'orders')->all();
 
 		$now = new DateTime();
 
@@ -101,7 +103,7 @@ class CartAbandonment extends Component
 
 		// Abandoned carts: incomplete orders with line items, older than 4 hours
 		// Note: status filter does NOT apply to abandoned carts (they are incomplete)
-		$abandonedCarts = (new Query())
+		$abandonedQuery = (new Query())
 			->select([
 				'orders.[[id]]',
 				'orders.[[totalPrice]]',
@@ -126,33 +128,40 @@ class CartAbandonment extends Component
 				['>=', '[[orders.dateUpdated]]', $scope->fromDT],
 				['<=', '[[orders.dateUpdated]]', $scope->toDT],
 				['<=', '[[orders.dateUpdated]]', $cutoff],
-			])
-			->all();
+			]);
+
+		$abandonedCarts = NotTrashed::join($abandonedQuery, 'orders')->all();
 
 		// Completed orders in the same period (for rate calculation)
 		// Status filter applies here
 		$completedCondition = [
 			'and',
-			['=', '[[isCompleted]]', true],
-			['>=', '[[dateOrdered]]', $scope->fromDT],
-			['<=', '[[dateOrdered]]', $scope->toDT],
+			['=', '[[orders.isCompleted]]', true],
+			['>=', '[[orders.dateOrdered]]', $scope->fromDT],
+			['<=', '[[orders.dateOrdered]]', $scope->toDT],
 		];
-		$statusCondition = $scope->statusCondition();
+		$statusCondition = $scope->statusCondition('orders');
 		if ($statusCondition !== null) {
 			$completedCondition[] = $statusCondition;
 		}
 
-		$totalCompleted = (int) (new Query())
+		$totalCompletedQuery = (new Query())
 			->select('COUNT(*)')
-			->from(CommerceTable::ORDERS)
-			->where($completedCondition)
-			->scalar();
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->where($completedCondition);
 
-		$completedValue = (float) (new Query())
-			->select(new Expression('COALESCE(SUM([[totalPrice]]), 0)'))
-			->from(CommerceTable::ORDERS)
-			->where($completedCondition)
-			->scalar();
+		$totalCompleted = (int) NotTrashed::join($totalCompletedQuery, 'orders')->scalar();
+
+		$completedValueQuery = (new Query())
+			->select(new Expression('COALESCE(SUM([[orders.totalPrice]]), 0)'))
+			->from([
+				'orders' => CommerceTable::ORDERS,
+			])
+			->where($completedCondition);
+
+		$completedValue = (float) NotTrashed::join($completedValueQuery, 'orders')->scalar();
 
 		$totalAbandoned = count($abandonedCarts);
 		$abandonedValue = 0.0;

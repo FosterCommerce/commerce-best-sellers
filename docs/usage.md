@@ -279,3 +279,23 @@ Event::on(
     }
 );
 ```
+
+## Settings
+
+Settings live under **Best Sellers > Settings** in the control panel. The page is gated by the `best-sellers:manageSettings` permission.
+
+### Default Order Statuses
+
+Order status handles selected here pre-fill the global order status filter the first time a user opens a report in a session. Users can still override the selection per session from the date range bar; the override is stored in the session and takes precedence until the session ends.
+
+If no defaults are configured and the user has not made a session selection, the filter resolves to all statuses.
+
+## Permissions
+
+Best Sellers registers three permissions under the `best-sellers` group:
+
+| Constant | Handle | Grants |
+|----------|--------|--------|
+| `Plugin::PERMISSION_VIEW_REPORTS` | `best-sellers:viewReports` | Access to the Best Sellers report pages |
+| `Plugin::PERMISSION_BACKFILL` | `best-sellers:backfill` | Running backfill jobs from the control panel |
+| `Plugin::PERMISSION_MANAGE_SETTINGS` | `best-sellers:manageSettings` | Viewing and saving the Settings page |

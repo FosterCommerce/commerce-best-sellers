@@ -59,6 +59,8 @@ class Plugin extends BasePlugin
 
 	public const PERMISSION_BACKFILL = 'best-sellers:backfill';
 
+	public const PERMISSION_MANAGE_SETTINGS = 'best-sellers:manageSettings';
+
 	public string $schemaVersion = '1.4.0';
 
 	public bool $hasCpSettings = false;
@@ -123,6 +125,9 @@ class Plugin extends BasePlugin
 						self::PERMISSION_BACKFILL => [
 							'label' => Craft::t('best-sellers', 'Backfill order data'),
 						],
+						self::PERMISSION_MANAGE_SETTINGS => [
+							'label' => Craft::t('best-sellers', 'Manage plugin settings'),
+						],
 					],
 				];
 			}
@@ -149,7 +154,8 @@ class Plugin extends BasePlugin
 		$navItem = parent::getCpNavItem();
 		$navItem['label'] = Craft::t('best-sellers', 'Best Sellers');
 		$navItem['url'] = 'best-sellers';
-		$navItem['subnav'] = [
+
+		$subnav = [
 			'overview' => [
 				'label' => Craft::t('best-sellers', 'Dashboard'),
 				'url' => 'best-sellers/',
@@ -171,6 +177,15 @@ class Plugin extends BasePlugin
 				'url' => 'best-sellers/operations',
 			],
 		];
+
+		if (Craft::$app->getUser()->checkPermission(self::PERMISSION_MANAGE_SETTINGS)) {
+			$subnav['settings'] = [
+				'label' => Craft::t('best-sellers', 'Settings'),
+				'url' => 'best-sellers/settings',
+			];
+		}
+
+		$navItem['subnav'] = $subnav;
 		return $navItem;
 	}
 
@@ -231,14 +246,6 @@ class Plugin extends BasePlugin
 	protected function createSettingsModel(): ?Model
 	{
 		return Craft::createObject(Settings::class);
-	}
-
-	protected function settingsHtml(): ?string
-	{
-		return Craft::$app->view->renderTemplate('best-sellers/_settings.twig', [
-			'plugin' => $this,
-			'settings' => $this->getSettings(),
-		]);
 	}
 
 	private function attachEventHandlers(): void
@@ -335,6 +342,8 @@ class Plugin extends BasePlugin
 				$registerUrlRulesEvent->rules['best-sellers/customers/export-csv'] = 'best-sellers/customers/export-csv';
 				$registerUrlRulesEvent->rules['best-sellers/operations'] = 'best-sellers/operations';
 				$registerUrlRulesEvent->rules['best-sellers/operations/clear-logs'] = 'best-sellers/operations/clear-logs';
+				$registerUrlRulesEvent->rules['best-sellers/settings'] = 'best-sellers/settings/index';
+				$registerUrlRulesEvent->rules['best-sellers/settings/save'] = 'best-sellers/settings/save';
 
 				// Backward compatibility redirects
 				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/orders';

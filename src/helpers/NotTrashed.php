@@ -23,7 +23,6 @@ abstract class NotTrashed
 	 * @template TKey of array-key
 	 * @template TValue
 	 * @param Query<TKey, TValue> $query
-	 * @param string $tableAlias
 	 * @return Query<TKey, TValue>
 	 */
 	public static function join(Query $query, string $tableAlias): Query

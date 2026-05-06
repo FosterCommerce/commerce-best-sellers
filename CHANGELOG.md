@@ -1,6 +1,11 @@
 # Release Notes for Best Sellers
 
-## 1.1.5
+## 1.2.0
+
+### Added
+- Settings page under the Best Sellers control panel nav for configuring plugin defaults
+- Default order statuses setting that pre-selects the global order status filter on first visit per session
+- `best-sellers:manageSettings` permission gating access to the settings page
 
 ### Fixed
 - Report and backfill queries now exclude soft-deleted orders

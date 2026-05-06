@@ -8,6 +8,7 @@ use craft\web\Request;
 use DateTime;
 use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\models\ReportScope;
+use fostercommerce\bestsellers\Plugin;
 use yii\base\Component;
 
 class DateRange extends Component
@@ -152,10 +153,16 @@ class DateRange extends Component
 			// Convert handles to IDs
 			$statusIds = $this->resolveStatusIds($statusHandles);
 			$session->set(self::SESSION_KEY_ORDER_STATUSES, $statusIds);
-		} else {
+		} elseif ($session->has(self::SESSION_KEY_ORDER_STATUSES)) {
 			$sessionValue = $session->get(self::SESSION_KEY_ORDER_STATUSES, []);
 			/** @var list<int> $statusIds */
 			$statusIds = is_array($sessionValue) ? $sessionValue : [];
+		} else {
+			// First visit in this session: fall back to plugin-level defaults
+			/** @var Plugin $plugin */
+			$plugin = Plugin::getInstance();
+			$defaultHandles = $plugin->getSettings()->defaultOrderStatusHandles;
+			$statusIds = $this->resolveStatusIds($defaultHandles);
 		}
 
 		$dateRange->prev = $previous;

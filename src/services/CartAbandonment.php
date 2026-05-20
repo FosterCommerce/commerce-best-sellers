@@ -63,8 +63,7 @@ class CartAbandonment extends Component
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', false],
-				['>=', '[[orders.dateUpdated]]', $scope->fromDT],
-				['<=', '[[orders.dateUpdated]]', $scope->toDT],
+				$scope->dateRange->dateCondition('[[orders.dateUpdated]]'),
 				['<=', '[[orders.dateUpdated]]', $cutoff],
 			])
 			->orderBy([
@@ -125,8 +124,7 @@ class CartAbandonment extends Component
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', false],
-				['>=', '[[orders.dateUpdated]]', $scope->fromDT],
-				['<=', '[[orders.dateUpdated]]', $scope->toDT],
+				$scope->dateRange->dateCondition('[[orders.dateUpdated]]'),
 				['<=', '[[orders.dateUpdated]]', $cutoff],
 			]);
 
@@ -137,8 +135,7 @@ class CartAbandonment extends Component
 		$completedCondition = [
 			'and',
 			['=', '[[orders.isCompleted]]', true],
-			['>=', '[[orders.dateOrdered]]', $scope->fromDT],
-			['<=', '[[orders.dateOrdered]]', $scope->toDT],
+			$scope->dateRange->dateCondition('[[orders.dateOrdered]]'),
 		];
 		$statusCondition = $scope->statusCondition('orders');
 		if ($statusCondition !== null) {

@@ -1,5 +1,21 @@
 # Release Notes for Best Sellers
 
+## 1.3.0 - 2026-05-20
+
+### Added
+- "Item Sales (Net)" column on the Products report. Value is Item Subtotal minus any coupon or manual discount attributed to the line item.
+- lineDiscount column on best_sellers_variant_sales. Bundle children receive a proportional share.
+- Default selection of Paid and Partial in the Orders page payment status filter.
+
+### Changed
+- Date filtering and Daily Stats aggregation now bucket dates in the Craft app timezone.
+- Products report excludes orders with a full balance owed (totalPaid <= 0 AND totalPrice > 0).
+
+### Fixed
+- Divergence between Products and Orders reports caused by inconsistent timezone handling in raw queries versus element queries.
+- Fully refunded orders no longer appear in the Orders report summary totals.
+- Orders report summary total derives from the same element query filter set as the row data.
+
 ## 1.2.0 - 2026-05-06
 
 ### Added

@@ -24,17 +24,22 @@ class Sales extends Component
 {
 	private const BUNDLE_CLASS = 'webdna\\commerce\\bundles\\elements\\Bundle';
 
-	public function logOrderSales(Order $order): void
+	public function logOrderSales(Order $order, bool $force = false): void
 	{
-		// Check if the order has already been processed.
-		$alreadyProcessed = VariantSale::find()
-			->where([
+		if ($force) {
+			VariantSale::deleteAll([
 				'orderId' => $order->id,
-			])
-			->exists();
+			]);
+		} else {
+			$alreadyProcessed = VariantSale::find()
+				->where([
+					'orderId' => $order->id,
+				])
+				->exists();
 
-		if ($alreadyProcessed) {
-			return;
+			if ($alreadyProcessed) {
+				return;
+			}
 		}
 
 		$lineItems = $order->getLineItems();
@@ -76,6 +81,10 @@ class Sales extends Component
 					'lineItemPrice' => $lineItem->price,
 					'lineItemTotal' => $lineItem->subtotal,
 					'discount' => abs((float) $lineItem->promotionalAmount),
+					// LineItem::getDiscount() sums Discount-type adjustments on this
+					// line (negative). Stored as-is so SUM(lineItemTotal + lineDiscount)
+					// gives item sales net of coupons / manual discounts.
+					'lineDiscount' => $lineItem->getDiscount(),
 					'sourceBundleId' => null,
 					'sourceBundleTitle' => null,
 					'orderId' => $order->id,
@@ -101,6 +110,7 @@ class Sales extends Component
 						'lineItemPrice',
 						'lineItemTotal',
 						'discount',
+						'lineDiscount',
 						'sourceBundleId',
 						'sourceBundleTitle',
 						'orderId',
@@ -165,7 +175,10 @@ class Sales extends Component
 		// currency precision; quantize once into Money here, then do all
 		// allocation in minor units so there is no drift.
 		$lineSubtotal = $this->floatToMoney((float) $lineItem->subtotal, $currency, $subunit);
-		$lineDiscount = $this->floatToMoney(abs((float) $lineItem->promotionalAmount), $currency, $subunit);
+		$linePromoDiscount = $this->floatToMoney(abs((float) $lineItem->promotionalAmount), $currency, $subunit);
+		// LineItem::getDiscount() is negative (Commerce convention). Keep the
+		// sign so allocate() distributes negative parts to child rows.
+		$lineAdjustmentDiscount = $this->floatToMoney($lineItem->getDiscount(), $currency, $subunit);
 
 		$totalWeight = array_sum(array_column($components, 'weight'));
 		$totalUnits = array_sum(array_column($components, 'childQty'));
@@ -178,7 +191,8 @@ class Sales extends Component
 		);
 
 		$subtotalParts = $lineSubtotal->allocate($ratios);
-		$discountParts = $lineDiscount->allocate($ratios);
+		$promoDiscountParts = $linePromoDiscount->allocate($ratios);
+		$adjustmentDiscountParts = $lineAdjustmentDiscount->allocate($ratios);
 
 		$lineQty = $lineItem->qty;
 		$dateOrdered = Db::prepareDateForDb($order->dateOrdered);
@@ -191,7 +205,8 @@ class Sales extends Component
 			$variant = $component['variant'];
 			$rowQty = $lineQty * $component['childQty'];
 			$rowTotal = $subtotalParts[$index];
-			$rowDiscount = $discountParts[$index];
+			$rowPromoDiscount = $promoDiscountParts[$index];
+			$rowAdjustmentDiscount = $adjustmentDiscountParts[$index];
 			$rowPrice = $rowQty > 0 ? $rowTotal->divide((string) $rowQty) : $zero;
 
 			/** @var Product $product */
@@ -207,7 +222,8 @@ class Sales extends Component
 				'qty' => $rowQty,
 				'lineItemPrice' => $formatter->format($rowPrice),
 				'lineItemTotal' => $formatter->format($rowTotal),
-				'discount' => $formatter->format($rowDiscount),
+				'discount' => $formatter->format($rowPromoDiscount),
+				'lineDiscount' => $formatter->format($rowAdjustmentDiscount),
 				'sourceBundleId' => $bundle->id,
 				'sourceBundleTitle' => $bundle->title ?? '',
 				'orderId' => $order->id,
@@ -264,6 +280,7 @@ class Sales extends Component
 			'lineItemPrice' => $lineItem->price,
 			'lineItemTotal' => $lineItem->subtotal,
 			'discount' => abs((float) $lineItem->promotionalAmount),
+			'lineDiscount' => $lineItem->getDiscount(),
 			'sourceBundleId' => null,
 			'sourceBundleTitle' => null,
 			'orderId' => $order->id,

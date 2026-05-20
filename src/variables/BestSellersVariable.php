@@ -37,7 +37,13 @@ class BestSellersVariable
 	}
 
 	/**
-	 * Returns the total revenue (sum of lineItemTotal) for a given variant ID.
+	 * Returns the gross revenue (sum of lineItemTotal) for a given variant ID.
+	 * Does NOT subtract line-level Discount adjustments.
+	 *
+	 * @deprecated since 1.6.0. The CP Products report shows item sales net of
+	 * line-level Discount adjustments. For matching numbers, use
+	 * variantTotalItemSalesNet(). This method is preserved for backward
+	 * compatibility and continues to return the gross figure.
 	 */
 	public function variantTotalRevenue(int $variantId, ?string $startDate = null, ?string $endDate = null): float
 	{
@@ -51,6 +57,29 @@ class BestSellersVariable
 
 		/** @var string|int|null|false $sum */
 		$sum = $query->sum('lineItemTotal');
+
+		return (float) ($sum ?? 0);
+	}
+
+	/**
+	 * Returns item sales net of line-level Discount adjustments
+	 * (SUM(lineItemTotal + lineDiscount)) for a given variant ID. Matches the
+	 * "Item Sales (Net)" column in the CP Products report.
+	 *
+	 * @since 1.6.0
+	 */
+	public function variantTotalItemSalesNet(int $variantId, ?string $startDate = null, ?string $endDate = null): float
+	{
+		$query = (new Query())
+			->from(Table::VARIANT_SALES)
+			->where([
+				'variantId' => $variantId,
+			]);
+
+		$this->applyDateFilter($query, $startDate, $endDate);
+
+		/** @var string|int|null|false $sum */
+		$sum = $query->sum('[[lineItemTotal]] + [[lineDiscount]]');
 
 		return (float) ($sum ?? 0);
 	}
@@ -79,7 +108,13 @@ class BestSellersVariable
 	}
 
 	/**
-	 * Returns the total revenue (sum of lineItemTotal) for a given product ID.
+	 * Returns the gross revenue (sum of lineItemTotal) for a given product ID.
+	 * Does NOT subtract line-level Discount adjustments.
+	 *
+	 * @deprecated since 1.6.0. The CP Products report shows item sales net of
+	 * line-level Discount adjustments. For matching numbers, use
+	 * productTotalItemSalesNet(). This method is preserved for backward
+	 * compatibility and continues to return the gross figure.
 	 */
 	public function productTotalRevenue(int $productId, ?string $startDate = null, ?string $endDate = null): float
 	{
@@ -93,6 +128,29 @@ class BestSellersVariable
 
 		/** @var string|int|null|false $sum */
 		$sum = $query->sum('lineItemTotal');
+
+		return (float) ($sum ?? 0);
+	}
+
+	/**
+	 * Returns item sales net of line-level Discount adjustments
+	 * (SUM(lineItemTotal + lineDiscount)) for a given product ID. Matches the
+	 * "Item Sales (Net)" column in the CP Products report.
+	 *
+	 * @since 1.6.0
+	 */
+	public function productTotalItemSalesNet(int $productId, ?string $startDate = null, ?string $endDate = null): float
+	{
+		$query = (new Query())
+			->from(Table::VARIANT_SALES)
+			->where([
+				'productId' => $productId,
+			]);
+
+		$this->applyDateFilter($query, $startDate, $endDate);
+
+		/** @var string|int|null|false $sum */
+		$sum = $query->sum('[[lineItemTotal]] + [[lineDiscount]]');
 
 		return (float) ($sum ?? 0);
 	}

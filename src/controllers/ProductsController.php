@@ -10,6 +10,7 @@ use craft\helpers\UrlHelper;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\VariantTitleHelper;
 use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\Plugin;
 use yii\web\BadRequestHttpException;
@@ -139,13 +140,11 @@ class ProductsController extends BaseReportController
 		foreach ($pageItems as $pageItem) {
 			$product = $productElements[$pageItem->productId] ?? null;
 
-			if ($productsOrVariants === 'variants') {
-				$displayTitle = $pageItem->productTitle . ': ' . ($pageItem->variantTitle ?? '');
-			} else {
-				$displayTitle = $pageItem->productTitle;
-			}
+			$displayTitle = $productsOrVariants === 'variants'
+				? VariantTitleHelper::buildDisplayTitle($pageItem->productTitle, $pageItem->variantTitle)
+				: $pageItem->productTitle;
 
-			$ordersUrl = UrlHelper::cpUrl('best-sellers/products/orders', [
+			$ordersUrl = UrlHelper::cpUrl('best-sellers/orders', [
 				($productsOrVariants === 'variants' ? 'variantId' : 'productId') => $productsOrVariants === 'variants' ? ($pageItem->variantId ?? 0) : $pageItem->productId,
 			]);
 
@@ -157,25 +156,30 @@ class ProductsController extends BaseReportController
 				'productType' => $pageItem->productType,
 				'unitsSold' => (int) $pageItem->unitsSold,
 				'orderCount' => (int) $pageItem->orderCount,
+				'itemSubtotal' => $this->formatCurrency((float) $pageItem->itemSubtotal),
 				'revenue' => $this->formatCurrency((float) $pageItem->revenue),
 				'avgPrice' => $this->formatCurrency((float) $pageItem->avgPrice),
 				'ordersUrl' => $ordersUrl,
 				'fromBundle' => $pageItem->fromBundle,
+				'hasUnpaidOrder' => $pageItem->hasUnpaidOrder,
 			];
 		}
 
 		$totalUnitsSold = 0;
 		$totalOrderCount = 0;
+		$totalItemSubtotal = 0.0;
 		$totalRevenue = 0.0;
 		foreach ($allItems as $allItem) {
 			$totalUnitsSold += (int) $allItem->unitsSold;
 			$totalOrderCount += (int) $allItem->orderCount;
+			$totalItemSubtotal += (float) $allItem->itemSubtotal;
 			$totalRevenue += (float) $allItem->revenue;
 		}
 
 		$totals = [
 			'unitsSold' => number_format($totalUnitsSold),
 			'orderCount' => number_format($totalOrderCount),
+			'itemSubtotal' => $this->formatCurrency($totalItemSubtotal),
 			'revenue' => $this->formatCurrency($totalRevenue),
 		];
 
@@ -230,19 +234,22 @@ class ProductsController extends BaseReportController
 		$csvRows = [];
 		$totalUnitsSold = 0;
 		$totalOrderCount = 0;
+		$totalItemSubtotal = 0.0;
 		$totalRevenue = 0.0;
 
 		foreach ($allItems as $allItem) {
 			$displayTitle = $productsOrVariants === 'variants'
-				? $allItem->productTitle . ': ' . ($allItem->variantTitle ?? '')
+				? VariantTitleHelper::buildDisplayTitle($allItem->productTitle, $allItem->variantTitle)
 				: $allItem->productTitle;
 
 			$unitsSold = (int) $allItem->unitsSold;
 			$orderCount = (int) $allItem->orderCount;
+			$itemSubtotal = (float) $allItem->itemSubtotal;
 			$revenue = (float) $allItem->revenue;
 
 			$totalUnitsSold += $unitsSold;
 			$totalOrderCount += $orderCount;
+			$totalItemSubtotal += $itemSubtotal;
 			$totalRevenue += $revenue;
 
 			$csvRows[] = [
@@ -251,6 +258,7 @@ class ProductsController extends BaseReportController
 				'type' => $allItem->productType,
 				'unitsSold' => $unitsSold,
 				'orders' => $orderCount,
+				'itemSubtotal' => $itemSubtotal,
 				'revenue' => $revenue,
 				'avgPrice' => (float) $allItem->avgPrice,
 			];
@@ -262,6 +270,7 @@ class ProductsController extends BaseReportController
 			'type' => '',
 			'unitsSold' => $totalUnitsSold,
 			'orders' => $totalOrderCount,
+			'itemSubtotal' => $totalItemSubtotal,
 			'revenue' => $totalRevenue,
 			'avgPrice' => '',
 		];
@@ -272,7 +281,8 @@ class ProductsController extends BaseReportController
 			Craft::t('best-sellers', 'Type'),
 			Craft::t('best-sellers', 'Units Sold'),
 			Craft::t('best-sellers', 'Orders'),
-			Craft::t('best-sellers', 'Revenue'),
+			Craft::t('best-sellers', 'Item Subtotal'),
+			Craft::t('best-sellers', 'Item Sales (Net)'),
 			Craft::t('best-sellers', 'Avg Price'),
 		], 'products');
 	}
@@ -316,7 +326,9 @@ class ProductsController extends BaseReportController
 			->one();
 
 		$itemTitle = $titleRow !== null
-			? ($variantId !== 0 ? ($titleRow['productTitle'] . ': ' . $titleRow['variantTitle']) : $titleRow['productTitle'])
+			? ($variantId !== 0
+				? VariantTitleHelper::buildDisplayTitle($titleRow['productTitle'], $titleRow['variantTitle'])
+				: $titleRow['productTitle'])
 			: 'Unknown';
 
 		return $this->renderTemplate('best-sellers/_product-orders', [
@@ -366,8 +378,7 @@ class ProductsController extends BaseReportController
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
-			->where(['>=', '[[variantSales.dateOrdered]]', $dateRange->fromDT])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $dateRange->toDT]);
+			->where($dateRange->dateRange->dateCondition('[[variantSales.dateOrdered]]'));
 
 		if ($variantId !== 0) {
 			$query->andWhere([

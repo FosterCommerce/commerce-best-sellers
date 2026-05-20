@@ -6,10 +6,14 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\db\OrderQuery;
 use craft\commerce\elements\Order;
+use craft\commerce\elements\Product;
+use craft\commerce\elements\Variant;
 use craft\db\Query;
 use craft\helpers\MoneyHelper;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
+use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\VariantTitleHelper;
 use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\Plugin;
 use Money\Money;
@@ -19,6 +23,27 @@ use yii\web\Response;
 class OrdersController extends BaseReportController
 {
 	private const PER_PAGE = 100;
+
+	private const SESSION_KEY_PAYMENT_STATUSES = 'bestSellers.scope.paymentStatuses';
+
+	/**
+	 * Fallback payment statuses applied on the user's first visit to the
+	 * Orders page in a session. "Paid" + "Partial" matches the most common
+	 * "money in (some or all)" view; users can still uncheck and the override
+	 * persists in the session.
+	 *
+	 * @var list<string>
+	 */
+	private const DEFAULT_PAYMENT_STATUSES = ['paid', 'partial'];
+
+	/**
+	 * Cached resolution so resolvePaymentStatusSelection() can be called from
+	 * both actionIndex (for server-rendered checkbox state) and applyOrderFilters
+	 * (for the WHERE clause) without double-reading the request or session.
+	 *
+	 * @var list<string>|null
+	 */
+	private ?array $resolvedPaymentStatuses = null;
 
 	public function actionIndex(): Response
 	{
@@ -32,6 +57,29 @@ class OrdersController extends BaseReportController
 		$shippingMethods = $operationsStats->getShippingMethods($scope);
 		$topDiscounts = $operationsStats->getTopDiscounts($scope, 20);
 
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+		/** @var string|int $rawProductId */
+		$rawProductId = $request->getQueryParam('productId', 0);
+		/** @var string|int $rawVariantId */
+		$rawVariantId = $request->getQueryParam('variantId', 0);
+		$productId = (int) $rawProductId;
+		$variantId = (int) $rawVariantId;
+		$purchasableFilterLabel = '';
+
+		if ($variantId > 0) {
+			/** @var ?Variant $variant */
+			$variant = Variant::find()->id($variantId)->status(null)->one();
+			if ($variant !== null) {
+				$owner = $variant->getOwner();
+				$purchasableFilterLabel = VariantTitleHelper::buildDisplayTitle($owner?->title ?? '', $variant->title);
+			}
+		} elseif ($productId > 0) {
+			/** @var ?Product $product */
+			$product = Product::find()->id($productId)->status(null)->one();
+			$purchasableFilterLabel = $product?->title ?? '';
+		}
+
 		return $this->renderTemplate('best-sellers/_sales', [
 			'title' => Craft::t('best-sellers', 'Orders'),
 			'selectedSubnavItem' => 'orders',
@@ -41,6 +89,10 @@ class OrdersController extends BaseReportController
 			'scope' => $scope,
 			'shippingMethods' => $shippingMethods,
 			'topDiscounts' => $topDiscounts,
+			'productId' => $productId,
+			'variantId' => $variantId,
+			'purchasableFilterLabel' => $purchasableFilterLabel,
+			'selectedPaymentStatuses' => $this->resolvePaymentStatusSelection(),
 		]);
 	}
 
@@ -149,7 +201,7 @@ class OrdersController extends BaseReportController
 			Craft::t('best-sellers', 'Date Ordered'),
 			Craft::t('best-sellers', 'Status'),
 			Craft::t('best-sellers', 'Email'),
-			Craft::t('best-sellers', 'Merchandise Total'),
+			Craft::t('best-sellers', 'Item Subtotal'),
 			Craft::t('best-sellers', 'Tax'),
 			Craft::t('best-sellers', 'Discount'),
 			Craft::t('best-sellers', 'Shipping'),
@@ -157,6 +209,57 @@ class OrdersController extends BaseReportController
 			Craft::t('best-sellers', 'Items Sold'),
 			Craft::t('best-sellers', 'Payment Status'),
 		], 'orders');
+	}
+
+	/**
+	 * Resolve which payment-status checkboxes should be applied.
+	 *
+	 * Mirrors the order-status pattern in DateRange::resolveScope():
+	 * query param wins (and persists to session), otherwise session value
+	 * is used, otherwise the hard-coded DEFAULT_PAYMENT_STATUSES.
+	 *
+	 * Sending `paymentStatus=` (empty string scalar) is treated as an
+	 * explicit clear and stores [] in the session, distinct from "never
+	 * touched" which falls through to defaults.
+	 *
+	 * @return list<string>
+	 */
+	private function resolvePaymentStatusSelection(): array
+	{
+		if ($this->resolvedPaymentStatuses !== null) {
+			return $this->resolvedPaymentStatuses;
+		}
+
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+		$session = Craft::$app->getSession();
+
+		$param = $request->getQueryParam('paymentStatus', null);
+
+		if ($param !== null) {
+			if (is_string($param)) {
+				$selection = $param !== '' ? [$param] : [];
+			} elseif (is_array($param)) {
+				$selection = array_values(array_filter($param, 'is_string'));
+			} else {
+				$selection = [];
+			}
+
+			$session->set(self::SESSION_KEY_PAYMENT_STATUSES, $selection);
+			$this->resolvedPaymentStatuses = $selection;
+			return $this->resolvedPaymentStatuses;
+		}
+
+		if ($session->has(self::SESSION_KEY_PAYMENT_STATUSES)) {
+			$stored = $session->get(self::SESSION_KEY_PAYMENT_STATUSES, []);
+			$this->resolvedPaymentStatuses = is_array($stored)
+				? array_values(array_filter($stored, 'is_string'))
+				: [];
+			return $this->resolvedPaymentStatuses;
+		}
+
+		$this->resolvedPaymentStatuses = self::DEFAULT_PAYMENT_STATUSES;
+		return $this->resolvedPaymentStatuses;
 	}
 
 	/**
@@ -242,22 +345,22 @@ class OrdersController extends BaseReportController
 	/**
 	 * Aggregate totals across all filtered orders (not just the current page).
 	 *
+	 * Materializes filtered order IDs from the same OrderQuery used for rows,
+	 * then runs raw SUM aggregates against that ID list. Guarantees totals
+	 * match the rendered rows (same TZ handling, soft-delete exclusion, and
+	 * request filters). The IDs list scales with the filter result count:
+	 * for very large unfiltered windows the IN(...) literal can get big, but
+	 * a raw aggregate Query cannot reuse the OrderQuery as a subquery because
+	 * ElementQuery::prepare merges in 10+ default SELECT columns, which an
+	 * `IN (subquery)` clause cannot consume.
+	 *
 	 * @return array<string, string>
 	 */
 	private function buildFilteredTotals(DateRangeResult $dateRange): array
 	{
-		/** @var array{itemSubtotal: string, totalTax: string, totalDiscount: string, totalShippingCost: string, totalPaid: string}|false $sums */
-		$sums = $this->buildFilteredTotalsQuery($dateRange)
-			->select([
-				'itemSubtotal' => 'COALESCE(SUM([[itemSubtotal]]), 0)',
-				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
-				'totalDiscount' => 'COALESCE(SUM([[totalDiscount]]), 0)',
-				'totalShippingCost' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
-				'totalPaid' => 'COALESCE(SUM([[totalPaid]]), 0)',
-			])
-			->one();
+		$orderIds = $this->buildFilteredOrdersQuery($dateRange)->ids();
 
-		if (! $sums) {
+		if ($orderIds === []) {
 			return [
 				'itemSubtotal' => $this->formatCurrency(0),
 				'totalTax' => $this->formatCurrency(0),
@@ -268,51 +371,37 @@ class OrdersController extends BaseReportController
 			];
 		}
 
-		$idSubquery = $this->buildFilteredTotalsQuery($dateRange)
-			->select(['[[id]]']);
+		/** @var array{itemSubtotal: string, totalTax: string, totalDiscount: string, totalShippingCost: string, totalPaid: string}|false $sums */
+		$sums = (new Query())
+			->select([
+				'itemSubtotal' => 'COALESCE(SUM([[itemSubtotal]]), 0)',
+				'totalTax' => 'COALESCE(SUM([[totalTax]]), 0)',
+				'totalDiscount' => 'COALESCE(SUM([[totalDiscount]]), 0)',
+				'totalShippingCost' => 'COALESCE(SUM([[totalShippingCost]]), 0)',
+				'totalPaid' => 'COALESCE(SUM([[totalPaid]]), 0)',
+			])
+			->from(CommerceTable::ORDERS)
+			->where([
+				'[[id]]' => $orderIds,
+			])
+			->one();
 
-		// Raw Query on commerce_lineitems for a single SUM aggregate
 		$totalItemsSold = (int) (new Query())
 			->select(new Expression('COALESCE(SUM([[qty]]), 0)'))
 			->from(CommerceTable::LINEITEMS)
-			->where(['in', '[[orderId]]', $idSubquery])
+			->where([
+				'[[orderId]]' => $orderIds,
+			])
 			->scalar();
 
 		return [
-			'itemSubtotal' => $this->formatCurrency((float) $sums['itemSubtotal']),
-			'totalTax' => $this->formatCurrency((float) $sums['totalTax']),
-			'totalDiscount' => $this->formatCurrency((float) $sums['totalDiscount']),
-			'totalShippingCost' => $this->formatCurrency((float) $sums['totalShippingCost']),
-			'totalPaid' => $this->formatCurrency((float) $sums['totalPaid']),
+			'itemSubtotal' => $this->formatCurrency((float) ($sums['itemSubtotal'] ?? 0)),
+			'totalTax' => $this->formatCurrency((float) ($sums['totalTax'] ?? 0)),
+			'totalDiscount' => $this->formatCurrency((float) ($sums['totalDiscount'] ?? 0)),
+			'totalShippingCost' => $this->formatCurrency((float) ($sums['totalShippingCost'] ?? 0)),
+			'totalPaid' => $this->formatCurrency((float) ($sums['totalPaid'] ?? 0)),
 			'itemsSold' => number_format($totalItemsSold),
 		];
-	}
-
-	/**
-	 * Raw Query (not OrderQuery) because we need multiple SUM aggregates
-	 * in a single query (itemSubtotal, totalTax, totalDiscount, etc.).
-	 * ElementQuery supports ->sum() for a single column, but a custom
-	 * ->select() with multiple SUMs requires a raw Query because
-	 * ElementQuery overrides select() during prepare().
-	 *
-	 * @return Query<array-key, mixed>
-	 */
-	private function buildFilteredTotalsQuery(DateRangeResult $dateRange): Query
-	{
-		$query = (new Query())
-			->from(CommerceTable::ORDERS)
-			->where([
-				'and',
-				[
-					'[[isCompleted]]' => true,
-				],
-				['>=', '[[dateOrdered]]', $dateRange->fromDT],
-				['<=', '[[dateOrdered]]', $dateRange->toDT],
-			]);
-
-		$this->applyOrderFilters($query);
-
-		return $query;
 	}
 
 	/**
@@ -338,29 +427,14 @@ class OrdersController extends BaseReportController
 		$rawSearch = $request->getQueryParam('search', '');
 		$search = trim($rawSearch);
 
-		$orderStatuses = $request->getQueryParam('orderStatus', []);
-		$paidFilters = $request->getQueryParam('paymentStatus', []);
+		$paidFilters = $this->resolvePaymentStatusSelection();
 
-		if (is_string($orderStatuses) && $orderStatuses !== '') {
-			$orderStatuses = [$orderStatuses];
-		} elseif (! is_array($orderStatuses)) {
-			$orderStatuses = [];
-		}
-
-		if (is_string($paidFilters) && $paidFilters !== '') {
-			$paidFilters = [$paidFilters];
-		} elseif (! is_array($paidFilters)) {
-			$paidFilters = [];
-		}
-
-		if ($orderStatuses !== []) {
+		// Order status comes from the global scope (date-picker header), not a
+		// per-page filter. Session-persisted through DateRange::resolveScope().
+		$scope = $this->resolveScope();
+		if ($scope->orderStatusIds !== []) {
 			$query->andWhere([
-				$statusIdCol => (new Query())
-					->select('[[id]]')
-					->from(CommerceTable::ORDERSTATUSES)
-					->where([
-						'[[handle]]' => $orderStatuses,
-					]),
+				$statusIdCol => $scope->orderStatusIds,
 			]);
 		}
 
@@ -450,6 +524,55 @@ class OrdersController extends BaseReportController
 						'[[type]]' => 'discount',
 					])
 					->andWhere($idExpr),
+			]);
+		}
+
+		// Product / variant filter: limit to orders that include this purchasable
+		// (directly or via a bundle constituent). Queries best_sellers_variant_sales
+		// so bundle children, which appear in variant_sales but not as line item
+		// purchasables, are matched. Matches the source the Products report's
+		// "in N orders" count was computed from.
+		/** @var string|int $rawProductId */
+		$rawProductId = $request->getQueryParam('productId', 0);
+		/** @var string|int $rawVariantId */
+		$rawVariantId = $request->getQueryParam('variantId', 0);
+		$productId = (int) $rawProductId;
+		$variantId = (int) $rawVariantId;
+
+		if ($variantId > 0) {
+			$query->andWhere([
+				$idCol => (new Query())
+					->select('DISTINCT [[orderId]]')
+					->from(Table::VARIANT_SALES)
+					->where([
+						'[[variantId]]' => $variantId,
+					]),
+			]);
+			// Mirror the Products report exclusion: drop orders with a full
+			// balance owed (totalPaid <= 0 AND totalPrice > 0) so the count on
+			// the Products page link matches the Orders page result.
+			$query->andWhere([
+				'not', [
+					'and',
+					['<=', '[[totalPaid]]', 0],
+					['>', '[[totalPrice]]', 0],
+				],
+			]);
+		} elseif ($productId > 0) {
+			$query->andWhere([
+				$idCol => (new Query())
+					->select('DISTINCT [[orderId]]')
+					->from(Table::VARIANT_SALES)
+					->where([
+						'[[productId]]' => $productId,
+					]),
+			]);
+			$query->andWhere([
+				'not', [
+					'and',
+					['<=', '[[totalPaid]]', 0],
+					['>', '[[totalPrice]]', 0],
+				],
 			]);
 		}
 

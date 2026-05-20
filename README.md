@@ -83,7 +83,7 @@ The dashboard provides a full overview of store performance for any date range, 
 Browse and search every completed order with filtering.
 
 - Filters: Order Status, Payment Status, Shipping Method, Discount (discounted/full-price and specific discounts by ID), Items Per Order bucket
-- Sortable columns: order number, date, status, merchandise total, tax, discount, shipping, total paid, items sold, payment status
+- Sortable columns: order number, date, status, item subtotal, tax, discount, shipping, total paid, items sold, payment status
 - Page totals for all currency columns
 - Dashboard widgets link to pre-filtered views
 - CSV export with all applied filters
@@ -96,7 +96,7 @@ See which products or variants are generating the most revenue, with breakdowns 
 - Filter by product type
 - Search by title, SKU, or product type
 - Drill down to every order containing a specific product
-- Sortable by units sold, order count, revenue, or average price
+- Sortable by units sold, order count, item sales (net of line-level discounts), or average price
 - CSV export with all applied filters
 
 ### Customers
@@ -134,7 +134,7 @@ Built-in cart restoration for abandoned cart recovery.
 
 Best Sellers provides Twig variables for displaying sales data on your front end.
 
-### Units Sold & Revenue
+### Units Sold & Item Sales
 
 ```twig
 {# Units sold for a variant #}
@@ -142,15 +142,18 @@ Best Sellers provides Twig variables for displaying sales data on your front end
 {{ craft.bestsellers.variantTotalSales(variant.id, '30 days ago') }}
 {{ craft.bestsellers.variantTotalSales(variant.id, '2024-01-01', '2024-12-31') }}
 
-{# Revenue for a variant #}
-{{ craft.bestsellers.variantTotalRevenue(variant.id)|commerceCurrency }}
+{# Item sales (net of line-level discounts) for a variant. #}
+{# Matches the CP Products report. #}
+{{ craft.bestsellers.variantTotalItemSalesNet(variant.id)|commerceCurrency }}
 
 {# Units sold for a product (all variants combined) #}
 {{ craft.bestsellers.productTotalSales(product.id) }}
 
-{# Revenue for a product #}
-{{ craft.bestsellers.productTotalRevenue(product.id)|commerceCurrency }}
+{# Item sales (net) for a product #}
+{{ craft.bestsellers.productTotalItemSalesNet(product.id)|commerceCurrency }}
 ```
+
+`*TotalRevenue()` methods are still available (gross, SUM of `lineItemTotal` only) but are deprecated since 1.6.0. See [docs/usage.md](docs/usage.md) for the full difference.
 
 ### Previous Purchases
 

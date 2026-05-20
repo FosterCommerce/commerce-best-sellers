@@ -17,6 +17,7 @@ use fostercommerce\bestsellers\db\Table;
  * @property float|null $lineItemPrice
  * @property float|null $lineItemTotal
  * @property float $discount
+ * @property float $lineDiscount
  * @property int|null $sourceBundleId
  * @property string|null $sourceBundleTitle
  * @property int $orderId

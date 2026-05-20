@@ -12,6 +12,7 @@ use craft\web\twig\variables\Paginate;
 use DateTime;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\behaviors\SalesBehavior;
+use fostercommerce\bestsellers\helpers\VariantTitleHelper;
 use fostercommerce\bestsellers\Plugin;
 use yii\base\Action;
 use yii\base\InvalidConfigException;
@@ -121,9 +122,10 @@ class DashboardController extends Controller
 				/** @var ?Product $product */
 				$product = $element->getOwner();
 				$totalQtySold = (int) ($element->totalQtySold ?? 0);
+				$displayTitle = VariantTitleHelper::buildDisplayTitle($product?->title ?? '', $element->title);
 				return [
 					'url' => $product?->getCpEditUrl(),
-					'title' => $product?->title . ': ' . $element->title,
+					'title' => $displayTitle,
 					'sku' => $element->sku,
 					'totalQtySold' => $totalQtySold,
 					'type' => $product?->getType()->name,

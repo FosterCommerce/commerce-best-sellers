@@ -27,7 +27,15 @@ class ProductRow extends Model
 	public int $orderCount = 0;
 
 	/**
-	 * @var float Total revenue
+	 * @var float Item subtotal: SUM(lineItemTotal). Gross of line-level Discount
+	 * adjustments. Matches the Orders report's "Item Subtotal" column when
+	 * summed across the same orders.
+	 */
+	public float $itemSubtotal = 0;
+
+	/**
+	 * @var float Item sales net of line-level Discount adjustments:
+	 * SUM(lineItemTotal + lineDiscount). The "Item Sales (Net)" column.
 	 */
 	public float $revenue = 0;
 
@@ -60,4 +68,12 @@ class ProductRow extends Model
 	 * @var bool True when any units rolled up into this row were sold as part of a bundle.
 	 */
 	public bool $fromBundle = false;
+
+	/**
+	 * @var bool True when at least one of the orders contributing to this row
+	 * is partially paid (0 < totalPaid < totalPrice). Fully-unpaid orders are
+	 * excluded upstream. Live; reflects current payment state, not the state
+	 * at order completion.
+	 */
+	public bool $hasUnpaidOrder = false;
 }

@@ -5,6 +5,8 @@ namespace fostercommerce\bestsellers\controllers;
 use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use craft\helpers\DateTimeHelper;
+use craft\helpers\Db;
 use craft\web\Controller;
 use craft\web\Request;
 use DateTime;
@@ -106,11 +108,13 @@ class ReportsController extends Controller
 	 */
 	private function getPeriodMetrics(string $fromDT, string $toDT): array
 	{
+		// $fromDT and $toDT are Craft-app-timezone wall-clock strings. Route them
+		// through Db::parseDateParam so the WHERE clause uses UTC literals that
+		// match how dateOrdered is stored.
 		$dateCondition = [
 			'and',
 			['=', '[[orders.isCompleted]]', true],
-			['>=', '[[orders.dateOrdered]]', $fromDT],
-			['<=', '[[orders.dateOrdered]]', $toDT],
+			Db::parseDateParam('[[orders.dateOrdered]]', ['and', ">= {$fromDT}", "<= {$toDT}"]),
 		];
 
 		$orderStatsQuery = (new Query())
@@ -163,18 +167,15 @@ class ReportsController extends Controller
 	 */
 	private function getDailyChart(string $fromDT, string $toDT): array
 	{
-		$db = Craft::$app->getDb();
-		$isMysql = $db->getIsMysql();
-
-		$dayExpression = $isMysql
-			? 'DATE([[orders.dateOrdered]])'
-			: 'CAST([[orders.dateOrdered]] AS DATE)';
-
+		// Pulls one row per order in the window into PHP and buckets by Craft app
+		// TZ day. Doing this in SQL would require DB-specific CONVERT_TZ / AT TIME
+		// ZONE support and timezone-info tables loaded. Trade-off: full window
+		// materialized in PHP memory; long ranges on busy stores are slower than
+		// the old SQL DATE() grouping.
 		$rowsQuery = (new Query())
 			->select([
-				'day' => $dayExpression,
-				'orderCount' => 'COUNT(*)',
-				'revenue' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
+				'dateOrdered' => '[[orders.dateOrdered]]',
+				'totalPrice' => '[[orders.totalPrice]]',
 			])
 			->from([
 				'orders' => CommerceTable::ORDERS,
@@ -182,25 +183,41 @@ class ReportsController extends Controller
 			->where([
 				'and',
 				['=', '[[orders.isCompleted]]', true],
-				['>=', '[[orders.dateOrdered]]', $fromDT],
-				['<=', '[[orders.dateOrdered]]', $toDT],
-			])
-			->groupBy($dayExpression)
-			->orderBy([
-				'day' => SORT_ASC,
+				Db::parseDateParam('[[orders.dateOrdered]]', ['and', ">= {$fromDT}", "<= {$toDT}"]),
 			]);
 
 		$rows = NotTrashed::join($rowsQuery, 'orders')->all();
+
+		$byDay = [];
+		foreach ($rows as $row) {
+			/** @var array{dateOrdered: string, totalPrice: string|float|null} $row */
+			$orderDate = DateTimeHelper::toDateTime((string) $row['dateOrdered']);
+			if ($orderDate === false) {
+				continue;
+			}
+
+			$day = $orderDate->format('Y-m-d');
+			if (! isset($byDay[$day])) {
+				$byDay[$day] = [
+					'count' => 0,
+					'revenue' => 0.0,
+				];
+			}
+
+			$byDay[$day]['count']++;
+			$byDay[$day]['revenue'] += (float) $row['totalPrice'];
+		}
+
+		ksort($byDay);
 
 		$labels = [];
 		$orders = [];
 		$revenue = [];
 
-		foreach ($rows as $row) {
-			/** @var array{day: string, orderCount: string, revenue: string} $row */
-			$labels[] = $row['day'];
-			$orders[] = (int) $row['orderCount'];
-			$revenue[] = (float) $row['revenue'];
+		foreach ($byDay as $day => $totals) {
+			$labels[] = $day;
+			$orders[] = $totals['count'];
+			$revenue[] = $totals['revenue'];
 		}
 
 		return [

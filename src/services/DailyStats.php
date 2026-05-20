@@ -4,12 +4,14 @@ namespace fostercommerce\bestsellers\services;
 
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use craft\helpers\Db;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\models\PeriodStats;
 use fostercommerce\bestsellers\records\DailyStat;
+use RuntimeException;
 use yii\base\Component;
 
 class DailyStats extends Component
@@ -19,14 +21,14 @@ class DailyStats extends Component
 	 */
 	public function aggregateDay(string $date): void
 	{
-		$dateStart = $date . ' 00:00:00';
-		$dateEnd = $date . ' 23:59:59';
-
+		// $date is a calendar date in the Craft app timezone. Db::parseDateParam
+		// interprets the wall-clock boundaries in system TZ and emits UTC literals
+		// matching how dateOrdered is stored, so the scan covers exactly the 24
+		// hours that represent this app-TZ calendar day.
 		$dateCondition = [
 			'and',
 			['=', '[[orders.isCompleted]]', true],
-			['>=', '[[orders.dateOrdered]]', $dateStart],
-			['<=', '[[orders.dateOrdered]]', $dateEnd],
+			Db::parseDateParam('[[orders.dateOrdered]]', ['and', ">= {$date} 00:00:00", "<= {$date} 23:59:59"]),
 		];
 
 		// Order-level aggregates
@@ -103,12 +105,16 @@ class DailyStats extends Component
 
 			$firstOrdersSubquery = NotTrashed::join($firstOrdersSubquery, 'orders');
 
+			$firstOrderDateCondition = Db::parseDateParam('firstOrder', ['and', ">= {$date} 00:00:00", "<= {$date} 23:59:59"]);
+			if ($firstOrderDateCondition === null) {
+				throw new RuntimeException('Db::parseDateParam returned null for first-order date condition');
+			}
+
 			$newCustomers = (int) (new Query())
 				->from([
 					'firstOrders' => $firstOrdersSubquery,
 				])
-				->andWhere(['>=', 'firstOrder', $dateStart])
-				->andWhere(['<=', 'firstOrder', $dateEnd])
+				->andWhere($firstOrderDateCondition)
 				->count();
 
 			$returningCustomers = max(0, $uniqueCustomers - $newCustomers);

@@ -30,11 +30,16 @@ abstract class Query
 			return;
 		}
 
+		// totalRevenue is gross (lineItemTotal only). totalItemSalesNet subtracts
+		// line-level Discount adjustments and matches the CP Products report's
+		// "Item Sales (Net)" column. Both kept for backward compatibility; new
+		// callers should prefer totalItemSalesNet.
 		$withQuery = (new DbQuery())
 			->select([
 				$id,
 				'totalQtySold' => 'COALESCE(SUM(qty), 0)',
 				'totalRevenue' => 'COALESCE(SUM(lineItemTotal), 0)',
+				'totalItemSalesNet' => 'COALESCE(SUM([[lineItemTotal]] + [[lineDiscount]]), 0)',
 			])
 			->from(Table::VARIANT_SALES)
 			->groupBy($id);
@@ -54,6 +59,7 @@ abstract class Query
 			?->addSelect([
 				'variant_sales_cte.totalQtySold',
 				'variant_sales_cte.totalRevenue',
+				'variant_sales_cte.totalItemSalesNet',
 			])
 			->withQuery($withQuery, 'variant_sales_cte')
 			->leftJoin(
@@ -66,6 +72,7 @@ abstract class Query
 			?->addSelect([
 				'subquery.totalQtySold',
 				'subquery.totalRevenue',
+				'subquery.totalItemSalesNet',
 			]);
 	}
 }

@@ -20,7 +20,7 @@ Best Sellers registers a `craft.bestsellers` variable with the following methods
 {{ craft.bestsellers.productTotalItemSalesNet(product.id) }}
 {{ craft.bestsellers.productTotalItemSalesNet(product.id, '30 days ago') }}
 
-{# Gross revenue (sum of lineItemTotal). Deprecated since 1.6.0; #}
+{# Gross revenue (sum of lineItemTotal). Deprecated since 1.3.0; #}
 {# kept for backward compatibility. Does NOT subtract line-level discounts. #}
 {{ craft.bestsellers.productTotalRevenue(product.id) }}
 ```
@@ -38,7 +38,7 @@ Best Sellers registers a `craft.bestsellers` variable with the following methods
 {{ craft.bestsellers.variantTotalItemSalesNet(variant.id) }}
 {{ craft.bestsellers.variantTotalItemSalesNet(variant.id, '90 days ago') }}
 
-{# Gross revenue (sum of lineItemTotal). Deprecated since 1.6.0; #}
+{# Gross revenue (sum of lineItemTotal). Deprecated since 1.3.0; #}
 {# kept for backward compatibility. Does NOT subtract line-level discounts. #}
 {{ craft.bestsellers.variantTotalRevenue(variant.id) }}
 ```
@@ -48,7 +48,7 @@ Best Sellers registers a `craft.bestsellers` variable with the following methods
 | Method | Formula | Matches |
 |---|---|---|
 | `productTotalItemSalesNet()` / `variantTotalItemSalesNet()` | `SUM(lineItemTotal + lineDiscount)` | "Item Sales (Net)" column in CP Products report |
-| `productTotalRevenue()` / `variantTotalRevenue()` | `SUM(lineItemTotal)` | "Item Subtotal" column in CP Products report (gross, before line discounts). Deprecated since 1.6.0; the value remains useful as the gross figure, but new code should prefer the explicit `*TotalItemSalesNet()` for net or read the CP column for gross. |
+| `productTotalRevenue()` / `variantTotalRevenue()` | `SUM(lineItemTotal)` | "Item Subtotal" column in CP Products report (gross, before line discounts). Deprecated since 1.6.0. |
 
 `lineDiscount` is the line-level Discount adjustment (coupons, manual discounts, and order-level discounts that Commerce attaches to specific lines). It is negative, so adding it nets the discount out of `lineItemTotal`. Sale-price promotions are already baked into `lineItemTotal` in both columns. Tax and shipping are excluded from both.
 
@@ -150,7 +150,7 @@ Best Sellers adds a `bestSellers()` behavior to `ProductQuery` and `VariantQuery
 {% for product in bestSellers %}
     {{ product.title }}: {{ product.totalQtySold }} sold,
     {{ product.totalItemSalesNet|currency }} net
-    {# product.totalRevenue is gross (lineItemTotal only) and deprecated since 1.6.0. #}
+    {# product.totalRevenue is gross (lineItemTotal only) and deprecated since 1.3.0. #}
 {% endfor %}
 ```
 

@@ -61,7 +61,7 @@ class Plugin extends BasePlugin
 
 	public const PERMISSION_MANAGE_SETTINGS = 'best-sellers:manageSettings';
 
-	public string $schemaVersion = '1.4.0';
+	public string $schemaVersion = '1.6.0';
 
 	public bool $hasCpSettings = false;
 
@@ -306,15 +306,26 @@ class Plugin extends BasePlugin
 			}
 		);
 
+		// Listen to AFTER_SAVE rather than AFTER_COMPLETE_ORDER so that
+		// post-completion edits (line item changes, manual discounts, status
+		// updates, etc.) re-sync the order's variant_sales rows and the day's
+		// daily_stats. AFTER_COMPLETE_ORDER fires only on the initial markAsComplete()
+		// transition; AFTER_SAVE catches both that and every subsequent save.
+		// force=true makes logOrderSales delete + re-insert the order's rows,
+		// and aggregateDay is an idempotent upsert.
 		Event::on(
 			Order::class,
-			Order::EVENT_AFTER_COMPLETE_ORDER,
+			Order::EVENT_AFTER_SAVE,
 			function (Event $event): void {
 				/** @var Order $order */
 				$order = $event->sender;
-				$this->sales->logOrderSales($order);
 
-				// Aggregate daily stats for the order's date
+				if (! $order->isCompleted) {
+					return;
+				}
+
+				$this->sales->logOrderSales($order, true);
+
 				if ($order->dateOrdered) {
 					$this->dailyStats->aggregateDay($order->dateOrdered->format('Y-m-d'));
 				}

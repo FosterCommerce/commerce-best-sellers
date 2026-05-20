@@ -101,7 +101,8 @@
 				{% for item in items %}
 					<tr tabindex="0">
 						<td data-title="{{ "Title"|t("best-sellers") }}">
-							<span><a class="go" href="{{ item.url }}">{{ item.title }}</a></span>
+							{% set shownTitle = item.title|length > 100 ? item.title|slice(0, 100) ~ '…' : item.title %}
+							<span><a class="go" href="{{ item.url }}" title="{{ item.title }}">{{ shownTitle }}</a></span>
 						</td>
 						<td data-title="{{ "Type"|t('best-sellers') }}">
 							{{ item.sku }}

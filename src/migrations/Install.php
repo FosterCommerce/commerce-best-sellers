@@ -44,6 +44,7 @@ class Install extends Migration
 			'lineItemPrice' => $this->decimal(14, 4)->null(),
 			'lineItemTotal' => $this->decimal(14, 4)->null(),
 			'discount' => $this->decimal(14, 4)->defaultValue(0),
+			'lineDiscount' => $this->decimal(14, 4)->notNull()->defaultValue(0),
 			'sourceBundleId' => $this->integer()->null(),
 			'sourceBundleTitle' => $this->string()->null(),
 			'orderId' => $this->integer(),

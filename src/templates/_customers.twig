@@ -27,6 +27,7 @@
 
 	{# Customers Table (hidden until loaded) #}
 	<div id="customers-container" style="display: none;">
+		<div id="customers-totals" class="bs-totals-bar" hidden></div>
 		<div style="overflow-x: auto;">
 			<table class="bs-data-table" id="customers-table">
 				<thead>
@@ -43,6 +44,17 @@
 			</table>
 		</div>
 		<div id="customers-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+
+		<details class="bs-data-notes">
+			<summary>{{ "About these numbers"|t('best-sellers') }}</summary>
+			<ul>
+				<li>{{ "Customers are grouped by email. A guest checkout and a logged-in checkout that share an email appear as one row."|t('best-sellers') }}</li>
+				<li>{{ "{label} sums the order’s <code>totalPrice</code> (after tax, shipping, and discount) across the customer’s orders in this window. Refunds are not netted out."|t('best-sellers', { label: '<strong>' ~ 'Total Spent'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+				<li>{{ "{label} is {totalSpent} ÷ {orderCount}."|t('best-sellers', { label: '<strong>' ~ 'AOV'|t('best-sellers') ~ '</strong>', totalSpent: '<strong>' ~ 'Total Spent'|t('best-sellers') ~ '</strong>', orderCount: '<strong>' ~ '# Orders'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+				<li>{{ "Only completed, non-trashed orders are counted."|t('best-sellers') }}</li>
+				<li>{{ "Dates are bucketed in the site’s timezone ({tz})."|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</li>
+			</ul>
+		</details>
 	</div>
 {% endblock %}
 
@@ -61,6 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		containerEl: document.getElementById('customers-container'),
 		tbodyEl: document.getElementById('customers-tbody'),
 		paginationEl: document.getElementById('customers-pagination'),
+		totalsEl: document.getElementById('customers-totals'),
 		actionUrl: 'best-sellers/customers/customers-data',
 		exportUrl: 'best-sellers/customers/export-csv',
 		exportContainerEl: document.getElementById('customers-export'),
@@ -90,16 +103,14 @@ document.addEventListener('DOMContentLoaded', function () {
 				'<td>' + customer.lastOrder + '</td>';
 			return row;
 		},
-		buildTotalsRow: function (totals) {
-			var row = document.createElement('tr');
-			row.innerHTML =
-				'<td>{{ "All Results Total"|t("best-sellers") }}</td>' +
-				'<td></td>' +
-				'<td class="bs-data-table--right">' + totals.orderCount + '</td>' +
-				'<td class="bs-data-table--right">' + totals.totalSpent + '</td>' +
-				'<td></td>' +
-				'<td></td>';
-			return row;
+		buildTotalsBar: function (totals) {
+			return BestSellersReports.buildTotalsBar(
+				'{{ "Filtered Results Total"|t("best-sellers") }}',
+				[
+					{ label: '{{ "Orders"|t("best-sellers") }}', value: totals.orderCount },
+					{ label: '{{ "Total Spent"|t("best-sellers") }}', value: totals.totalSpent }
+				]
+			);
 		},
 		getFilterParams: function () {
 			var params = {};

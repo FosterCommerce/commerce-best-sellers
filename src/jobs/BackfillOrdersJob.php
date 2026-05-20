@@ -20,6 +20,13 @@ class BackfillOrdersJob extends BaseJob
 
 	public ?string $endDate = null;
 
+	/**
+	 * When true, existing variant_sales rows for each processed order are
+	 * deleted before re-inserting. Used by rebuild migrations that change
+	 * how rows are computed.
+	 */
+	public bool $force = false;
+
 	public function execute($queue): void
 	{
 		$ordersQuery = Order::find()
@@ -41,7 +48,7 @@ class BackfillOrdersJob extends BaseJob
 
 		foreach ($orders as $i => $order) {
 			try {
-				$plugin->sales->logOrderSales($order);
+				$plugin->sales->logOrderSales($order, $this->force);
 			} catch (Throwable $e) {
 				Craft::warning("Failed to process order #{$order->id}: {$e->getMessage()}", 'best-sellers');
 				$plugin->backfillLogs->log('backfill', (string) $order->id, $e->getMessage());

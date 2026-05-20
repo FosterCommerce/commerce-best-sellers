@@ -14,23 +14,14 @@
 
 {% block reportContent %}
 	{# Filters #}
-	{% set orderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
 	<div class="bs-section">
 		<div class="bs-filter-bar" style="margin-bottom: 1rem;">
-			<div class="bs-multiselect" id="order-status-multiselect">
-				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Order Status'|t('best-sellers') }}">{{ "Order Status"|t('best-sellers') }}</button>
-				<div class="bs-multiselect__dropdown">
-					{% for status in orderStatuses %}
-						<label><input type="checkbox" value="{{ status.handle }}"> {{ status.name }}</label>
-					{% endfor %}
-				</div>
-			</div>
 			<div class="bs-multiselect" id="payment-status-multiselect">
 				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Payment Status'|t('best-sellers') }}">{{ "Payment Status"|t('best-sellers') }}</button>
 				<div class="bs-multiselect__dropdown">
-					<label><input type="checkbox" value="paid"> {{ "Paid"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="partial"> {{ "Partial"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="unpaid"> {{ "Unpaid"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="paid"{% if 'paid' in selectedPaymentStatuses %} checked{% endif %}> {{ "Paid"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="partial"{% if 'partial' in selectedPaymentStatuses %} checked{% endif %}> {{ "Partial"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="unpaid"{% if 'unpaid' in selectedPaymentStatuses %} checked{% endif %}> {{ "Unpaid"|t('best-sellers') }}</label>
 				</div>
 			</div>
 			{% if shippingMethods is defined and shippingMethods|length > 0 %}
@@ -70,8 +61,20 @@
 			<p class="bs-loading__message">{{ "Rummaging through the order archives..."|t('best-sellers') }}</p>
 		</div>
 
+		{% if purchasableFilterLabel %}
+			{% set clearUrl = url('best-sellers/orders') %}
+			<div class="bs-filter-chip-bar">
+				<span class="bs-filter-chip">
+					<span class="bs-filter-chip__label">{{ "Filtered to:"|t('best-sellers') }}</span>
+					<span class="bs-filter-chip__value">{{ purchasableFilterLabel }}</span>
+					<a href="{{ clearUrl }}" class="bs-filter-chip__clear" title="{{ 'Clear filter'|t('best-sellers') }}">×</a>
+				</span>
+			</div>
+		{% endif %}
+
 		{# Orders Table (hidden until loaded) #}
 		<div id="orders-container" style="display: none;">
+			<div id="orders-totals" class="bs-totals-bar" hidden></div>
 			<div style="overflow-x: auto;">
 				<table class="bs-data-table" id="orders-table">
 					<thead>
@@ -79,7 +82,7 @@
 							<th data-sort="reference">{{ "Order #"|t('best-sellers') }}</th>
 							<th data-sort="dateOrdered">{{ "Date Ordered"|t('best-sellers') }}</th>
 							<th data-sort="orderStatusId">{{ "Status"|t('best-sellers') }}</th>
-							<th class="bs-data-table--right" data-sort="itemSubtotal">{{ "Merchandise Total"|t('best-sellers') }}</th>
+							<th class="bs-data-table--right" data-sort="itemSubtotal">{{ "Item Subtotal"|t('best-sellers') }}</th>
 							<th class="bs-data-table--right" data-sort="totalTax">{{ "Tax"|t('best-sellers') }}</th>
 							<th class="bs-data-table--right" data-sort="totalDiscount">{{ "Discount"|t('best-sellers') }}</th>
 							<th class="bs-data-table--right" data-sort="totalShippingCost">{{ "Shipping"|t('best-sellers') }}</th>
@@ -93,19 +96,29 @@
 			</div>
 
 			<div id="orders-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+
+			<details class="bs-data-notes">
+				<summary>{{ "About these numbers"|t('best-sellers') }}</summary>
+				<ul>
+					<li>{{ "{label} is the order’s <code>itemSubtotal</code>: quantity × sale price across every line item. Sale-price promotions are already baked in; coupon and manual discounts (line-level or order-level) are not subtracted here. They appear in the {discountLabel} column."|t('best-sellers', { label: '<strong>' ~ 'Item Subtotal'|t('best-sellers') ~ '</strong>', discountLabel: '<strong>' ~ 'Discount'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+					<li>{{ "{label} sums all Discount adjustments on the order (coupons, manual, line-level and order-level). It does not include sale-price promotions."|t('best-sellers', { label: '<strong>' ~ 'Discount'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+					<li>{{ "{label} is the live sum of successful gateway transactions minus refunds. This is the closest figure to what was settled."|t('best-sellers', { label: '<strong>' ~ 'Total Paid'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+					<li>{{ "Soft-deleted orders are excluded."|t('best-sellers') }}</li>
+					<li>{{ "Dates are bucketed in the site’s timezone ({tz})."|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</li>
+				</ul>
+			</details>
 		</div>
 	</div>
 {% endblock %}
+
+{% set baseParams = { from: from, to: to, preset: preset } %}
+{% if productId %}{% set baseParams = baseParams|merge({ productId: productId }) %}{% endif %}
+{% if variantId %}{% set baseParams = baseParams|merge({ variantId: variantId }) %}{% endif %}
 
 {% js %}
 document.addEventListener('DOMContentLoaded', function () {
 	var searchInput = document.getElementById('orders-search');
 	var searchTimer = null;
-
-	var orderStatusMulti = BestSellersReports.createMultiSelect({
-		container: document.getElementById('order-status-multiselect'),
-		onChange: function () { table.reload(); }
-	});
 
 	var paymentStatusMulti = BestSellersReports.createMultiSelect({
 		container: document.getElementById('payment-status-multiselect'),
@@ -127,10 +140,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		containerEl: document.getElementById('orders-container'),
 		tbodyEl: document.getElementById('orders-tbody'),
 		paginationEl: document.getElementById('orders-pagination'),
+		totalsEl: document.getElementById('orders-totals'),
 		actionUrl: 'best-sellers/orders/orders-data',
 		exportUrl: 'best-sellers/orders/export-csv',
 		exportContainerEl: document.getElementById('orders-export'),
-		baseParams: { from: '{{ from }}', to: '{{ to }}', preset: '{{ preset }}' },
+		baseParams: {{ baseParams|json_encode|raw }},
 		defaultSort: 'dateOrdered',
 		defaultSortDir: 'desc',
 		itemLabel: 'orders',
@@ -150,29 +164,32 @@ document.addEventListener('DOMContentLoaded', function () {
 				'<td>' + order.paidStatusHtml + '</td>';
 			return row;
 		},
-		buildTotalsRow: function (totals) {
-			var row = document.createElement('tr');
-			row.innerHTML =
-				'<td>{{ "All Results Total"|t("best-sellers") }}</td>' +
-				'<td></td>' +
-				'<td></td>' +
-				'<td class="bs-data-table--right">' + totals.itemSubtotal + '</td>' +
-				'<td class="bs-data-table--right">' + totals.totalTax + '</td>' +
-				'<td class="bs-data-table--right">' + totals.totalDiscount + '</td>' +
-				'<td class="bs-data-table--right">' + totals.totalShippingCost + '</td>' +
-				'<td class="bs-data-table--right">' + totals.totalPaid + '</td>' +
-				'<td class="bs-data-table--right">' + totals.itemsSold + '</td>' +
-				'<td></td>';
-			return row;
+		buildTotalsBar: function (totals) {
+			return BestSellersReports.buildTotalsBar(
+				'{{ "Filtered Results Total"|t("best-sellers") }}',
+				[
+					{ label: '{{ "Item Subtotal"|t("best-sellers") }}', value: totals.itemSubtotal },
+					{ label: '{{ "Tax"|t("best-sellers") }}', value: totals.totalTax },
+					{ label: '{{ "Discount"|t("best-sellers") }}', value: totals.totalDiscount },
+					{ label: '{{ "Shipping"|t("best-sellers") }}', value: totals.totalShippingCost },
+					{ label: '{{ "Total Paid"|t("best-sellers") }}', value: totals.totalPaid },
+					{ label: '{{ "Items"|t("best-sellers") }}', value: totals.itemsSold }
+				]
+			);
 		},
 		getFilterParams: function () {
 			var params = {};
 			var searchValue = searchInput ? searchInput.value.trim() : '';
 			if (searchValue) { params.search = searchValue; }
-			var orderStatuses = orderStatusMulti.getSelected();
-			if (orderStatuses.length > 0) { params['orderStatus[]'] = orderStatuses; }
 			var paymentStatuses = paymentStatusMulti.getSelected();
-			if (paymentStatuses.length > 0) { params['paymentStatus[]'] = paymentStatuses; }
+			if (paymentStatuses.length > 0) {
+				params['paymentStatus[]'] = paymentStatuses;
+			} else {
+				// Empty-string marker: tells the controller the user explicitly cleared
+				// the filter (vs. "never touched", which falls back to the session
+				// default of Paid + Partial).
+				params['paymentStatus'] = '';
+			}
 			if (shippingMethodMulti) {
 				var shippingMethods = shippingMethodMulti.getSelected();
 				if (shippingMethods.length > 0) { params['shippingMethod'] = shippingMethods[0]; }
@@ -192,15 +209,6 @@ document.addEventListener('DOMContentLoaded', function () {
 		restoreFilterState: function (filters) {
 			if (filters.search && searchInput) {
 				searchInput.value = filters.search;
-			}
-			if (filters['orderStatus[]']) {
-				var orderStatusContainer = document.getElementById('order-status-multiselect');
-				var orderStatusCheckboxes = orderStatusContainer.querySelectorAll('input[type="checkbox"]');
-				var orderStatusValues = filters['orderStatus[]'];
-				orderStatusCheckboxes.forEach(function (checkbox) {
-					checkbox.checked = orderStatusValues.indexOf(checkbox.value) !== -1;
-				});
-				orderStatusMulti.refresh();
 			}
 			if (filters['paymentStatus[]']) {
 				var paymentStatusContainer = document.getElementById('payment-status-multiselect');

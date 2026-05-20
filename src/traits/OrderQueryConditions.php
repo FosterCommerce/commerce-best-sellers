@@ -21,8 +21,7 @@ trait OrderQueryConditions
 		$condition = [
 			'and',
 			['=', "[[{$prefix}isCompleted]]", true],
-			['>=', "[[{$prefix}dateOrdered]]", $scope->fromDT],
-			['<=', "[[{$prefix}dateOrdered]]", $scope->toDT],
+			$scope->dateRange->dateCondition("[[{$prefix}dateOrdered]]"),
 		];
 
 		$statusCondition = $scope->statusCondition($tableAlias);

@@ -2,10 +2,10 @@
 
 namespace fostercommerce\bestsellers\services;
 
-use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
 use craft\db\Table as CraftTable;
+use craft\helpers\DateTimeHelper;
 use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\models\CustomerKpis;
@@ -82,8 +82,7 @@ class CustomerStats extends Component
 				->from([
 					'firstOrders' => $firstOrderQuery,
 				])
-				->andWhere(['>=', 'firstOrder', $scope->fromDT])
-				->andWhere(['<=', 'firstOrder', $scope->toDT])
+				->andWhere($scope->dateRange->dateCondition('firstOrder'))
 				->count();
 
 			$returning = max(0, $total - $new);
@@ -106,13 +105,6 @@ class CustomerStats extends Component
 	 */
 	public function getNewVsReturningByDay(ReportScope $scope): array
 	{
-		$db = Craft::$app->getDb();
-		$isMysql = $db->getIsMysql();
-
-		$dayExpression = $isMysql
-			? 'DATE([[orders.dateOrdered]])'
-			: 'CAST([[orders.dateOrdered]] AS DATE)';
-
 		$dateCondition = $this->buildDateCondition($scope, 'orders');
 
 		// Get emails who ordered in the range
@@ -156,16 +148,26 @@ class CustomerStats extends Component
 
 		$firstOrders = NotTrashed::join($firstOrdersQuery, 'orders')->all();
 
+		// Bucket day labels in the Craft app TZ rather than UTC so that the chart's
+		// x-axis matches DailyStats and the user's local sense of "day".
 		$firstOrderMap = [];
 		foreach ($firstOrders as $firstOrder) {
 			/** @var array{email: string, firstOrder: string} $firstOrder */
-			$firstOrderMap[$firstOrder['email']] = substr($firstOrder['firstOrder'], 0, 10);
+			$firstOrderDate = DateTimeHelper::toDateTime($firstOrder['firstOrder']);
+			if ($firstOrderDate === false) {
+				continue;
+			}
+
+			$firstOrderMap[$firstOrder['email']] = $firstOrderDate->format('Y-m-d');
 		}
 
-		// Get all orders in the range grouped by day and email
+		// Pulls one row per order in the window into PHP and buckets by app TZ
+		// day. SQL DATE() bucketing would be cheaper but would label rows in
+		// UTC, drifting the chart off the DailyStats x-axis. Trade-off: full
+		// window in PHP memory; long ranges on busy stores are slower.
 		$ordersQuery = (new Query())
 			->select([
-				'day' => $dayExpression,
+				'dateOrdered' => '[[orders.dateOrdered]]',
 				'email' => '[[orders.email]]',
 			])
 			->from([
@@ -180,11 +182,15 @@ class CustomerStats extends Component
 
 		$orders = NotTrashed::join($ordersQuery, 'orders')->all();
 
-		// Group by day
 		$byDay = [];
-		/** @var array{day: string, email: string} $order */
+		/** @var array{dateOrdered: string, email: string} $order */
 		foreach ($orders as $order) {
-			$day = $order['day'];
+			$orderDate = DateTimeHelper::toDateTime($order['dateOrdered']);
+			if ($orderDate === false) {
+				continue;
+			}
+
+			$day = $orderDate->format('Y-m-d');
 			$email = $order['email'];
 			if (! isset($byDay[$day])) {
 				$byDay[$day] = [

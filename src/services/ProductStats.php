@@ -2,9 +2,9 @@
 
 namespace fostercommerce\bestsellers\services;
 
-use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\db\Query;
+use craft\helpers\DateTimeHelper;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\models\ProductRow;
@@ -28,10 +28,18 @@ class ProductStats extends Component
 				'productTitle' => '[[variantSales.productTitle]]',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
-				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'itemSubtotal' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)',
 				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
 				'productType' => "COALESCE([[productTypes.name]], 'Unknown')",
 				'fromBundle' => 'MAX(CASE WHEN [[variantSales.sourceBundleId]] IS NOT NULL THEN 1 ELSE 0 END)',
+				// Live partial-payment flag: 1 if any contributing order has
+				// totalPaid < totalPrice. Fully-unpaid orders (totalPaid <= 0
+				// AND totalPrice > 0) are excluded upstream, so a 1 here means
+				// at least one order is partially paid right now. Reflects
+				// current state, not the state at order completion
+				// (variant_sales is frozen but orders are live).
+				'hasUnpaidOrder' => 'MAX(CASE WHEN [[orders.totalPaid]] < [[orders.totalPrice]] THEN 1 ELSE 0 END)',
 			])
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
@@ -39,15 +47,14 @@ class ProductStats extends Component
 			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
-			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->where($scope->dateRange->dateCondition('[[variantSales.dateOrdered]]'))
 			->groupBy([
 				'[[variantSales.productId]]',
 				'[[variantSales.productTitle]]',
 				new Expression("COALESCE([[productTypes.name]], 'Unknown')"),
 			]);
 
-		$this->applyStatusFilter($query, $scope);
+		$this->applyOrdersJoinAndFilters($query, $scope);
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
 			$query->andWhere([
@@ -55,12 +62,16 @@ class ProductStats extends Component
 			]);
 		}
 
-		$orderColumn = $sortBy === 'units' ? 'unitsSold' : 'revenue';
+		$orderColumn = match ($sortBy) {
+			'units' => 'unitsSold',
+			'itemSubtotal' => 'itemSubtotal',
+			default => 'revenue',
+		};
 		$query->orderBy([
 			$orderColumn => SORT_DESC,
 		])->limit($limit);
 
-		/** @var list<array{productId: int|string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string, fromBundle: int|string}> $rows */
+		/** @var list<array{productId: int|string, productTitle: string, unitsSold: int|string, orderCount: int|string, itemSubtotal: float|string, revenue: float|string, avgPrice: float|string, productType: string, fromBundle: int|string, hasUnpaidOrder: int|string}> $rows */
 		$rows = $query->all();
 
 		return array_map(fn (array $row): ProductRow => new ProductRow([
@@ -68,10 +79,12 @@ class ProductStats extends Component
 			'productTitle' => $row['productTitle'],
 			'unitsSold' => (int) $row['unitsSold'],
 			'orderCount' => (int) $row['orderCount'],
+			'itemSubtotal' => (float) $row['itemSubtotal'],
 			'revenue' => (float) $row['revenue'],
 			'avgPrice' => (float) $row['avgPrice'],
 			'productType' => $row['productType'],
 			'fromBundle' => (bool) $row['fromBundle'],
+			'hasUnpaidOrder' => (bool) $row['hasUnpaidOrder'],
 		]), $rows);
 	}
 
@@ -91,10 +104,12 @@ class ProductStats extends Component
 				'productTitle' => '[[variantSales.productTitle]]',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
-				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'itemSubtotal' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)',
 				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
 				'productType' => "COALESCE([[productTypes.name]], 'Unknown')",
 				'fromBundle' => 'MAX(CASE WHEN [[variantSales.sourceBundleId]] IS NOT NULL THEN 1 ELSE 0 END)',
+				'hasUnpaidOrder' => 'MAX(CASE WHEN [[orders.totalPaid]] < [[orders.totalPrice]] THEN 1 ELSE 0 END)',
 			])
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
@@ -102,8 +117,7 @@ class ProductStats extends Component
 			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
-			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->where($scope->dateRange->dateCondition('[[variantSales.dateOrdered]]'))
 			->groupBy([
 				'[[variantSales.productId]]',
 				'[[variantSales.variantId]]',
@@ -113,7 +127,7 @@ class ProductStats extends Component
 				new Expression("COALESCE([[productTypes.name]], 'Unknown')"),
 			]);
 
-		$this->applyStatusFilter($query, $scope);
+		$this->applyOrdersJoinAndFilters($query, $scope);
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
 			$query->andWhere([
@@ -121,12 +135,16 @@ class ProductStats extends Component
 			]);
 		}
 
-		$orderColumn = $sortBy === 'units' ? 'unitsSold' : 'revenue';
+		$orderColumn = match ($sortBy) {
+			'units' => 'unitsSold',
+			'itemSubtotal' => 'itemSubtotal',
+			default => 'revenue',
+		};
 		$query->orderBy([
 			$orderColumn => SORT_DESC,
 		])->limit($limit);
 
-		/** @var list<array{productId: int|string, variantId: int|string, variantTitle: string, variantSku: string, productTitle: string, unitsSold: int|string, orderCount: int|string, revenue: float|string, avgPrice: float|string, productType: string, fromBundle: int|string}> $rows */
+		/** @var list<array{productId: int|string, variantId: int|string, variantTitle: string, variantSku: string, productTitle: string, unitsSold: int|string, orderCount: int|string, itemSubtotal: float|string, revenue: float|string, avgPrice: float|string, productType: string, fromBundle: int|string, hasUnpaidOrder: int|string}> $rows */
 		$rows = $query->all();
 
 		return array_map(fn (array $row): ProductRow => new ProductRow([
@@ -134,6 +152,7 @@ class ProductStats extends Component
 			'productTitle' => $row['productTitle'],
 			'unitsSold' => (int) $row['unitsSold'],
 			'orderCount' => (int) $row['orderCount'],
+			'itemSubtotal' => (float) $row['itemSubtotal'],
 			'revenue' => (float) $row['revenue'],
 			'avgPrice' => (float) $row['avgPrice'],
 			'productType' => $row['productType'],
@@ -141,6 +160,7 @@ class ProductStats extends Component
 			'variantTitle' => $row['variantTitle'],
 			'variantSku' => $row['variantSku'],
 			'fromBundle' => (bool) $row['fromBundle'],
+			'hasUnpaidOrder' => (bool) $row['hasUnpaidOrder'],
 		]), $rows);
 	}
 
@@ -151,10 +171,6 @@ class ProductStats extends Component
 	 */
 	public function getTopProductsTrend(ReportScope $scope, bool $variants = false, int $limit = 5): array
 	{
-		$db = Craft::$app->getDb();
-		$isMysql = $db->getIsMysql();
-		$dayExpr = $isMysql ? 'DATE([[variantSales.dateOrdered]])' : 'CAST([[variantSales.dateOrdered]] AS DATE)';
-
 		$idCol = $variants ? 'variantId' : 'productId';
 		$titleCol = $variants ? 'variantTitle' : 'productTitle';
 
@@ -175,15 +191,14 @@ class ProductStats extends Component
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
-			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->where($scope->dateRange->dateCondition('[[variantSales.dateOrdered]]'))
 			->groupBy($groupFields)
 			->orderBy([
-				'SUM([[variantSales.lineItemTotal]])' => SORT_DESC,
+				'SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]])' => SORT_DESC,
 			])
 			->limit($limit);
 
-		$this->applyStatusFilter($topQuery, $scope);
+		$this->applyOrdersJoinAndFilters($topQuery, $scope);
 
 		$topItems = $topQuery->all();
 
@@ -206,35 +221,40 @@ class ProductStats extends Component
 			$titleMap[$topItem['itemId']] = $title;
 		}
 
-		// Get daily revenue for these items
+		// Pulls every sale row for the top-N items in the window into PHP and
+		// buckets by app TZ day. SQL DATE() bucketing would be cheaper but
+		// labels rows in UTC, drifting the chart off DailyStats. Trade-off:
+		// full window in PHP memory for these items; long ranges on busy
+		// stores are slower than the old SQL grouping.
 		$dailyQuery = (new Query())
 			->select([
-				'day' => $dayExpr,
+				'dateOrdered' => '[[variantSales.dateOrdered]]',
 				'itemId' => "[[variantSales.{$idCol}]]",
-				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'revenue' => '[[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]',
 			])
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
-			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
-			->andWhere(['in', "[[variantSales.{$idCol}]]", $itemIds])
-			->groupBy([$dayExpr, "[[variantSales.{$idCol}]]"])
-			->orderBy([
-				'day' => SORT_ASC,
-			]);
+			->where($scope->dateRange->dateCondition('[[variantSales.dateOrdered]]'))
+			->andWhere(['in', "[[variantSales.{$idCol}]]", $itemIds]);
 
-		$this->applyStatusFilter($dailyQuery, $scope);
+		$this->applyOrdersJoinAndFilters($dailyQuery, $scope);
 
 		$rows = $dailyQuery->all();
 
-		// Collect all unique days
 		$allDays = [];
 		$byItem = [];
-		/** @var array{day: string, itemId: string, revenue: string} $row */
+		/** @var array{dateOrdered: string, itemId: string, revenue: string|float|null} $row */
 		foreach ($rows as $row) {
-			$allDays[$row['day']] = true;
-			$byItem[$row['itemId']][$row['day']] = (float) $row['revenue'];
+			$saleDate = DateTimeHelper::toDateTime((string) $row['dateOrdered']);
+			if ($saleDate === false) {
+				continue;
+			}
+
+			$day = $saleDate->format('Y-m-d');
+			$itemId = (string) $row['itemId'];
+			$allDays[$day] = true;
+			$byItem[$itemId][$day] = ($byItem[$itemId][$day] ?? 0.0) + (float) $row['revenue'];
 		}
 
 		ksort($allDays);
@@ -272,7 +292,7 @@ class ProductStats extends Component
 		$query = (new Query())
 			->select([
 				'title' => "[[variantSales.{$titleCol}]]",
-				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)',
 			])
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
@@ -280,14 +300,13 @@ class ProductStats extends Component
 			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
-			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->where($scope->dateRange->dateCondition('[[variantSales.dateOrdered]]'))
 			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
 			->orderBy([
 				'revenue' => SORT_DESC,
 			]);
 
-		$this->applyStatusFilter($query, $scope);
+		$this->applyOrdersJoinAndFilters($query, $scope);
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
 			$query->andWhere([
@@ -349,14 +368,13 @@ class ProductStats extends Component
 			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
-			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->where($scope->dateRange->dateCondition('[[variantSales.dateOrdered]]'))
 			->groupBy("[[variantSales.{$idCol}]], [[variantSales.{$titleCol}]]")
 			->orderBy([
 				'unitsSold' => SORT_DESC,
 			]);
 
-		$this->applyStatusFilter($query, $scope);
+		$this->applyOrdersJoinAndFilters($query, $scope);
 
 		if ($productTypeHandle && $productTypeHandle !== 'all') {
 			$query->andWhere([
@@ -379,11 +397,7 @@ class ProductStats extends Component
 	 */
 	public function getSummaryStats(ReportScope $scope): ProductSummary
 	{
-		$dateConditions = [
-			'and',
-			['>=', '[[variantSales.dateOrdered]]', $scope->fromDT],
-			['<=', '[[variantSales.dateOrdered]]', $scope->toDT],
-		];
+		$dateConditions = $scope->dateRange->dateCondition('[[variantSales.dateOrdered]]');
 
 		$uniqueQuery = (new Query())
 			->select('COUNT(DISTINCT [[variantSales.productId]])')
@@ -391,14 +405,14 @@ class ProductStats extends Component
 				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where($dateConditions);
-		$this->applyStatusFilter($uniqueQuery, $scope);
+		$this->applyOrdersJoinAndFilters($uniqueQuery, $scope);
 		$uniqueProducts = (int) $uniqueQuery->scalar();
 
 		$topQuery = (new Query())
 			->select([
 				'title' => '[[variantSales.productTitle]]',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
-				'revenue' => new Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'),
+				'revenue' => new Expression('COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)'),
 			])
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
@@ -409,18 +423,18 @@ class ProductStats extends Component
 				'unitsSold' => SORT_DESC,
 			])
 			->limit(1);
-		$this->applyStatusFilter($topQuery, $scope);
+		$this->applyOrdersJoinAndFilters($topQuery, $scope);
 
 		/** @var array{title: string, unitsSold: string, revenue: string}|false $topProduct */
 		$topProduct = $topQuery->one();
 
 		$revenueQuery = (new Query())
-			->select(new Expression('COALESCE(SUM([[variantSales.lineItemTotal]]), 0)'))
+			->select(new Expression('COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)'))
 			->from([
 				'variantSales' => Table::VARIANT_SALES,
 			])
 			->where($dateConditions);
-		$this->applyStatusFilter($revenueQuery, $scope);
+		$this->applyOrdersJoinAndFilters($revenueQuery, $scope);
 		$totalProductRevenue = (float) $revenueQuery->scalar();
 
 		return new ProductSummary([
@@ -441,7 +455,7 @@ class ProductStats extends Component
 		$query = (new Query())
 			->select([
 				'productType' => "COALESCE([[productTypes.name]], 'Unknown')",
-				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
 			->from([
@@ -450,8 +464,7 @@ class ProductStats extends Component
 			->leftJoin([
 				'productTypes' => CommerceTable::PRODUCTTYPES,
 			], '[[variantSales.productTypeId]] = [[productTypes.id]]')
-			->where(['>=', '[[variantSales.dateOrdered]]', $scope->fromDT])
-			->andWhere(['<=', '[[variantSales.dateOrdered]]', $scope->toDT])
+			->where($scope->dateRange->dateCondition('[[variantSales.dateOrdered]]'))
 			->groupBy([
 				new Expression("COALESCE([[productTypes.name]], 'Unknown')"),
 			])
@@ -459,7 +472,7 @@ class ProductStats extends Component
 				'revenue' => SORT_DESC,
 			]);
 
-		$this->applyStatusFilter($query, $scope);
+		$this->applyOrdersJoinAndFilters($query, $scope);
 
 		/** @var array<int, array{productType: string, revenue: float, unitsSold: int}> $rows */
 		$rows = $query->all();
@@ -468,26 +481,42 @@ class ProductStats extends Component
 	}
 
 	/**
-	 * Conditionally join commerce_orders and apply status filter to a variant_sales query.
+	 * Join commerce_orders and apply standard filters that the Products report
+	 * needs on every aggregate: status filter (when active) and exclusion of
+	 * orders with a full balance owed.
 	 *
-	 * Only adds the join when a status filter is active, avoiding performance impact otherwise.
+	 * "Full balance owed" = totalPaid <= 0 AND totalPrice > 0. Catches orders
+	 * that were authorized but never captured, were fully refunded, or whose
+	 * payment failed but the order completed. Those orders should not
+	 * contribute to "what was sold" reporting because no money was realized
+	 * and (in the refund case) the items effectively came back.
+	 *
+	 * Caller must NOT pre-join orders; this helper owns the alias.
 	 *
 	 * @param Query<array-key, mixed> $query
 	 */
-	private function applyStatusFilter(Query $query, ReportScope $scope): void
+	private function applyOrdersJoinAndFilters(Query $query, ReportScope $scope): void
 	{
-		if (! $scope->hasStatusFilter()) {
-			return;
-		}
-
 		$query->innerJoin(
 			[
 				'orders' => CommerceTable::ORDERS,
 			],
 			'[[variantSales.orderId]] = [[orders.id]]',
 		);
-		/** @var array<mixed> $condition */
-		$condition = $scope->statusCondition('orders');
-		$query->andWhere($condition);
+
+		// Exclude orders with a full balance owed.
+		$query->andWhere([
+			'not', [
+				'and',
+				['<=', '[[orders.totalPaid]]', 0],
+				['>', '[[orders.totalPrice]]', 0],
+			],
+		]);
+
+		if ($scope->hasStatusFilter()) {
+			/** @var array<mixed> $condition */
+			$condition = $scope->statusCondition('orders');
+			$query->andWhere($condition);
+		}
 	}
 }

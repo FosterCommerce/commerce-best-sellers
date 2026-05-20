@@ -16,11 +16,9 @@ Best Sellers registers a `craft.bestsellers` variable with the following methods
 {# Total units sold (specific date range) #}
 {{ craft.bestsellers.productTotalSales(product.id, '2024-01-01', '2024-03-01') }}
 
-{# Total revenue (all time) #}
-{{ craft.bestsellers.productTotalRevenue(product.id) }}
-
-{# Total revenue (last 30 days) #}
-{{ craft.bestsellers.productTotalRevenue(product.id, '30 days ago') }}
+{# Item sales net of line-level discounts (matches CP Products report) #}
+{{ craft.bestsellers.productTotalItemSalesNet(product.id) }}
+{{ craft.bestsellers.productTotalItemSalesNet(product.id, '30 days ago') }}
 ```
 
 ### Variant Sales
@@ -32,12 +30,21 @@ Best Sellers registers a `craft.bestsellers` variable with the following methods
 {# Total units sold (specific date range) #}
 {{ craft.bestsellers.variantTotalSales(variant.id, '2024-01-01', '2024-03-01') }}
 
-{# Total revenue (all time) #}
-{{ craft.bestsellers.variantTotalRevenue(variant.id) }}
-
-{# Total revenue (last 90 days) #}
-{{ craft.bestsellers.variantTotalRevenue(variant.id, '90 days ago') }}
+{# Item sales net of line-level discounts (matches CP Products report) #}
+{{ craft.bestsellers.variantTotalItemSalesNet(variant.id) }}
+{{ craft.bestsellers.variantTotalItemSalesNet(variant.id, '90 days ago') }}
 ```
+
+**Revenue vs. Item Sales (Net)**
+
+| Method | Formula | Matches |
+|---|---|---|
+| `productTotalItemSalesNet()` / `variantTotalItemSalesNet()` | `SUM(lineItemTotal + lineDiscount)` | "Item Sales (Net)" column in CP Products report |
+| `productTotalRevenue()` / `variantTotalRevenue()` | `SUM(lineItemTotal)` | "Item Subtotal" column in CP Products report (gross, before line discounts). |
+
+`lineDiscount` is the line-level Discount adjustment (coupons, manual discounts, and order-level discounts that Commerce attaches to specific lines). It is negative, so adding it nets the discount out of `lineItemTotal`. Sale-price promotions are already baked into `lineItemTotal` in both columns. Tax and shipping are excluded from both.
+
+The CP Products report's "Item Subtotal" column reconciles with the Orders report's "Item Subtotal" column when summed across the same set of orders, since both sum the same underlying `lineItemTotal`.
 
 ### Previous Purchases
 
@@ -92,12 +99,12 @@ $bestSellers = new BestSellersVariable();
 // Product sales
 $productSales = $bestSellers->productTotalSales($product->id);
 $productSales = $bestSellers->productTotalSales($product->id, '2 months ago');
-$productRevenue = $bestSellers->productTotalRevenue($product->id);
+$productItemSalesNet = $bestSellers->productTotalItemSalesNet($product->id);
 
 // Variant sales
 $variantSales = $bestSellers->variantTotalSales($variant->id);
 $variantSales = $bestSellers->variantTotalSales($variant->id, '2024-01-01', '2024-03-01');
-$variantRevenue = $bestSellers->variantTotalRevenue($variant->id);
+$variantItemSalesNet = $bestSellers->variantTotalItemSalesNet($variant->id);
 
 // Previous purchases
 $previousOrder = $bestSellers->previousPurchaseByUser($purchasableId, $user);
@@ -131,7 +138,8 @@ Best Sellers adds a `bestSellers()` behavior to `ProductQuery` and `VariantQuery
 
 {# Access sales data on the element #}
 {% for product in bestSellers %}
-    {{ product.title }}: {{ product.totalQtySold }} sold, {{ product.totalRevenue|currency }}
+    {{ product.title }}: {{ product.totalQtySold }} sold,
+    {{ product.totalItemSalesNet|currency }} net
 {% endfor %}
 ```
 

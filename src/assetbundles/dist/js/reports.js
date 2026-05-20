@@ -186,6 +186,54 @@
 		},
 
 		/**
+		 * Truncate a string to `len` characters, appending an ellipsis when
+		 * truncated. Returns the original string if shorter.
+		 */
+		truncate: function (str, len) {
+			str = String(str == null ? '' : str);
+			return str.length > len ? str.substring(0, len) + '…' : str;
+		},
+
+		/**
+		 * Escape a string for safe inclusion in an HTML attribute value.
+		 * Use when concatenating strings into HTML built via innerHTML.
+		 */
+		escapeAttr: function (str) {
+			return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+		},
+
+		/**
+		 * Build totals bar content. Returns a DocumentFragment so that the
+		 * label and item spans become direct children of the caller-provided
+		 * totalsEl (the .bs-totals-bar flex container). A wrapper element
+		 * would break the parent's flex gap layout.
+		 *
+		 *   label: leading bold label (e.g. "All Results Total")
+		 *   items: array of { label: string, value: string } pairs
+		 */
+		buildTotalsBar: function (label, items) {
+			var fragment = document.createDocumentFragment();
+			var labelEl = document.createElement('span');
+			labelEl.className = 'bs-totals-bar__label';
+			labelEl.textContent = label;
+			fragment.appendChild(labelEl);
+			items.forEach(function (item) {
+				var itemEl = document.createElement('span');
+				itemEl.className = 'bs-totals-bar__item';
+				var itemLabel = document.createElement('span');
+				itemLabel.className = 'bs-totals-bar__item-label';
+				itemLabel.textContent = item.label + ':';
+				var itemValue = document.createElement('span');
+				itemValue.className = 'bs-totals-bar__item-value';
+				itemValue.textContent = item.value;
+				itemEl.appendChild(itemLabel);
+				itemEl.appendChild(itemValue);
+				fragment.appendChild(itemEl);
+			});
+			return fragment;
+		},
+
+		/**
 		 * Create an AJAX-loaded table with pagination and loading animation.
 		 *
 		 * Options:
@@ -193,9 +241,13 @@
 		 *   containerEl: DOM element for table container
 		 *   tbodyEl: DOM element for table body
 		 *   paginationEl: DOM element for pagination controls
+		 *   totalsEl: DOM element for the totals bar above the table (optional)
 		 *   actionUrl: Craft action URL string
 		 *   baseParams: object of params always sent (from, to, preset)
 		 *   buildRow: function(item) => TR element
+		 *   buildTotalsBar: function(totals) => HTMLElement to put in totalsEl
+		 *   buildTotalsRow: function(totals) => TR element (legacy footer; used
+		 *     when totalsEl is not provided)
 		 *   getFilterParams: function() => object of current filter values
 		 *   emptyMessage: string shown when no results
 		 *   itemLabel: string like 'orders' or 'products'
@@ -342,25 +394,63 @@
 					});
 				}
 
-				// Totals footer row
+				// Totals - either render into a standalone bar above the table
+				// (preferred, set via totalsEl + buildTotalsBar) or as a legacy
+				// tfoot row inside the table (buildTotalsRow).
 				var existingTfoot = tableEl ? tableEl.querySelector('tfoot') : null;
 				if (existingTfoot) {
 					existingTfoot.remove();
 				}
-				if (data.totals && options.buildTotalsRow && items.length > 0 && tableEl) {
+
+				if (options.totalsEl) {
+					options.totalsEl.innerHTML = '';
+					if (data.totals && options.buildTotalsBar && items.length > 0) {
+						options.totalsEl.appendChild(options.buildTotalsBar(data.totals));
+						options.totalsEl.hidden = false;
+					} else {
+						options.totalsEl.hidden = true;
+					}
+				} else if (data.totals && options.buildTotalsRow && items.length > 0 && tableEl) {
 					var tfoot = document.createElement('tfoot');
 					tfoot.appendChild(options.buildTotalsRow(data.totals));
 					tableEl.appendChild(tfoot);
 				}
 
-				// Pagination
+				// Pagination - left-aligned with Prev/Next, range info, and page indicator.
+				// Export CSV (rendered below) sticks to the right via marginLeft: auto.
 				paginationEl.innerHTML = '';
 				paginationEl.style.gap = '1rem';
+				paginationEl.style.justifyContent = 'flex-start';
 				var totalItems = data.totalItems || data.totalOrders || 0;
 				var totalPages = data.totalPages || 1;
 				var currentPage = data.currentPage || 1;
 
-				if (totalPages > 1) {
+				if (totalItems > 0) {
+					var buttons = document.createElement('div');
+					buttons.style.display = 'flex';
+					buttons.style.gap = '0.5rem';
+
+					var prevBtn = document.createElement('button');
+					prevBtn.className = 'btn';
+					prevBtn.textContent = Craft.t('best-sellers', 'Previous');
+					if (currentPage > 1) {
+						prevBtn.addEventListener('click', function () { loadPage(currentPage - 1); });
+					} else {
+						prevBtn.disabled = true;
+					}
+					buttons.appendChild(prevBtn);
+
+					var nextBtn = document.createElement('button');
+					nextBtn.className = 'btn';
+					nextBtn.textContent = Craft.t('best-sellers', 'Next');
+					if (currentPage < totalPages) {
+						nextBtn.addEventListener('click', function () { loadPage(currentPage + 1); });
+					} else {
+						nextBtn.disabled = true;
+					}
+					buttons.appendChild(nextBtn);
+					paginationEl.appendChild(buttons);
+
 					var rangeStart = (currentPage - 1) * perPage + 1;
 					var rangeEnd = Math.min(currentPage * perPage, totalItems);
 
@@ -369,30 +459,10 @@
 					info.textContent = Craft.t('best-sellers', 'Showing {start}\u2013{end} of {total} {label}', { start: rangeStart, end: rangeEnd, total: totalItems, label: itemLabel });
 					paginationEl.appendChild(info);
 
-					var buttons = document.createElement('div');
-					buttons.style.display = 'flex';
-					buttons.style.gap = '0.5rem';
-
-					if (currentPage > 1) {
-						var prevBtn = document.createElement('button');
-						prevBtn.className = 'btn';
-						prevBtn.textContent = Craft.t('best-sellers', 'Previous');
-						prevBtn.addEventListener('click', function () { loadPage(currentPage - 1); });
-						buttons.appendChild(prevBtn);
-					}
-					if (currentPage < totalPages) {
-						var nextBtn = document.createElement('button');
-						nextBtn.className = 'btn';
-						nextBtn.textContent = Craft.t('best-sellers', 'Next');
-						nextBtn.addEventListener('click', function () { loadPage(currentPage + 1); });
-						buttons.appendChild(nextBtn);
-					}
-					paginationEl.appendChild(buttons);
-				} else if (totalItems > 0) {
-					var info = document.createElement('span');
-					info.className = 'light';
-					info.textContent = totalItems + ' ' + itemLabel;
-					paginationEl.appendChild(info);
+					var pageIndicator = document.createElement('span');
+					pageIndicator.className = 'light';
+					pageIndicator.textContent = Craft.t('best-sellers', 'Page {current} of {total}', { current: currentPage, total: totalPages });
+					paginationEl.appendChild(pageIndicator);
 				}
 
 				// Export CSV button

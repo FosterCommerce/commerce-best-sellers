@@ -22,14 +22,14 @@ use yii\base\Component;
 
 class Sales extends Component
 {
-	private const BUNDLE_CLASS = 'webdna\\commerce\\bundles\\elements\\Bundle';
-
 	/**
 	 * Written by the EVENT_POPULATE_LINE_ITEM listener in Plugin and read by
 	 * expandBundleLineItem so re-syncs and backfills do not drift if catalog
 	 * prices change after the order completes.
 	 */
 	public const OPTIONS_KEY_BUNDLE_CHILD_PRICES = 'bestSellersBundleChildPrices';
+
+	private const BUNDLE_CLASS = 'webdna\\commerce\\bundles\\elements\\Bundle';
 
 	public function logOrderSales(Order $order, bool $force = false): void
 	{
@@ -196,18 +196,18 @@ class Sales extends Component
 		/** @var list<array{variantId: int, childQty: int}> $unknown */
 		$unknown = [];
 
-		foreach ($allChildIds as $childId) {
-			$childQty = (int) ($qtys[$childId] ?? 1);
+		foreach ($allChildIds as $allChildId) {
+			$childQty = (int) ($qtys[$allChildId] ?? 1);
 			if ($childQty <= 0) {
 				continue;
 			}
 
-			$liveVariant = $liveById[$childId] ?? null;
-			$frozenPrice = $frozenChildPrices[$childId] ?? null;
+			$liveVariant = $liveById[$allChildId] ?? null;
+			$frozenPrice = $frozenChildPrices[$allChildId] ?? null;
 
 			if ($frozenPrice !== null) {
 				$known[] = [
-					'variantId' => $childId,
+					'variantId' => $allChildId,
 					'variant' => $liveVariant,
 					'childQty' => $childQty,
 					'catalogPrice' => max(0.0, $frozenPrice),
@@ -217,7 +217,7 @@ class Sales extends Component
 
 			if ($liveVariant !== null) {
 				$known[] = [
-					'variantId' => $childId,
+					'variantId' => $allChildId,
 					'variant' => $liveVariant,
 					'childQty' => $childQty,
 					'catalogPrice' => max(0.0, (float) $liveVariant->price),
@@ -226,7 +226,7 @@ class Sales extends Component
 			}
 
 			$unknown[] = [
-				'variantId' => $childId,
+				'variantId' => $allChildId,
 				'childQty' => $childQty,
 			];
 		}
@@ -331,6 +331,10 @@ class Sales extends Component
 		// then re-key back to match $rowSubtotals.
 		$positionalKeys = array_keys($discountWeights);
 		$positionalWeights = array_values($discountWeights);
+		if ($positionalWeights === []) {
+			return [];
+		}
+
 		$promoParts = $linePromoDiscount->allocate($positionalWeights);
 		$adjustmentParts = $lineAdjustmentDiscount->allocate($positionalWeights);
 

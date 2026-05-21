@@ -349,7 +349,7 @@ class Plugin extends BasePlugin
 				$lineItem = $event->lineItem;
 				$purchasable = $lineItem->getPurchasable();
 
-				if ($purchasable === null || ! is_a($purchasable, 'webdna\\commerce\\bundles\\elements\\Bundle')) {
+				if (! $purchasable instanceof \craft\commerce\base\PurchasableInterface || ! is_a($purchasable, 'webdna\\commerce\\bundles\\elements\\Bundle')) {
 					return;
 				}
 
@@ -357,8 +357,12 @@ class Plugin extends BasePlugin
 					return;
 				}
 
+				$getChildrenMethod = 'getPurchasables';
+				/** @var iterable<mixed> $childPurchasables */
+				$childPurchasables = $purchasable->{$getChildrenMethod}();
+
 				$childPrices = [];
-				foreach ($purchasable->getPurchasables() as $childPurchasable) {
+				foreach ($childPurchasables as $childPurchasable) {
 					if ($childPurchasable instanceof Variant) {
 						$childPrices[$childPurchasable->id] = (float) $childPurchasable->price;
 					}

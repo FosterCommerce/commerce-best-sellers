@@ -230,9 +230,18 @@ class TransactionsController extends BaseReportController
 		$net = $captured->subtract($refunded);
 
 		foreach ([
-			['label' => Craft::t('best-sellers', 'Captured'), 'money' => $captured],
-			['label' => Craft::t('best-sellers', 'Refunded'), 'money' => $refunded],
-			['label' => Craft::t('best-sellers', 'Net'), 'money' => $net],
+			[
+				'label' => Craft::t('best-sellers', 'Captured'),
+				'money' => $captured,
+			],
+			[
+				'label' => Craft::t('best-sellers', 'Refunded'),
+				'money' => $refunded,
+			],
+			[
+				'label' => Craft::t('best-sellers', 'Net'),
+				'money' => $net,
+			],
 		] as $summaryRow) {
 			$csvRows[] = [
 				'dateCreated' => $summaryRow['label'],

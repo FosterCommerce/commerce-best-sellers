@@ -5,6 +5,7 @@ namespace fostercommerce\bestsellers;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
+use craft\commerce\base\PurchasableInterface;
 use craft\commerce\elements\db\ProductQuery;
 use craft\commerce\elements\db\VariantQuery;
 use craft\commerce\elements\Order;
@@ -349,7 +350,7 @@ class Plugin extends BasePlugin
 				$lineItem = $event->lineItem;
 				$purchasable = $lineItem->getPurchasable();
 
-				if (! $purchasable instanceof \craft\commerce\base\PurchasableInterface || ! is_a($purchasable, 'webdna\\commerce\\bundles\\elements\\Bundle')) {
+				if (! $purchasable instanceof PurchasableInterface || ! is_a($purchasable, 'webdna\\commerce\\bundles\\elements\\Bundle')) {
 					return;
 				}
 
@@ -357,6 +358,8 @@ class Plugin extends BasePlugin
 					return;
 				}
 
+				// Dynamic method name keeps phpstan from resolving against the unknown
+				// Bundle class. Runtime safety is the is_a + method_exists guards above.
 				$getChildrenMethod = 'getPurchasables';
 				/** @var iterable<mixed> $childPurchasables */
 				$childPurchasables = $purchasable->{$getChildrenMethod}();

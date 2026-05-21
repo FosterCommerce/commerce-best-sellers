@@ -275,11 +275,8 @@ class Sales extends Component
 			$knownTotalMoney = new Money(0, $currency);
 			$knownTotals = [];
 			foreach ($known as $index => $entry) {
-				$rowMoney = $this->floatToMoney(
-					$entry['catalogPrice'] * $entry['childQty'] * $lineQty,
-					$currency,
-					$subunit,
-				);
+				$unitMoney = $this->floatToMoney($entry['catalogPrice'], $currency, $subunit);
+				$rowMoney = $unitMoney->multiply((string) ($entry['childQty'] * $lineQty));
 				$knownTotals[$index] = $rowMoney;
 				$knownTotalMoney = $knownTotalMoney->add($rowMoney);
 			}

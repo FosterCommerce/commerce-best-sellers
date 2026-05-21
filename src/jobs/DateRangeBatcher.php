@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\jobs;
 
 use craft\base\Batchable;
+use craft\helpers\DateTimeHelper;
 use DateTime;
 
 class DateRangeBatcher implements Batchable
@@ -15,8 +16,12 @@ class DateRangeBatcher implements Batchable
 
 	public function count(): int
 	{
-		$start = new DateTime($this->startDate);
-		$end = new DateTime($this->endDate);
+		$start = DateTimeHelper::toDateTime($this->startDate);
+		$end = DateTimeHelper::toDateTime($this->endDate);
+		if (! $start instanceof DateTime || ! $end instanceof DateTime) {
+			return 0;
+		}
+
 		$interval = $start->diff($end);
 
 		return max(0, $interval->days + 1);
@@ -27,13 +32,16 @@ class DateRangeBatcher implements Batchable
 	 */
 	public function getSlice(int $offset, int $limit): iterable
 	{
-		$current = new DateTime($this->startDate);
+		$current = DateTimeHelper::toDateTime($this->startDate);
+		$end = DateTimeHelper::toDateTime($this->endDate);
+		if (! $current instanceof DateTime || ! $end instanceof DateTime) {
+			return [];
+		}
+
 		$current->modify("+{$offset} days");
 
-		$end = new DateTime($this->endDate);
 		$dates = [];
-
-		for ($i = 0; $i < $limit && $current <= $end; $i++) {
+		for ($index = 0; $index < $limit && $current <= $end; $index++) {
 			$dates[] = $current->format('Y-m-d');
 			$current->modify('+1 day');
 		}

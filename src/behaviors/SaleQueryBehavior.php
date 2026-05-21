@@ -4,6 +4,7 @@ namespace fostercommerce\bestsellers\behaviors;
 
 use craft\base\Element;
 use craft\elements\db\ElementQuery;
+use craft\helpers\DateTimeHelper;
 use DateTime;
 use yii\base\Behavior;
 
@@ -33,11 +34,13 @@ class SaleQueryBehavior extends Behavior
 		$this->includeBestSellersData = true;
 
 		if (is_string($from)) {
-			$this->bestSellersFrom = new DateTime($from);
+			$fromDt = DateTimeHelper::toDateTime($from);
+			$this->bestSellersFrom = $fromDt instanceof DateTime ? $fromDt : null;
 		}
 
 		if (is_string($to)) {
-			$this->bestSellersTo = new DateTime($to);
+			$toDt = DateTimeHelper::toDateTime($to);
+			$this->bestSellersTo = $toDt instanceof DateTime ? $toDt : null;
 		}
 
 		/** @var ElementQuery<TKey, TElement> $variantQuery */

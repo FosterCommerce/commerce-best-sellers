@@ -4,7 +4,7 @@
 (function () {
 	'use strict';
 
-	var loadingPhrases = [
+	const loadingPhrases = [
 		'Rummaging through the archives...',
 		'Our warehouse elf is counting boxes...',
 		'Dusting off the ledger books...',
@@ -22,7 +22,7 @@
 		 * Create a sparkline canvas
 		 */
 		createSparkline: function (canvasId, data, color) {
-			var canvas = document.getElementById(canvasId);
+			const canvas = document.getElementById(canvasId);
 			if (!canvas || typeof Chart === 'undefined') return null;
 
 			color = color || 'rgba(0, 115, 170, 0.4)';
@@ -78,9 +78,9 @@
 				return { unit: 'day', stepSize: 1 };
 			}
 
-			var startDate = new Date(labels[0]);
-			var endDate = new Date(labels[labels.length - 1]);
-			var diffDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+			const startDate = new Date(labels[0]);
+			const endDate = new Date(labels[labels.length - 1]);
+			const diffDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
 			if (diffDays > 365) {
 				return { unit: 'month', stepSize: 1 };
@@ -102,14 +102,14 @@
 		 * Returns: { getSelected: function() => array of selected values }
 		 */
 		createMultiSelect: function (options) {
-			var container = options.container;
-			var btn = container.querySelector('.bs-multiselect__btn');
-			var dropdown = container.querySelector('.bs-multiselect__dropdown');
-			var checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
-			var labelText = btn.getAttribute('data-label') || btn.textContent.trim();
+			const container = options.container;
+			const btn = container.querySelector('.bs-multiselect__btn');
+			const dropdown = container.querySelector('.bs-multiselect__dropdown');
+			const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+			const labelText = btn.getAttribute('data-label') || btn.textContent.trim();
 
 			function updateLabel() {
-				var selected = [];
+				const selected = [];
 				checkboxes.forEach(function (checkbox) {
 					if (checkbox.checked) {
 						selected.push(checkbox.parentElement.textContent.trim());
@@ -117,11 +117,11 @@
 				});
 
 				btn.innerHTML = '';
-				var textNode = document.createTextNode(selected.length > 0 ? labelText : labelText);
+				const textNode = document.createTextNode(selected.length > 0 ? labelText : labelText);
 				btn.appendChild(textNode);
 
 				if (selected.length > 0) {
-					var badge = document.createElement('span');
+					const badge = document.createElement('span');
 					badge.className = 'bs-multiselect__badge';
 					badge.textContent = selected.length;
 					btn.appendChild(badge);
@@ -153,7 +153,7 @@
 
 			return {
 				getSelected: function () {
-					var selected = [];
+					const selected = [];
 					checkboxes.forEach(function (checkbox) {
 						if (checkbox.checked) {
 							selected.push(checkbox.value);
@@ -212,18 +212,18 @@
 		 *   items: array of { label: string, value: string } pairs
 		 */
 		buildTotalsBar: function (label, items) {
-			var fragment = document.createDocumentFragment();
-			var labelEl = document.createElement('span');
+			const fragment = document.createDocumentFragment();
+			const labelEl = document.createElement('span');
 			labelEl.className = 'bs-totals-bar__label';
 			labelEl.textContent = label;
 			fragment.appendChild(labelEl);
 			items.forEach(function (item) {
-				var itemEl = document.createElement('span');
+				const itemEl = document.createElement('span');
 				itemEl.className = 'bs-totals-bar__item';
-				var itemLabel = document.createElement('span');
+				const itemLabel = document.createElement('span');
 				itemLabel.className = 'bs-totals-bar__item-label';
 				itemLabel.textContent = item.label + ':';
-				var itemValue = document.createElement('span');
+				const itemValue = document.createElement('span');
 				itemValue.className = 'bs-totals-bar__item-value';
 				itemValue.textContent = item.value;
 				itemEl.appendChild(itemLabel);
@@ -254,24 +254,24 @@
 		 *   perPage: number (default 100)
 		 */
 		createAjaxTable: function (options) {
-			var loadingEl = options.loadingEl;
-			var containerEl = options.containerEl;
-			var tbodyEl = options.tbodyEl;
-			var paginationEl = options.paginationEl;
-			var messageEl = loadingEl.querySelector('.bs-loading__message');
-			var spinnerEl = loadingEl.querySelector('.bs-loading__spinner');
-			var perPage = options.perPage || 100;
-			var itemLabel = options.itemLabel || 'items';
-			var currentSort = options.defaultSort || '';
-			var currentSortDir = options.defaultSortDir || 'desc';
-			var currentPage = 1;
+			const loadingEl = options.loadingEl;
+			const containerEl = options.containerEl;
+			const tbodyEl = options.tbodyEl;
+			const paginationEl = options.paginationEl;
+			const messageEl = loadingEl.querySelector('.bs-loading__message');
+			const spinnerEl = loadingEl.querySelector('.bs-loading__spinner');
+			const perPage = options.perPage || 100;
+			const itemLabel = options.itemLabel || 'items';
+			let currentSort = options.defaultSort || '';
+			let currentSortDir = options.defaultSortDir || 'desc';
+			let currentPage = 1;
 
 			// Persist/restore table state via sessionStorage
-			var stateKey = 'bs-table-' + options.actionUrl;
+			const stateKey = 'bs-table-' + options.actionUrl;
 
 			function readSavedState() {
 				try {
-					var stored = sessionStorage.getItem(stateKey);
+					const stored = sessionStorage.getItem(stateKey);
 					return stored ? JSON.parse(stored) : null;
 				} catch (err) {
 					return null;
@@ -279,7 +279,7 @@
 			}
 
 			function writeState() {
-				var state = {
+				const state = {
 					page: currentPage,
 					sort: currentSort,
 					sortDir: currentSortDir
@@ -301,12 +301,12 @@
 			}
 
 			// Read URL query params for cross-page filter links (e.g. from dashboard)
-			var urlFilters = {};
-			var urlFilterLabel = '';
+			const urlFilters = {};
+			let urlFilterLabel = '';
 			try {
-				var urlParams = new URLSearchParams(window.location.search);
+				const urlParams = new URLSearchParams(window.location.search);
 				['shippingMethod', 'discountStatus', 'discountId', 'itemsPerOrder'].forEach(function (key) {
-					var val = urlParams.get(key);
+					const val = urlParams.get(key);
 					if (val) { urlFilters[key] = val; }
 				});
 				if (urlFilters.shippingMethod) {
@@ -324,17 +324,17 @@
 				// URLSearchParams not supported or other error
 			}
 
-			var savedState = Object.keys(urlFilters).length > 0 ? null : readSavedState();
+			const savedState = Object.keys(urlFilters).length > 0 ? null : readSavedState();
 
 			// Wire up sortable headers
-			var tableEl = tbodyEl.closest('table');
+			const tableEl = tbodyEl.closest('table');
 			if (tableEl) {
-				var sortHeaders = tableEl.querySelectorAll('th[data-sort]');
+				const sortHeaders = tableEl.querySelectorAll('th[data-sort]');
 				sortHeaders.forEach(function (header) {
 					header.style.cursor = 'pointer';
 					header.style.userSelect = 'none';
 					header.addEventListener('click', function () {
-						var sortKey = this.getAttribute('data-sort');
+						const sortKey = this.getAttribute('data-sort');
 						if (currentSort === sortKey) {
 							currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
 						} else {
@@ -350,15 +350,15 @@
 			function updateSortIndicators() {
 				if (!tableEl) return;
 				tableEl.querySelectorAll('th[data-sort]').forEach(function (header) {
-					var indicator = header.querySelector('.bs-sort-indicator');
+					let indicator = header.querySelector('.bs-sort-indicator');
 					if (!indicator) {
 						indicator = document.createElement('span');
 						indicator.className = 'bs-sort-indicator';
 						header.appendChild(indicator);
 					}
-					var sortKey = header.getAttribute('data-sort');
+					const sortKey = header.getAttribute('data-sort');
 					if (sortKey === currentSort) {
-						indicator.textContent = currentSortDir === 'asc' ? ' \u25B2' : ' \u25BC';
+						indicator.textContent = currentSortDir === 'asc' ? ' ▲' : ' ▼';
 						header.classList.add('bs-th--sorted');
 					} else {
 						indicator.textContent = '';
@@ -368,7 +368,7 @@
 			}
 
 			function showLoading() {
-				var phrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
+				const phrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
 				messageEl.textContent = phrase;
 				spinnerEl.classList.remove('hidden');
 				loadingEl.classList.remove('hidden');
@@ -383,7 +383,7 @@
 			function renderData(data) {
 				tbodyEl.innerHTML = '';
 
-				var items = data.items || data.orders || [];
+				const items = data.items || data.orders || [];
 
 				if (items.length === 0) {
 					tbodyEl.innerHTML = '<tr><td colspan="20" style="text-align:center; padding:2rem; color:#999;">' +
@@ -397,7 +397,7 @@
 				// Totals - either render into a standalone bar above the table
 				// (preferred, set via totalsEl + buildTotalsBar) or as a legacy
 				// tfoot row inside the table (buildTotalsRow).
-				var existingTfoot = tableEl ? tableEl.querySelector('tfoot') : null;
+				const existingTfoot = tableEl ? tableEl.querySelector('tfoot') : null;
 				if (existingTfoot) {
 					existingTfoot.remove();
 				}
@@ -411,7 +411,7 @@
 						options.totalsEl.hidden = true;
 					}
 				} else if (data.totals && options.buildTotalsRow && items.length > 0 && tableEl) {
-					var tfoot = document.createElement('tfoot');
+					const tfoot = document.createElement('tfoot');
 					tfoot.appendChild(options.buildTotalsRow(data.totals));
 					tableEl.appendChild(tfoot);
 				}
@@ -421,55 +421,55 @@
 				paginationEl.innerHTML = '';
 				paginationEl.style.gap = '1rem';
 				paginationEl.style.justifyContent = 'flex-start';
-				var totalItems = data.totalItems || data.totalOrders || 0;
-				var totalPages = data.totalPages || 1;
-				var currentPage = data.currentPage || 1;
+				const totalItems = data.totalItems || data.totalOrders || 0;
+				const totalPages = data.totalPages || 1;
+				const renderedPage = data.currentPage || 1;
 
 				if (totalItems > 0) {
-					var buttons = document.createElement('div');
+					const buttons = document.createElement('div');
 					buttons.style.display = 'flex';
 					buttons.style.gap = '0.5rem';
 
-					var prevBtn = document.createElement('button');
+					const prevBtn = document.createElement('button');
 					prevBtn.className = 'btn';
 					prevBtn.textContent = Craft.t('best-sellers', 'Previous');
-					if (currentPage > 1) {
-						prevBtn.addEventListener('click', function () { loadPage(currentPage - 1); });
+					if (renderedPage > 1) {
+						prevBtn.addEventListener('click', function () { loadPage(renderedPage - 1); });
 					} else {
 						prevBtn.disabled = true;
 					}
 					buttons.appendChild(prevBtn);
 
-					var nextBtn = document.createElement('button');
+					const nextBtn = document.createElement('button');
 					nextBtn.className = 'btn';
 					nextBtn.textContent = Craft.t('best-sellers', 'Next');
-					if (currentPage < totalPages) {
-						nextBtn.addEventListener('click', function () { loadPage(currentPage + 1); });
+					if (renderedPage < totalPages) {
+						nextBtn.addEventListener('click', function () { loadPage(renderedPage + 1); });
 					} else {
 						nextBtn.disabled = true;
 					}
 					buttons.appendChild(nextBtn);
 					paginationEl.appendChild(buttons);
 
-					var rangeStart = (currentPage - 1) * perPage + 1;
-					var rangeEnd = Math.min(currentPage * perPage, totalItems);
+					const rangeStart = (renderedPage - 1) * perPage + 1;
+					const rangeEnd = Math.min(renderedPage * perPage, totalItems);
 
-					var info = document.createElement('span');
+					const info = document.createElement('span');
 					info.className = 'light';
-					info.textContent = Craft.t('best-sellers', 'Showing {start}\u2013{end} of {total} {label}', { start: rangeStart, end: rangeEnd, total: totalItems, label: itemLabel });
+					info.textContent = Craft.t('best-sellers', 'Showing {start}–{end} of {total} {label}', { start: rangeStart, end: rangeEnd, total: totalItems, label: itemLabel });
 					paginationEl.appendChild(info);
 
-					var pageIndicator = document.createElement('span');
+					const pageIndicator = document.createElement('span');
 					pageIndicator.className = 'light';
-					pageIndicator.textContent = Craft.t('best-sellers', 'Page {current} of {total}', { current: currentPage, total: totalPages });
+					pageIndicator.textContent = Craft.t('best-sellers', 'Page {current} of {total}', { current: renderedPage, total: totalPages });
 					paginationEl.appendChild(pageIndicator);
 				}
 
 				// Export CSV button
 				if (options.exportUrl && totalItems > 0) {
-					var exportTarget = options.exportContainerEl || paginationEl;
+					const exportTarget = options.exportContainerEl || paginationEl;
 					if (!exportTarget.querySelector('.bs-export-btn')) {
-						var exportBtn = document.createElement('a');
+						const exportBtn = document.createElement('a');
 						exportBtn.className = 'btn bs-export-btn';
 						exportBtn.textContent = Craft.t('best-sellers', 'Export CSV');
 						if (!options.exportContainerEl) {
@@ -477,7 +477,7 @@
 						}
 						exportBtn.addEventListener('click', function (event) {
 							event.preventDefault();
-							var exportParams = Object.assign({}, options.baseParams);
+							const exportParams = Object.assign({}, options.baseParams);
 							if (options.getFilterParams) {
 								Object.assign(exportParams, options.getFilterParams());
 							}
@@ -498,7 +498,7 @@
 				currentPage = page;
 				showLoading();
 
-				var params = Object.assign({}, options.baseParams, urlFilters, { page: page });
+				const params = Object.assign({}, options.baseParams, urlFilters, { page: page });
 
 				if (currentSort) {
 					params.sort = currentSort;
@@ -506,11 +506,11 @@
 				}
 
 				if (options.getFilterParams) {
-					var filterParams = options.getFilterParams();
+					const filterParams = options.getFilterParams();
 					Object.assign(params, filterParams);
 				}
 
-				var url = Craft.getActionUrl(options.actionUrl, params);
+				const url = Craft.getActionUrl(options.actionUrl, params);
 
 				fetch(url, {
 					headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
@@ -535,12 +535,12 @@
 				init: function () {
 					// Show filter banner for cross-page links
 					if (urlFilterLabel && containerEl) {
-						var banner = document.createElement('div');
+						const banner = document.createElement('div');
 						banner.className = 'bs-filter-banner';
-						var labelSpan = document.createElement('span');
+						const labelSpan = document.createElement('span');
 						labelSpan.textContent = Craft.t('best-sellers', 'Filtered: {label}', { label: urlFilterLabel });
 						banner.appendChild(labelSpan);
-						var clearLink = document.createElement('a');
+						const clearLink = document.createElement('a');
 						clearLink.href = window.location.pathname + '?from=' + (options.baseParams.from || '') + '&to=' + (options.baseParams.to || '') + '&preset=' + (options.baseParams.preset || '');
 						clearLink.textContent = Craft.t('best-sellers', 'Clear filter');
 						clearLink.className = 'bs-filter-banner__clear';

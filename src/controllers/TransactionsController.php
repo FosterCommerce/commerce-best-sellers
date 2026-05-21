@@ -13,6 +13,7 @@ use craft\helpers\Db;
 use craft\helpers\MoneyHelper;
 use craft\helpers\UrlHelper;
 use craft\web\Request;
+use DateTime;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\models\DateRangeResult;
 use Money\Money;
@@ -135,9 +136,8 @@ class TransactionsController extends BaseReportController
 		$request = Craft::$app->getRequest();
 		$scope = $this->resolveScope();
 
-		/** @var int|string $page */
-		$page = $request->getQueryParam('page', 1);
-		$page = max(1, (int) $page);
+		$rawPage = $request->getQueryParam('page', 1);
+		$page = max(1, (int) (is_scalar($rawPage) ? $rawPage : 1));
 
 		$offset = ($page - 1) * self::PER_PAGE;
 
@@ -148,11 +148,12 @@ class TransactionsController extends BaseReportController
 
 		$totals = $this->buildFilteredTotals(clone $rowsQuery);
 
-		/** @var string $rawSort */
 		$rawSort = $request->getQueryParam('sort', 'dateCreated');
-		/** @var string $rawSortDir */
 		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
-		[$sortColumn, $sortDirection] = $this->resolveSort($rawSort, $rawSortDir);
+		[$sortColumn, $sortDirection] = $this->resolveSort(
+			is_string($rawSort) ? $rawSort : 'dateCreated',
+			is_string($rawSortDir) ? $rawSortDir : 'desc',
+		);
 
 		/** @var list<RawTransactionRow> $rawRows */
 		$rawRows = $rowsQuery
@@ -183,11 +184,12 @@ class TransactionsController extends BaseReportController
 
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
-		/** @var string $rawSort */
 		$rawSort = $request->getQueryParam('sort', 'dateCreated');
-		/** @var string $rawSortDir */
 		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
-		[$sortColumn, $sortDirection] = $this->resolveSort($rawSort, $rawSortDir);
+		[$sortColumn, $sortDirection] = $this->resolveSort(
+			is_string($rawSort) ? $rawSort : 'dateCreated',
+			is_string($rawSortDir) ? $rawSortDir : 'desc',
+		);
 
 		/** @var list<RawTransactionRow> $rawRows */
 		$rawRows = $rowsQuery
@@ -431,9 +433,8 @@ class TransactionsController extends BaseReportController
 			]);
 		}
 
-		/** @var string $rawSearch */
 		$rawSearch = $request->getQueryParam('search', '');
-		$search = trim($rawSearch);
+		$search = is_string($rawSearch) ? trim($rawSearch) : '';
 		if ($search !== '') {
 			$query->andWhere([
 				'or',
@@ -473,16 +474,16 @@ class TransactionsController extends BaseReportController
 			? DateTimeHelper::toDateTime($rawTo)
 			: false;
 
-		if (! $fromDt instanceof \DateTime && ! $toDt instanceof \DateTime) {
+		if (! $fromDt instanceof DateTime && ! $toDt instanceof DateTime) {
 			return;
 		}
 
 		$conditions = ['and'];
-		if ($fromDt instanceof \DateTime) {
+		if ($fromDt instanceof DateTime) {
 			$conditions[] = '>= ' . $fromDt->format('Y-m-d') . ' 00:00:00';
 		}
 
-		if ($toDt instanceof \DateTime) {
+		if ($toDt instanceof DateTime) {
 			$conditions[] = '<= ' . $toDt->format('Y-m-d') . ' 23:59:59';
 		}
 
@@ -510,12 +511,14 @@ class TransactionsController extends BaseReportController
 			$money = $this->parseMoney($rawRow['amount']);
 			$signed = $type === TransactionRecord::TYPE_REFUND ? $money->negative() : $money;
 
+			$formatter = Craft::$app->getFormatter();
+
 			$dateCreated = $rawRow['dateCreated'] ?? null;
 			$formattedDate = '';
 			if (is_string($dateCreated) && $dateCreated !== '') {
-				$dt = DateTimeHelper::toDateTime($dateCreated);
-				if ($dt instanceof \DateTime) {
-					$formattedDate = $dt->format('m/d/Y g:ia');
+				$dateCreatedDt = DateTimeHelper::toDateTime($dateCreated);
+				if ($dateCreatedDt instanceof DateTime) {
+					$formattedDate = $formatter->asDatetime($dateCreatedDt, 'short');
 				}
 			}
 
@@ -524,9 +527,9 @@ class TransactionsController extends BaseReportController
 			$orderDateOrdered = $rawRow['orderDateOrdered'] ?? null;
 			$formattedOrderDate = '';
 			if (is_string($orderDateOrdered) && $orderDateOrdered !== '') {
-				$orderDt = DateTimeHelper::toDateTime($orderDateOrdered);
-				if ($orderDt instanceof \DateTime) {
-					$formattedOrderDate = $orderDt->format('m/d/Y g:ia');
+				$orderDateOrderedDt = DateTimeHelper::toDateTime($orderDateOrdered);
+				if ($orderDateOrderedDt instanceof DateTime) {
+					$formattedOrderDate = $formatter->asDatetime($orderDateOrderedDt, 'short');
 				}
 			}
 

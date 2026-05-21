@@ -6,6 +6,7 @@ use Craft;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
 use craft\commerce\Plugin as Commerce;
+use craft\helpers\DateTimeHelper;
 use craft\web\Controller;
 use craft\web\Request;
 use craft\web\twig\variables\Paginate;
@@ -46,34 +47,37 @@ class DashboardController extends Controller
 		/** @var Request $request */
 		$request = Craft::$app->getRequest();
 
-		$defaultFromDT = new DateTime('-1 month');
-		$defaultToDT = new DateTime('now');
+		$defaultFromDt = new DateTime('-1 month');
+		$defaultToDt = new DateTime('now');
 
-		/** @var string $preset */
-		$preset = $request->getQueryParam('preset', '');
-		/** @var string $fromInput */
-		$fromInput = $request->getQueryParam('from', $defaultFromDT->format('Y-m-d'));
-		/** @var string $toInput */
-		$toInput = $request->getQueryParam('to', $defaultToDT->format('Y-m-d'));
+		$rawPreset = $request->getQueryParam('preset', '');
+		$preset = is_string($rawPreset) ? $rawPreset : '';
+
+		$rawFromInput = $request->getQueryParam('from', $defaultFromDt->format('Y-m-d'));
+		$fromInput = is_string($rawFromInput) ? $rawFromInput : $defaultFromDt->format('Y-m-d');
+
+		$rawToInput = $request->getQueryParam('to', $defaultToDt->format('Y-m-d'));
+		$toInput = is_string($rawToInput) ? $rawToInput : $defaultToDt->format('Y-m-d');
 
 		$from = trim($fromInput);
 		$to = trim($toInput);
 
-		$fromDTObj = new DateTime($from);
-		$fromDTObj->setTime(0, 0, 0);
+		$fromDtObj = DateTimeHelper::toDateTime($from) ?: clone $defaultFromDt;
+		$fromDtObj->setTime(0, 0, 0);
 
-		$fromDT = $fromDTObj->format('Y-m-d H:i:s');
-		$toDTObj = new DateTime($to);
-		$toDTObj->setTime(23, 59, 59);
+		$fromDT = $fromDtObj->format('Y-m-d H:i:s');
 
-		$toDT = $toDTObj->format('Y-m-d H:i:s');
+		$toDtObj = DateTimeHelper::toDateTime($to) ?: clone $defaultToDt;
+		$toDtObj->setTime(23, 59, 59);
 
-		/** @var string $productsOrVariants */
-		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
+		$toDT = $toDtObj->format('Y-m-d H:i:s');
+
+		$rawProductsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
+		$productsOrVariants = is_string($rawProductsOrVariants) ? $rawProductsOrVariants : 'products';
 		$fetchVariants = $productsOrVariants === 'variants';
 
-		/** @var string $productType */
-		$productType = $request->getQueryParam('productType', 'all');
+		$rawProductType = $request->getQueryParam('productType', 'all');
+		$productType = is_string($rawProductType) ? $rawProductType : 'all';
 
 		if ($fetchVariants) {
 			$query = Variant::find();

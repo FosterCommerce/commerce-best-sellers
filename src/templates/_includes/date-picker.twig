@@ -20,6 +20,8 @@
 
 	{% block filtersBefore %}{% endblock %}
 
+	<span class="light bs-timezone-indicator">{{ "All times in {tz}"|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</span>
+
 	<div data-date-range-picker></div>
 
 	{% set allOrderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}

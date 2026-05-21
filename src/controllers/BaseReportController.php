@@ -8,8 +8,10 @@ use craft\helpers\MoneyHelper;
 use craft\web\Controller;
 use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\Plugin;
+use Money\Currencies\ISOCurrencies;
 use Money\Currency;
 use Money\Money;
+use Money\Parser\DecimalMoneyParser;
 use RuntimeException;
 use yii\base\Action;
 use yii\web\Response;
@@ -19,6 +21,8 @@ abstract class BaseReportController extends Controller
 	protected array|bool|int $allowAnonymous = false;
 
 	private ?Currency $_storeCurrency = null;
+
+	private ?DecimalMoneyParser $_moneyParser = null;
 
 	/**
 	 * @param Action<static> $action
@@ -97,15 +101,25 @@ abstract class BaseReportController extends Controller
 		return $this->formatCurrency((string) MoneyHelper::toDecimal($money));
 	}
 
+	/**
+	 * Parse a decimal amount string into a Money value in the store's currency.
+	 *
+	 * Direct DecimalMoneyParser, not MoneyHelper::toMoney, so the return type is
+	 * Money (not Money|false): a malformed amount throws at the parse boundary
+	 * rather than silently coercing to false.
+	 */
+	protected function parseMoney(string $amount): Money
+	{
+		if (! $this->_moneyParser instanceof DecimalMoneyParser) {
+			$this->_moneyParser = new DecimalMoneyParser(new ISOCurrencies());
+		}
+
+		return $this->_moneyParser->parse($amount, $this->getStoreCurrency());
+	}
+
 	protected function toMoney(float $amount): Money
 	{
-		/** @var Money $money */
-		$money = MoneyHelper::toMoney([
-			'value' => (string) $amount,
-			'currency' => $this->getStoreCurrency(),
-		]);
-
-		return $money;
+		return $this->parseMoney((string) $amount);
 	}
 
 	/**

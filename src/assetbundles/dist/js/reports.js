@@ -370,14 +370,14 @@
 			function showLoading() {
 				var phrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
 				messageEl.textContent = phrase;
-				spinnerEl.style.display = '';
-				loadingEl.style.display = 'flex';
-				containerEl.style.display = 'none';
+				spinnerEl.classList.remove('hidden');
+				loadingEl.classList.remove('hidden');
+				containerEl.classList.add('hidden');
 			}
 
 			function hideLoading() {
-				loadingEl.style.display = 'none';
-				containerEl.style.display = 'block';
+				loadingEl.classList.add('hidden');
+				containerEl.classList.remove('hidden');
 			}
 
 			function renderData(data) {
@@ -523,7 +523,7 @@
 				})
 				.then(function (data) { renderData(data); writeState(); })
 				.catch(function (error) {
-					spinnerEl.style.display = 'none';
+					spinnerEl.classList.add('hidden');
 					messageEl.textContent = Craft.t('best-sellers', 'Failed to load data: {error}', { error: error.message });
 					console.error('Best Sellers data load error:', error);
 				});

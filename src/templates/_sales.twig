@@ -22,6 +22,7 @@
 					<label><input type="checkbox" value="paid"{% if 'paid' in selectedPaymentStatuses %} checked{% endif %}> {{ "Paid"|t('best-sellers') }}</label>
 					<label><input type="checkbox" value="partial"{% if 'partial' in selectedPaymentStatuses %} checked{% endif %}> {{ "Partial"|t('best-sellers') }}</label>
 					<label><input type="checkbox" value="unpaid"{% if 'unpaid' in selectedPaymentStatuses %} checked{% endif %}> {{ "Unpaid"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="overpaid"{% if 'overpaid' in selectedPaymentStatuses %} checked{% endif %}> {{ "Overpaid"|t('best-sellers') }}</label>
 				</div>
 			</div>
 			{% if shippingMethods is defined and shippingMethods|length > 0 %}
@@ -73,7 +74,7 @@
 		{% endif %}
 
 		{# Orders Table (hidden until loaded) #}
-		<div id="orders-container" style="display: none;">
+		<div id="orders-container" class="hidden">
 			<div id="orders-totals" class="bs-totals-bar" hidden></div>
 			<div style="overflow-x: auto;">
 				<table class="bs-data-table" id="orders-table">
@@ -95,7 +96,7 @@
 				</table>
 			</div>
 
-			<div id="orders-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+			<div id="orders-pagination" class="bs-pagination"></div>
 
 			<details class="bs-data-notes">
 				<summary>{{ "About these numbers"|t('best-sellers') }}</summary>

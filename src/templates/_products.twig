@@ -42,7 +42,7 @@
 	</div>
 
 	{# Products Table (hidden until loaded) #}
-	<div id="products-container" style="display: none;">
+	<div id="products-container" class="hidden">
 		<div id="products-totals" class="bs-totals-bar" hidden></div>
 		<div style="overflow-x: auto;">
 			<table class="bs-data-table" id="products-table">
@@ -61,7 +61,7 @@
 				<tbody id="products-tbody"></tbody>
 			</table>
 		</div>
-		<div id="products-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+		<div id="products-pagination" class="bs-pagination"></div>
 
 		<details class="bs-data-notes">
 			<summary>{{ "About these numbers"|t('best-sellers') }}</summary>

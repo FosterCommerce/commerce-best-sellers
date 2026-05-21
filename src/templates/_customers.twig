@@ -26,7 +26,7 @@
 	</div>
 
 	{# Customers Table (hidden until loaded) #}
-	<div id="customers-container" style="display: none;">
+	<div id="customers-container" class="hidden">
 		<div id="customers-totals" class="bs-totals-bar" hidden></div>
 		<div style="overflow-x: auto;">
 			<table class="bs-data-table" id="customers-table">
@@ -43,7 +43,7 @@
 				<tbody id="customers-tbody"></tbody>
 			</table>
 		</div>
-		<div id="customers-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+		<div id="customers-pagination" class="bs-pagination"></div>
 
 		<details class="bs-data-notes">
 			<summary>{{ "About these numbers"|t('best-sellers') }}</summary>

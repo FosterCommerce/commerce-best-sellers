@@ -28,13 +28,27 @@ class OrdersController extends BaseReportController
 
 	/**
 	 * Fallback payment statuses applied on the user's first visit to the
-	 * Orders page in a session. "Paid" + "Partial" matches the most common
-	 * "money in (some or all)" view; users can still uncheck and the override
-	 * persists in the session.
+	 * Orders page in a session. Paid + Partial + Overpaid matches the most
+	 * common "money in (any amount)" view, and surfaces overpaid anomalies
+	 * by default rather than burying them behind an opt-in checkbox.
 	 *
 	 * @var list<string>
 	 */
-	private const DEFAULT_PAYMENT_STATUSES = ['paid', 'partial'];
+	private const DEFAULT_PAYMENT_STATUSES = ['paid', 'partial', 'overpaid'];
+
+	/**
+	 * Maps the lowercase UI filter values to the camelCase strings Commerce
+	 * persists in [[commerce_orders.paidStatus]]. Source of truth for the
+	 * column values: craft\commerce\elements\Order::PAID_STATUS_* constants.
+	 *
+	 * @var array<string, string>
+	 */
+	private const PAID_STATUS_COLUMN_MAP = [
+		'paid' => 'paid',
+		'partial' => 'partial',
+		'unpaid' => 'unpaid',
+		'overpaid' => 'overPaid',
+	];
 
 	/**
 	 * Cached resolution so resolvePaymentStatusSelection() can be called from
@@ -119,7 +133,7 @@ class OrdersController extends BaseReportController
 		$totalPages = max(1, (int) ceil($totalOrders / self::PER_PAGE));
 
 		// Aggregate totals across all filtered results (before pagination)
-		$totals = $this->buildFilteredTotals($dateRange->dateRange);
+		$totals = $this->buildFilteredTotals(clone $ordersQuery);
 
 		$orders = $ordersQuery
 			->offset($offset)
@@ -354,11 +368,15 @@ class OrdersController extends BaseReportController
 	 * ElementQuery::prepare merges in 10+ default SELECT columns, which an
 	 * `IN (subquery)` clause cannot consume.
 	 *
+	 * Takes the prebuilt orders query (cloned) rather than rebuilding it so
+	 * the filter wiring happens exactly once per request. `ids()` mutates the
+	 * passed query, so callers must clone before passing.
+	 *
 	 * @return array<string, string>
 	 */
-	private function buildFilteredTotals(DateRangeResult $dateRange): array
+	private function buildFilteredTotals(OrderQuery $ordersQuery): array
 	{
-		$orderIds = $this->buildFilteredOrdersQuery($dateRange)->ids();
+		$orderIds = $ordersQuery->ids();
 
 		if ($orderIds === []) {
 			return [
@@ -439,21 +457,18 @@ class OrdersController extends BaseReportController
 		}
 
 		if ($paidFilters !== []) {
-			$paymentConditions = ['or'];
+			$paidStatusCol = $query instanceof OrderQuery ? '[[commerce_orders.paidStatus]]' : '[[paidStatus]]';
+			$columnValues = [];
 			foreach ($paidFilters as $paidFilter) {
-				if ($paidFilter === 'paid') {
-					$paymentConditions[] = '[[totalPaid]] >= [[totalPrice]]';
-				} elseif ($paidFilter === 'partial') {
-					$paymentConditions[] = ['and', '[[totalPaid]] > 0', '[[totalPaid]] < [[totalPrice]]'];
-				} elseif ($paidFilter === 'unpaid') {
-					$paymentConditions[] = [
-						'[[totalPaid]]' => 0,
-					];
+				if (isset(self::PAID_STATUS_COLUMN_MAP[$paidFilter])) {
+					$columnValues[] = self::PAID_STATUS_COLUMN_MAP[$paidFilter];
 				}
 			}
 
-			if (count($paymentConditions) > 1) {
-				$query->andWhere($paymentConditions);
+			if ($columnValues !== []) {
+				$query->andWhere([
+					$paidStatusCol => $columnValues,
+				]);
 			}
 		}
 

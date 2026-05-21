@@ -737,3 +737,42 @@
 	}
 }
 
+.bs-filter-bar--spaced {
+	margin-bottom: 1rem;
+}
+
+.bs-table-scroll {
+	overflow-x: auto;
+}
+
+.bs-pagination {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 1rem;
+}
+
+.bs-timezone-indicator {
+	font-size: 0.8rem;
+	margin-right: 0.25rem;
+}
+
+.bs-order-date-range {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.35rem;
+	flex: 0 0 auto;
+}
+
+.bs-order-date-range__label {
+	font-size: 0.75rem;
+	line-height: 1;
+}
+
+.bs-order-date-range__controls {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+

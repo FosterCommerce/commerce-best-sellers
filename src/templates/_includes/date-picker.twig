@@ -20,7 +20,7 @@
 
 	{% block filtersBefore %}{% endblock %}
 
-	<span class="light bs-timezone-indicator">{{ "All times in {tz}"|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</span>
+	<span class="light bs-timezone-indicator" title="{{ craft.app.getTimeZone() }}">{{ "All times in {tz}"|t('best-sellers', { tz: 'now'|date('T') }) }}</span>
 
 	<div data-date-range-picker></div>
 

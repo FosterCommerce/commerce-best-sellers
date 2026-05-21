@@ -16,7 +16,7 @@
 		<p class="bs-loading__message">{{ "Our diligent elf is sorting receipts..."|t('best-sellers') }}</p>
 	</div>
 
-	<div id="product-orders-container" style="display: none;">
+	<div id="product-orders-container" class="hidden">
 		<div style="overflow-x: auto;">
 			<table class="bs-data-table">
 				<thead>
@@ -32,7 +32,7 @@
 				<tbody id="product-orders-tbody"></tbody>
 			</table>
 		</div>
-		<div id="product-orders-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;"></div>
+		<div id="product-orders-pagination" class="bs-pagination"></div>
 	</div>
 {% endblock %}
 

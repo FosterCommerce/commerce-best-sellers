@@ -164,6 +164,10 @@ class Plugin extends BasePlugin
 				'label' => Craft::t('best-sellers', 'Orders'),
 				'url' => 'best-sellers/orders',
 			],
+			'transactions' => [
+				'label' => Craft::t('best-sellers', 'Transactions'),
+				'url' => 'best-sellers/transactions',
+			],
 			'products' => [
 				'label' => Craft::t('best-sellers', 'Products'),
 				'url' => 'best-sellers/products',
@@ -343,6 +347,9 @@ class Plugin extends BasePlugin
 				$registerUrlRulesEvent->rules['best-sellers/orders'] = 'best-sellers/orders';
 				$registerUrlRulesEvent->rules['best-sellers/orders/orders-data'] = 'best-sellers/orders/orders-data';
 				$registerUrlRulesEvent->rules['best-sellers/orders/export-csv'] = 'best-sellers/orders/export-csv';
+				$registerUrlRulesEvent->rules['best-sellers/transactions'] = 'best-sellers/transactions';
+				$registerUrlRulesEvent->rules['best-sellers/transactions/transactions-data'] = 'best-sellers/transactions/transactions-data';
+				$registerUrlRulesEvent->rules['best-sellers/transactions/export-csv'] = 'best-sellers/transactions/export-csv';
 				$registerUrlRulesEvent->rules['best-sellers/products'] = 'best-sellers/products';
 				$registerUrlRulesEvent->rules['best-sellers/products/orders'] = 'best-sellers/products/orders';
 				$registerUrlRulesEvent->rules['best-sellers/products/products-data'] = 'best-sellers/products/products-data';

@@ -30,7 +30,7 @@ class ProductStats extends Component
 				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
 				'itemSubtotal' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)',
-				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'avgPrice' => 'COALESCE(SUM([[variantSales.catalogPrice]] * [[variantSales.qty]]) / NULLIF(SUM([[variantSales.qty]]), 0), 0)',
 				'productType' => "COALESCE([[productTypes.name]], 'Unknown')",
 				'fromBundle' => 'MAX(CASE WHEN [[variantSales.sourceBundleId]] IS NOT NULL THEN 1 ELSE 0 END)',
 				// Live partial-payment flag: 1 if any contributing order has
@@ -106,7 +106,7 @@ class ProductStats extends Component
 				'orderCount' => 'COUNT(DISTINCT [[variantSales.orderId]])',
 				'itemSubtotal' => 'COALESCE(SUM([[variantSales.lineItemTotal]]), 0)',
 				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)',
-				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'avgPrice' => 'COALESCE(SUM([[variantSales.catalogPrice]] * [[variantSales.qty]]) / NULLIF(SUM([[variantSales.qty]]), 0), 0)',
 				'productType' => "COALESCE([[productTypes.name]], 'Unknown')",
 				'fromBundle' => 'MAX(CASE WHEN [[variantSales.sourceBundleId]] IS NOT NULL THEN 1 ELSE 0 END)',
 				'hasUnpaidOrder' => 'MAX(CASE WHEN [[orders.totalPaid]] < [[orders.totalPrice]] THEN 1 ELSE 0 END)',
@@ -359,7 +359,7 @@ class ProductStats extends Component
 		$query = (new Query())
 			->select([
 				'title' => "[[variantSales.{$titleCol}]]",
-				'avgPrice' => 'COALESCE(AVG([[variantSales.lineItemPrice]]), 0)',
+				'avgPrice' => 'COALESCE(SUM([[variantSales.catalogPrice]] * [[variantSales.qty]]) / NULLIF(SUM([[variantSales.qty]]), 0), 0)',
 				'unitsSold' => 'SUM([[variantSales.qty]])',
 			])
 			->from([

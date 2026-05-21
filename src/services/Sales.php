@@ -24,6 +24,13 @@ class Sales extends Component
 {
 	private const BUNDLE_CLASS = 'webdna\\commerce\\bundles\\elements\\Bundle';
 
+	/**
+	 * Written by the EVENT_POPULATE_LINE_ITEM listener in Plugin and read by
+	 * expandBundleLineItem so re-syncs and backfills do not drift if catalog
+	 * prices change after the order completes.
+	 */
+	public const OPTIONS_KEY_BUNDLE_CHILD_PRICES = 'bestSellersBundleChildPrices';
+
 	public function logOrderSales(Order $order, bool $force = false): void
 	{
 		if ($force) {
@@ -80,6 +87,9 @@ class Sales extends Component
 					'qty' => $lineItem->qty,
 					'lineItemPrice' => $lineItem->price,
 					'lineItemTotal' => $lineItem->subtotal,
+					// Commerce freezes LineItem::price at line-item creation,
+					// so no separate snapshot is needed for non-bundle rows.
+					'catalogPrice' => $lineItem->price,
 					'discount' => abs((float) $lineItem->promotionalAmount),
 					// LineItem::getDiscount() sums Discount-type adjustments on this
 					// line (negative). Stored as-is so SUM(lineItemTotal + lineDiscount)
@@ -109,6 +119,7 @@ class Sales extends Component
 						'qty',
 						'lineItemPrice',
 						'lineItemTotal',
+						'catalogPrice',
 						'discount',
 						'lineDiscount',
 						'sourceBundleId',
@@ -124,40 +135,20 @@ class Sales extends Component
 	}
 
 	/**
+	 * Expand a bundle line item into one variant_sales row per child. When all
+	 * children resolve to a catalog price, Money::allocate distributes the
+	 * bundle subtotal by (catalogPrice * childQty) weights. When some children
+	 * are deleted, knowns store at pure catalog and unknowns split the
+	 * leftover equally per-unit so SUM(lineItemTotal) still equals the bundle
+	 * subtotal.
+	 *
 	 * @return list<array<string, mixed>>
 	 */
 	private function expandBundleLineItem(LineItem $lineItem, PurchasableInterface $bundle, Order $order): array
 	{
-		// getPurchasables() and getQtys() are defined on the webdna Bundle element,
-		// not PurchasableInterface. method_exists() narrows the type for PHPStan.
-		if (! method_exists($bundle, 'getPurchasables') || ! method_exists($bundle, 'getQtys')) {
-			return [];
-		}
-
-		/** @var list<PurchasableInterface> $childPurchasables */
-		$childPurchasables = $bundle->getPurchasables();
-		/** @var array<int, int|string> $qtys */
-		$qtys = $bundle->getQtys();
-
-		$components = [];
-		foreach ($childPurchasables as $childPurchasable) {
-			if (! $childPurchasable instanceof Variant) {
-				continue;
-			}
-
-			$childQty = (int) ($qtys[$childPurchasable->id] ?? 1);
-			if ($childQty <= 0) {
-				continue;
-			}
-
-			$components[] = [
-				'variant' => $childPurchasable,
-				'childQty' => $childQty,
-				'weight' => max(0.0, (float) $childPurchasable->price) * $childQty,
-			];
-		}
-
-		if ($components === []) {
+		if (! method_exists($bundle, 'getPurchasables')
+			|| ! method_exists($bundle, 'getQtys')
+			|| ! method_exists($bundle, 'getPurchasableIds')) {
 			return [];
 		}
 
@@ -171,59 +162,258 @@ class Sales extends Component
 		$subunit = $currencies->subunitFor($currency);
 		$formatter = new DecimalMoneyFormatter($currencies);
 
-		// Commerce's LineItem::getSubtotal() returns a float already rounded to
-		// currency precision; quantize once into Money here, then do all
-		// allocation in minor units so there is no drift.
-		$lineSubtotal = $this->floatToMoney((float) $lineItem->subtotal, $currency, $subunit);
+		$bundleSubtotal = $this->floatToMoney((float) $lineItem->subtotal, $currency, $subunit);
 		$linePromoDiscount = $this->floatToMoney(abs((float) $lineItem->promotionalAmount), $currency, $subunit);
-		// LineItem::getDiscount() is negative (Commerce convention). Keep the
-		// sign so allocate() distributes negative parts to child rows.
 		$lineAdjustmentDiscount = $this->floatToMoney($lineItem->getDiscount(), $currency, $subunit);
 
-		$totalWeight = array_sum(array_column($components, 'weight'));
-		$totalUnits = array_sum(array_column($components, 'childQty'));
+		/** @var array<int, int|string> $qtys */
+		$qtys = $bundle->getQtys();
+		/** @var array<int, int> $allChildIds */
+		$allChildIds = array_map('intval', $bundle->getPurchasableIds());
 
-		$ratios = array_map(
-			static fn (array $component): float => $totalWeight > 0.0
-				? $component['weight'] / $totalWeight
-				: $component['childQty'] / $totalUnits,
-			$components,
-		);
+		/** @var array<int, Variant> $liveById */
+		$liveById = [];
+		foreach ($bundle->getPurchasables() as $livePurchasable) {
+			if ($livePurchasable instanceof Variant) {
+				$liveById[$livePurchasable->id] = $livePurchasable;
+			}
+		}
 
-		$subtotalParts = $lineSubtotal->allocate($ratios);
-		$promoDiscountParts = $linePromoDiscount->allocate($ratios);
-		$adjustmentDiscountParts = $lineAdjustmentDiscount->allocate($ratios);
+		/** @var array<int, float> $frozenChildPrices */
+		$frozenChildPrices = [];
+		$options = $lineItem->getOptions();
+		if (isset($options[self::OPTIONS_KEY_BUNDLE_CHILD_PRICES])
+			&& is_array($options[self::OPTIONS_KEY_BUNDLE_CHILD_PRICES])) {
+			foreach ($options[self::OPTIONS_KEY_BUNDLE_CHILD_PRICES] as $childId => $price) {
+				if (is_numeric($childId) && is_numeric($price)) {
+					$frozenChildPrices[(int) $childId] = (float) $price;
+				}
+			}
+		}
+
+		/** @var list<array{variantId: int, variant: ?Variant, childQty: int, catalogPrice: float}> $known */
+		$known = [];
+		/** @var list<array{variantId: int, childQty: int}> $unknown */
+		$unknown = [];
+
+		foreach ($allChildIds as $childId) {
+			$childQty = (int) ($qtys[$childId] ?? 1);
+			if ($childQty <= 0) {
+				continue;
+			}
+
+			$liveVariant = $liveById[$childId] ?? null;
+			$frozenPrice = $frozenChildPrices[$childId] ?? null;
+
+			if ($frozenPrice !== null) {
+				$known[] = [
+					'variantId' => $childId,
+					'variant' => $liveVariant,
+					'childQty' => $childQty,
+					'catalogPrice' => max(0.0, $frozenPrice),
+				];
+				continue;
+			}
+
+			if ($liveVariant !== null) {
+				$known[] = [
+					'variantId' => $childId,
+					'variant' => $liveVariant,
+					'childQty' => $childQty,
+					'catalogPrice' => max(0.0, (float) $liveVariant->price),
+				];
+				continue;
+			}
+
+			$unknown[] = [
+				'variantId' => $childId,
+				'childQty' => $childQty,
+			];
+		}
+
+		if ($known === [] && $unknown === []) {
+			return [];
+		}
 
 		$lineQty = $lineItem->qty;
 		$dateOrdered = Db::prepareDateForDb($order->dateOrdered);
 		$dateCreated = Db::prepareDateForDb(new DateTime());
 		$zero = new Money(0, $currency);
 
-		$rows = [];
-		foreach ($components as $index => $component) {
-			/** @var Variant $variant */
-			$variant = $component['variant'];
-			$rowQty = $lineQty * $component['childQty'];
-			$rowTotal = $subtotalParts[$index];
-			$rowPromoDiscount = $promoDiscountParts[$index];
-			$rowAdjustmentDiscount = $adjustmentDiscountParts[$index];
-			$rowPrice = $rowQty > 0 ? $rowTotal->divide((string) $rowQty) : $zero;
+		/** @var array<int, Money> $rowSubtotals */
+		$rowSubtotals = [];
+		/** @var array<int, array{type: string, payload: array<string, mixed>}> $rowMeta */
+		$rowMeta = [];
 
-			/** @var Product $product */
-			$product = $variant->getOwner();
+		if ($unknown === []) {
+			$weights = array_map(
+				static fn (array $entry): float => $entry['catalogPrice'] * $entry['childQty'],
+				$known,
+			);
+
+			if (array_sum($weights) <= 0.0) {
+				// Fall back to qty weights so the bundle subtotal distributes
+				// evenly instead of allocating everything to a single row.
+				$weights = array_map(
+					static fn (array $entry): float => (float) $entry['childQty'],
+					$known,
+				);
+				if (array_sum($weights) <= 0.0) {
+					return [];
+				}
+			}
+
+			$subtotalParts = $bundleSubtotal->allocate($weights);
+			foreach ($known as $index => $entry) {
+				$rowSubtotals[$index] = $subtotalParts[$index];
+				$rowMeta[$index] = [
+					'type' => 'known',
+					'payload' => $entry,
+				];
+			}
+		} else {
+			$knownTotalMoney = new Money(0, $currency);
+			$knownTotals = [];
+			foreach ($known as $index => $entry) {
+				$rowMoney = $this->floatToMoney(
+					$entry['catalogPrice'] * $entry['childQty'] * $lineQty,
+					$currency,
+					$subunit,
+				);
+				$knownTotals[$index] = $rowMoney;
+				$knownTotalMoney = $knownTotalMoney->add($rowMoney);
+			}
+
+			$remainder = $bundleSubtotal->subtract($knownTotalMoney);
+
+			foreach ($known as $index => $entry) {
+				$rowSubtotals[$index] = $knownTotals[$index];
+				$rowMeta[$index] = [
+					'type' => 'known',
+					'payload' => $entry,
+				];
+			}
+
+			$unknownUnits = 0;
+			foreach ($unknown as $entry) {
+				$unknownUnits += $entry['childQty'] * $lineQty;
+			}
+
+			if ($unknownUnits > 0) {
+				$unknownWeights = array_map(
+					static fn (array $entry): float => (float) $entry['childQty'],
+					$unknown,
+				);
+				$unknownParts = $remainder->allocate($unknownWeights);
+				foreach ($unknown as $unknownIndex => $entry) {
+					$compositeIndex = count($known) + $unknownIndex;
+					$rowSubtotals[$compositeIndex] = $unknownParts[$unknownIndex];
+					$rowMeta[$compositeIndex] = [
+						'type' => 'unknown',
+						'payload' => $entry,
+					];
+				}
+			}
+		}
+
+		// Distribute promo + adjustment discounts using the same weights as the
+		// row subtotals so children see proportional discount slices.
+		$discountWeights = [];
+		foreach ($rowSubtotals as $index => $money) {
+			$discountWeights[$index] = max(0.0, (float) $money->getAmount());
+		}
+
+		if (array_sum($discountWeights) <= 0.0) {
+			$discountWeights = array_fill_keys(array_keys($rowSubtotals), 1.0);
+		}
+
+		// Money::allocate ignores keys; convert to a positional list, allocate,
+		// then re-key back to match $rowSubtotals.
+		$positionalKeys = array_keys($discountWeights);
+		$positionalWeights = array_values($discountWeights);
+		$promoParts = $linePromoDiscount->allocate($positionalWeights);
+		$adjustmentParts = $lineAdjustmentDiscount->allocate($positionalWeights);
+
+		$promoByIndex = [];
+		$adjustmentByIndex = [];
+		foreach ($positionalKeys as $positionalIndex => $rowIndex) {
+			$promoByIndex[$rowIndex] = $promoParts[$positionalIndex] ?? $zero;
+			$adjustmentByIndex[$rowIndex] = $adjustmentParts[$positionalIndex] ?? $zero;
+		}
+
+		$rows = [];
+		ksort($rowSubtotals);
+		foreach ($rowSubtotals as $index => $rowTotal) {
+			$meta = $rowMeta[$index];
+
+			if ($meta['type'] === 'known') {
+				/** @var array{variantId: int, variant: ?Variant, childQty: int, catalogPrice: float} $entry */
+				$entry = $meta['payload'];
+				$rowQty = $lineQty * $entry['childQty'];
+				$rowPrice = $rowQty > 0 ? $rowTotal->divide((string) $rowQty) : $zero;
+				$variant = $entry['variant'];
+
+				if ($variant instanceof Variant) {
+					/** @var Product $product */
+					$product = $variant->getOwner();
+					$productId = $product->id;
+					$productTitle = $product->title;
+					$productTypeId = $product->typeId;
+					$variantTitle = $variant->title;
+					$variantSku = $variant->sku;
+				} else {
+					$productId = null;
+					$productTitle = null;
+					$productTypeId = null;
+					$variantTitle = null;
+					$variantSku = null;
+				}
+
+				$rows[] = [
+					'productId' => $productId,
+					'productTitle' => $productTitle,
+					'productTypeId' => $productTypeId,
+					'variantId' => $entry['variantId'],
+					'variantTitle' => $variantTitle,
+					'variantSku' => $variantSku,
+					'qty' => $rowQty,
+					'lineItemPrice' => $formatter->format($rowPrice),
+					'lineItemTotal' => $formatter->format($rowTotal),
+					'catalogPrice' => $formatter->format($this->floatToMoney($entry['catalogPrice'], $currency, $subunit)),
+					'discount' => $formatter->format($promoByIndex[$index] ?? $zero),
+					'lineDiscount' => $formatter->format($adjustmentByIndex[$index] ?? $zero),
+					'sourceBundleId' => $bundle->id,
+					'sourceBundleTitle' => $bundle->title ?? '',
+					'orderId' => $order->id,
+					'dateOrdered' => $dateOrdered,
+					'dateCreated' => $dateCreated,
+				];
+				continue;
+			}
+
+			/** @var array{variantId: int, childQty: int} $entry */
+			$entry = $meta['payload'];
+			$rowQty = $lineQty * $entry['childQty'];
+			$rowPrice = $rowQty > 0 ? $rowTotal->divide((string) $rowQty) : $zero;
+			$rowPriceFormatted = $formatter->format($rowPrice);
 
 			$rows[] = [
-				'productId' => $product->id,
-				'productTitle' => $product->title,
-				'productTypeId' => $product->typeId,
-				'variantId' => $variant->id,
-				'variantTitle' => $variant->title,
-				'variantSku' => $variant->sku,
+				'productId' => null,
+				'productTitle' => null,
+				'productTypeId' => null,
+				'variantId' => $entry['variantId'],
+				'variantTitle' => null,
+				'variantSku' => null,
 				'qty' => $rowQty,
-				'lineItemPrice' => $formatter->format($rowPrice),
+				'lineItemPrice' => $rowPriceFormatted,
 				'lineItemTotal' => $formatter->format($rowTotal),
-				'discount' => $formatter->format($rowPromoDiscount),
-				'lineDiscount' => $formatter->format($rowAdjustmentDiscount),
+				// catalog cannot be recovered for a deleted child; mirror the
+				// allocated per-unit price so SUM(catalogPrice * qty) ties out
+				// against the order subtotal exactly when unknowns absorb the
+				// full remainder.
+				'catalogPrice' => $rowPriceFormatted,
+				'discount' => $formatter->format($promoByIndex[$index] ?? $zero),
+				'lineDiscount' => $formatter->format($adjustmentByIndex[$index] ?? $zero),
 				'sourceBundleId' => $bundle->id,
 				'sourceBundleTitle' => $bundle->title ?? '',
 				'orderId' => $order->id,
@@ -279,6 +469,7 @@ class Sales extends Component
 			'qty' => $lineItem->qty,
 			'lineItemPrice' => $lineItem->price,
 			'lineItemTotal' => $lineItem->subtotal,
+			'catalogPrice' => $lineItem->price,
 			'discount' => abs((float) $lineItem->promotionalAmount),
 			'lineDiscount' => $lineItem->getDiscount(),
 			'sourceBundleId' => null,

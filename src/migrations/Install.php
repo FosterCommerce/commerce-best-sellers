@@ -43,6 +43,7 @@ class Install extends Migration
 			'qty' => $this->integer()->notNull(),
 			'lineItemPrice' => $this->decimal(14, 4)->null(),
 			'lineItemTotal' => $this->decimal(14, 4)->null(),
+			'catalogPrice' => $this->decimal(14, 4)->null(),
 			'discount' => $this->decimal(14, 4)->defaultValue(0),
 			'lineDiscount' => $this->decimal(14, 4)->notNull()->defaultValue(0),
 			'sourceBundleId' => $this->integer()->null(),

@@ -10,6 +10,8 @@ use craft\commerce\elements\db\VariantQuery;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
+use craft\commerce\events\LineItemEvent;
+use craft\commerce\services\LineItems;
 use craft\elements\db\ElementQuery;
 use craft\events\CancelableEvent;
 use craft\events\DefineBehaviorsEvent;
@@ -61,7 +63,7 @@ class Plugin extends BasePlugin
 
 	public const PERMISSION_MANAGE_SETTINGS = 'best-sellers:manageSettings';
 
-	public string $schemaVersion = '1.6.0';
+	public string $schemaVersion = '1.7.0';
 
 	public bool $hasCpSettings = false;
 
@@ -333,6 +335,42 @@ class Plugin extends BasePlugin
 				if ($order->dateOrdered) {
 					$this->dailyStats->aggregateDay($order->dateOrdered->format('Y-m-d'));
 				}
+			}
+		);
+
+		// Sales::expandBundleLineItem reads this snapshot on every (re)sync so
+		// catalog drift between order completion and a later AFTER_SAVE rebuild
+		// cannot shift historical allocations. String instanceof keeps the
+		// listener a no-op when webdna/commerce-bundles is not installed.
+		Event::on(
+			LineItems::class,
+			LineItems::EVENT_POPULATE_LINE_ITEM,
+			static function (LineItemEvent $event): void {
+				$lineItem = $event->lineItem;
+				$purchasable = $lineItem->getPurchasable();
+
+				if ($purchasable === null || ! is_a($purchasable, 'webdna\\commerce\\bundles\\elements\\Bundle')) {
+					return;
+				}
+
+				if (! method_exists($purchasable, 'getPurchasables')) {
+					return;
+				}
+
+				$childPrices = [];
+				foreach ($purchasable->getPurchasables() as $childPurchasable) {
+					if ($childPurchasable instanceof Variant) {
+						$childPrices[$childPurchasable->id] = (float) $childPurchasable->price;
+					}
+				}
+
+				if ($childPrices === []) {
+					return;
+				}
+
+				$options = $lineItem->getOptions();
+				$options[Sales::OPTIONS_KEY_BUNDLE_CHILD_PRICES] = $childPrices;
+				$lineItem->setOptions($options);
 			}
 		);
 	}

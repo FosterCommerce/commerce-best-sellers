@@ -5,28 +5,23 @@
 
 {% block reportContent %}
 	{# Filters #}
-	<div class="bs-filter-bar" style="margin-bottom: 1rem;">
-		<div class="bs-filter-bar__item">
-			<select id="products-or-variants" class="text fullwidth">
-				<option value="products" {% if productsOrVariants == 'products' %}selected{% endif %}>{{ "Products"|t('best-sellers') }}</option>
-				<option value="variants" {% if productsOrVariants == 'variants' %}selected{% endif %}>{{ "Variants"|t('best-sellers') }}</option>
-			</select>
+	<div class="bs-filter-bar bs-filter-bar--spaced">
+		<div class="bs-filter-bar__item bs-filter-bar__item--shrink">
+			<input type="hidden" id="products-or-variants" value="{{ productsOrVariants }}">
+			<div class="bs-segmented bs-pov-toggle" role="group" aria-label="{{ 'Show products or variants'|t('best-sellers') }}">
+				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'products' ? ' bs-segmented__btn--active' : '' }}" data-value="products" aria-pressed="{{ productsOrVariants == 'products' ? 'true' : 'false' }}">{{ "Products"|t('best-sellers') }}</button>
+				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'variants' ? ' bs-segmented__btn--active' : '' }}" data-value="variants" aria-pressed="{{ productsOrVariants == 'variants' ? 'true' : 'false' }}">{{ "Variants"|t('best-sellers') }}</button>
+			</div>
 		</div>
 		{% set allProductTypes = craft.commerce.productTypes.allProductTypes %}
 		{% if allProductTypes|length > 1 %}
-			<div class="bs-filter-bar__item">
-				{% set productTypes = [{
-					label: 'All product types',
-					value: 'all',
-				}]|merge(allProductTypes|map(type => {
-					label: type.name,
-					value: type.handle,
-				})) %}
-				<select id="product-type-filter" class="text fullwidth">
-					{% for pt in productTypes %}
-						<option value="{{ pt.value }}" {% if productType == pt.value %}selected{% endif %}>{{ pt.label }}</option>
+			<div class="bs-multiselect" id="product-type-multiselect">
+				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Product Type'|t('best-sellers') }}">{{ "Product Type"|t('best-sellers') }}</button>
+				<div class="bs-multiselect__dropdown">
+					{% for type in allProductTypes %}
+						<label><input type="checkbox" value="{{ type.handle }}"{% if type.handle in selectedProductTypes %} checked{% endif %}> {{ type.name }}</label>
 					{% endfor %}
-				</select>
+				</div>
 			</div>
 		{% endif %}
 		<div class="bs-filter-bar__item">
@@ -82,12 +77,27 @@
 
 {% js %}
 document.addEventListener('DOMContentLoaded', function () {
-	var searchInput = document.getElementById('product-search');
-	var productsOrVariantsSelect = document.getElementById('products-or-variants');
-	var productTypeFilter = document.getElementById('product-type-filter');
-	var searchTimer = null;
+	const searchInput = document.getElementById('product-search');
+	const povInput = document.getElementById('products-or-variants');
+	const povButtons = document.querySelectorAll('.bs-pov-toggle .bs-segmented__btn');
+	const productTypeContainer = document.getElementById('product-type-multiselect');
+	let searchTimer = null;
 
-	var table = BestSellersReports.createAjaxTable({
+	function setPovValue(value) {
+		povInput.value = value;
+		povButtons.forEach(function (button) {
+			const isActive = button.dataset.value === value;
+			button.classList.toggle('bs-segmented__btn--active', isActive);
+			button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+		});
+	}
+
+	const productTypeMulti = productTypeContainer ? BestSellersReports.createMultiSelect({
+		container: productTypeContainer,
+		onChange: function () { table.reload(); }
+	}) : null;
+
+	const table = BestSellersReports.createAjaxTable({
 		loadingEl: document.getElementById('products-loading'),
 		containerEl: document.getElementById('products-container'),
 		tbodyEl: document.getElementById('products-tbody'),
@@ -102,22 +112,22 @@ document.addEventListener('DOMContentLoaded', function () {
 		itemLabel: 'products',
 		emptyMessage: 'No product sales data for this period.',
 		buildRow: function (item) {
-			var row = document.createElement('tr');
-			var fullTitle = item.displayTitle || '';
-			var shownTitle = BestSellersReports.truncate(fullTitle, 100);
-			var titleAttr = ' title="' + BestSellersReports.escapeAttr(fullTitle) + '"';
-			var titleCell = item.cpEditUrl
+			const row = document.createElement('tr');
+			const fullTitle = item.displayTitle || '';
+			const shownTitle = BestSellersReports.truncate(fullTitle, 100);
+			const titleAttr = ' title="' + BestSellersReports.escapeAttr(fullTitle) + '"';
+			let titleCell = item.cpEditUrl
 				? '<a href="' + item.cpEditUrl + '" class="go"' + titleAttr + '>' + shownTitle + '</a>'
 				: '<span' + titleAttr + '>' + shownTitle + '</span>';
 			if (item.fromBundle) {
 				titleCell += ' <span class="bs-bundle-marker" title="{{ "Sold as part of a bundle"|t('best-sellers') }}" aria-label="{{ "Sold as part of a bundle"|t('best-sellers') }}">⧉</span>';
 			}
-			var linkCell = item.frontEndUrl
+			const linkCell = item.frontEndUrl
 				? '<a href="' + item.frontEndUrl + '" target="_blank" rel="noopener" class="bs-external-link"><span data-icon="world"></span></a>'
 				: '';
-			var ordersLink = '<a href="' + item.ordersUrl + '" class="light" style="text-decoration:underline">in ' + item.orderCount + ' orders</a>';
+			const ordersLink = '<a href="' + item.ordersUrl + '" class="light" style="text-decoration:underline">in ' + item.orderCount + ' orders</a>';
 
-			var unpaidMarker = item.hasUnpaidOrder
+			const unpaidMarker = item.hasUnpaidOrder
 				? '<span class="bs-unpaid-marker" title="{{ "At least one contributing order is not fully paid"|t('best-sellers') }}" aria-label="{{ "At least one contributing order is not fully paid"|t('best-sellers') }}">⚠</span> '
 				: '';
 			row.innerHTML =
@@ -142,30 +152,42 @@ document.addEventListener('DOMContentLoaded', function () {
 			);
 		},
 		getFilterParams: function () {
-			var params = {};
-			params.productsOrVariants = productsOrVariantsSelect ? productsOrVariantsSelect.value : 'products';
-			if (productTypeFilter) { params.productType = productTypeFilter.value; }
-			var searchValue = searchInput ? searchInput.value.trim() : '';
+			const params = {};
+			params.productsOrVariants = povInput.value;
+			if (productTypeMulti) {
+				const productTypes = productTypeMulti.getSelected();
+				if (productTypes.length > 0) { params['productType[]'] = productTypes; }
+			}
+			const searchValue = searchInput.value.trim();
 			if (searchValue) { params.search = searchValue; }
 			return params;
 		},
 		restoreFilterState: function (filters) {
-			if (filters.search && searchInput) { searchInput.value = filters.search; }
-			if (filters.productsOrVariants && productsOrVariantsSelect) { productsOrVariantsSelect.value = filters.productsOrVariants; }
-			if (filters.productType && productTypeFilter) { productTypeFilter.value = filters.productType; }
+			if (filters.search) { searchInput.value = filters.search; }
+			if (filters.productsOrVariants) { setPovValue(filters.productsOrVariants); }
+			if (filters['productType[]'] && productTypeMulti) {
+				const typeValues = filters['productType[]'];
+				productTypeContainer.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+					checkbox.checked = typeValues.indexOf(checkbox.value) !== -1;
+				});
+				productTypeMulti.refresh();
+			}
 		}
 	});
 
 	function reloadTable() { table.reload(); }
 
-	if (searchInput) {
-		searchInput.addEventListener('input', function () {
-			clearTimeout(searchTimer);
-			searchTimer = setTimeout(reloadTable, 400);
+	searchInput.addEventListener('input', function () {
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(reloadTable, 400);
+	});
+
+	povButtons.forEach(function (button) {
+		button.addEventListener('click', function () {
+			setPovValue(button.dataset.value);
+			reloadTable();
 		});
-	}
-	if (productsOrVariantsSelect) productsOrVariantsSelect.addEventListener('change', reloadTable);
-	if (productTypeFilter) productTypeFilter.addEventListener('change', reloadTable);
+	});
 
 	table.init();
 });

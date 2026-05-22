@@ -48,18 +48,18 @@
 
 {% js %}
 (function() {
-	var initialized = false;
+	let initialized = false;
 
-	var options = {
+	const options = {
 		selected: '{{ preset|default("past30Days") }}',
 		onChange: function(start, end, handle) {
 			if (!initialized) {
 				return;
 			}
 
-			var $startDate = document.getElementById('bs-startDate');
-			var $endDate = document.getElementById('bs-endDate');
-			var $dateRange = document.getElementById('bs-dateRange');
+			const $startDate = document.getElementById('bs-startDate');
+			const $endDate = document.getElementById('bs-endDate');
+			const $dateRange = document.getElementById('bs-dateRange');
 
 			$startDate.value = '';
 			$endDate.value = '';
@@ -89,7 +89,7 @@
 		options['endDate'] = new Date({{ to|date('Y') }}, {{ to|date('m') - 1 }}, {{ to|date('d') }});
 	{% endif %}
 
-	var $container = document.querySelector('[data-date-range-picker]');
+	const $container = document.querySelector('[data-date-range-picker]');
 	if ($container && Craft.ui.createDateRangePicker) {
 		Craft.ui.createDateRangePicker(options).appendTo($container);
 	}
@@ -97,17 +97,17 @@
 	initialized = true;
 
 	// Order status scope filter
-	var statusBtn = document.getElementById('bs-scope-status-btn');
-	var statusDropdown = document.getElementById('bs-scope-status-dropdown');
+	const statusBtn = document.getElementById('bs-scope-status-btn');
+	const statusDropdown = document.getElementById('bs-scope-status-dropdown');
 	if (statusBtn && statusDropdown) {
-		var statusDirty = false;
+		let statusDirty = false;
 
 		// Move dropdown to body so it's not clipped by header overflow
 		document.body.appendChild(statusDropdown);
 
 		statusBtn.addEventListener('click', function (e) {
 			e.stopPropagation();
-			var rect = statusBtn.getBoundingClientRect();
+			const rect = statusBtn.getBoundingClientRect();
 			statusDropdown.style.top = (rect.bottom + 4) + 'px';
 			statusDropdown.style.right = (window.innerWidth - rect.right) + 'px';
 			statusDropdown.classList.toggle('is-open');
@@ -118,21 +118,21 @@
 			statusDropdown.classList.remove('is-open');
 			if (statusDirty) {
 				// Sync checkbox values back into the form before submitting
-				var form = document.getElementById('bs-date-form');
+				const form = document.getElementById('bs-date-form');
 				form.querySelectorAll('input[name="orderStatuses[]"], input[name="orderStatuses"]').forEach(function (el) {
 					el.remove();
 				});
-				var checked = statusDropdown.querySelectorAll('input[type="checkbox"]:checked');
+				const checked = statusDropdown.querySelectorAll('input[type="checkbox"]:checked');
 				if (checked.length > 0) {
 					checked.forEach(function (cb) {
-						var hidden = document.createElement('input');
+						const hidden = document.createElement('input');
 						hidden.type = 'hidden';
 						hidden.name = 'orderStatuses[]';
 						hidden.value = cb.value;
 						form.appendChild(hidden);
 					});
 				} else {
-					var clear = document.createElement('input');
+					const clear = document.createElement('input');
 					clear.type = 'hidden';
 					clear.name = 'orderStatuses';
 					clear.value = '';

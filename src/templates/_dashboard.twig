@@ -145,66 +145,73 @@
 	});
 
 	document.addEventListener('DOMContentLoaded', function() {
-	var presetSelector = document.getElementById('date-presets');
-	var fromInput = document.getElementById('from');
-	var toInput = document.getElementById('to');
-	var presetHidden = document.getElementById('preset');
+	const presetSelector = document.getElementById('date-presets');
+	const fromInput = document.getElementById('from');
+	const toInput = document.getElementById('to');
+	const presetHidden = document.getElementById('preset');
 
 	presetSelector.addEventListener('change', function() {
-	var preset = this.value;
-	var now = new Date();
-	var fromVal = '';
-	var toVal = '';
+	const preset = this.value;
+	const now = new Date();
+	let fromVal = '';
+	let toVal = '';
 
 	switch(preset) {
 	case 'today':
 	fromVal = toVal = now.toISOString().split('T')[0];
 	break;
-	case 'thisWeek':
-	var day = now.getDay() || 7; // treat Sunday as 7
-	var monday = new Date(now);
+	case 'thisWeek': {
+	const day = now.getDay() || 7; // treat Sunday as 7
+	const monday = new Date(now);
 	monday.setDate(now.getDate() - day + 1);
-	var sunday = new Date(now);
+	const sunday = new Date(now);
 	sunday.setDate(now.getDate() + (7 - day));
 	fromVal = monday.toISOString().split('T')[0];
 	toVal = sunday.toISOString().split('T')[0];
 	break;
-	case 'thisMonth':
-	var firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-	var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+	}
+	case 'thisMonth': {
+	const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+	const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 	fromVal = firstDay.toISOString().split('T')[0];
 	toVal = lastDay.toISOString().split('T')[0];
 	break;
-	case 'thisYear':
-	var firstDay = new Date(now.getFullYear(), 0, 1);
-	var lastDay = new Date(now.getFullYear(), 11, 31);
+	}
+	case 'thisYear': {
+	const firstDay = new Date(now.getFullYear(), 0, 1);
+	const lastDay = new Date(now.getFullYear(), 11, 31);
 	fromVal = firstDay.toISOString().split('T')[0];
 	toVal = lastDay.toISOString().split('T')[0];
 	break;
-	case 'past7Days':
-	var past = new Date(now);
+	}
+	case 'past7Days': {
+	const past = new Date(now);
 	past.setDate(now.getDate() - 7);
 	fromVal = past.toISOString().split('T')[0];
 	toVal = now.toISOString().split('T')[0];
 	break;
-	case 'past30Days':
-	var past = new Date(now);
+	}
+	case 'past30Days': {
+	const past = new Date(now);
 	past.setDate(now.getDate() - 30);
 	fromVal = past.toISOString().split('T')[0];
 	toVal = now.toISOString().split('T')[0];
 	break;
-	case 'past90Days':
-	var past = new Date(now);
+	}
+	case 'past90Days': {
+	const past = new Date(now);
 	past.setDate(now.getDate() - 90);
 	fromVal = past.toISOString().split('T')[0];
 	toVal = now.toISOString().split('T')[0];
 	break;
-	case 'pastYear':
-	var past = new Date(now);
+	}
+	case 'pastYear': {
+	const past = new Date(now);
 	past.setFullYear(now.getFullYear() - 1);
 	fromVal = past.toISOString().split('T')[0];
 	toVal = now.toISOString().split('T')[0];
 	break;
+	}
 	default:
 	fromVal = fromInput.value;
 	toVal = toInput.value;

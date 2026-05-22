@@ -18,9 +18,10 @@ class ProductStats extends Component
 	/**
 	 * Get top products by revenue or units.
 	 *
+	 * @param list<string> $productTypeHandles Empty means all product types.
 	 * @return list<ProductRow>
 	 */
-	public function getTopProducts(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, ?string $productTypeHandle = null): array
+	public function getTopProducts(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, array $productTypeHandles = []): array
 	{
 		$query = (new Query())
 			->select([
@@ -56,9 +57,9 @@ class ProductStats extends Component
 
 		$this->applyOrdersJoinAndFilters($query, $scope);
 
-		if ($productTypeHandle && $productTypeHandle !== 'all') {
+		if ($productTypeHandles !== []) {
 			$query->andWhere([
-				'[[productTypes.handle]]' => $productTypeHandle,
+				'[[productTypes.handle]]' => $productTypeHandles,
 			]);
 		}
 
@@ -91,9 +92,10 @@ class ProductStats extends Component
 	/**
 	 * Get top variants by revenue or units.
 	 *
+	 * @param list<string> $productTypeHandles Empty means all product types.
 	 * @return list<ProductRow>
 	 */
-	public function getTopVariants(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, ?string $productTypeHandle = null): array
+	public function getTopVariants(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, array $productTypeHandles = []): array
 	{
 		$query = (new Query())
 			->select([
@@ -129,9 +131,9 @@ class ProductStats extends Component
 
 		$this->applyOrdersJoinAndFilters($query, $scope);
 
-		if ($productTypeHandle && $productTypeHandle !== 'all') {
+		if ($productTypeHandles !== []) {
 			$query->andWhere([
-				'[[productTypes.handle]]' => $productTypeHandle,
+				'[[productTypes.handle]]' => $productTypeHandles,
 			]);
 		}
 

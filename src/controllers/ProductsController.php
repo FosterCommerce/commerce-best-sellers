@@ -33,8 +33,6 @@ class ProductsController extends BaseReportController
 		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
 		/** @var string $sortBy */
 		$sortBy = $request->getQueryParam('sortBy', 'revenue');
-		/** @var string $productType */
-		$productType = $request->getQueryParam('productType', 'all');
 
 		return $this->renderTemplate('best-sellers/_products', [
 			'title' => Craft::t('best-sellers', 'Products'),
@@ -45,7 +43,7 @@ class ProductsController extends BaseReportController
 			'scope' => $dateRange,
 			'productsOrVariants' => $productsOrVariants,
 			'sortBy' => $sortBy,
-			'productType' => $productType,
+			'selectedProductTypes' => $this->resolveProductTypeHandles(),
 		]);
 	}
 
@@ -68,8 +66,7 @@ class ProductsController extends BaseReportController
 		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
 		/** @var string $sortBy */
 		$sortBy = $request->getQueryParam('sortBy', 'revenue');
-		/** @var string $productType */
-		$productType = $request->getQueryParam('productType', 'all');
+		$productTypeHandles = $this->resolveProductTypeHandles();
 		/** @var string $rawSearch */
 		$rawSearch = $request->getQueryParam('search', '');
 		$search = trim($rawSearch);
@@ -84,9 +81,9 @@ class ProductsController extends BaseReportController
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
-			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productTypeHandles);
 		} else {
-			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productTypeHandles);
 		}
 
 		/** @var list<ProductRow> $allItems */
@@ -206,8 +203,7 @@ class ProductsController extends BaseReportController
 		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
 		/** @var string $sortBy */
 		$sortBy = $request->getQueryParam('sortBy', 'revenue');
-		/** @var string $productType */
-		$productType = $request->getQueryParam('productType', 'all');
+		$productTypeHandles = $this->resolveProductTypeHandles();
 		/** @var string $rawSearch */
 		$rawSearch = $request->getQueryParam('search', '');
 		$search = trim($rawSearch);
@@ -216,9 +212,9 @@ class ProductsController extends BaseReportController
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
-			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productTypeHandles);
 		} else {
-			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productType);
+			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productTypeHandles);
 		}
 
 		/** @var list<ProductRow> $allItems */
@@ -463,5 +459,34 @@ class ProductsController extends BaseReportController
 			'totalItems' => $totalItems,
 			'perPage' => self::PER_PAGE,
 		]);
+	}
+
+	/**
+	 * Resolve the selected product type handles from the request. Accepts the
+	 * `productType[]` multi-select array and tolerates a bare string. Empty
+	 * selection (or the legacy `all` sentinel) means no product type filter.
+	 *
+	 * @return list<string>
+	 */
+	private function resolveProductTypeHandles(): array
+	{
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+		$rawProductType = $request->getQueryParam('productType', []);
+
+		if (is_string($rawProductType)) {
+			return $rawProductType !== '' && $rawProductType !== 'all' ? [$rawProductType] : [];
+		}
+
+		$handles = [];
+		if (is_array($rawProductType)) {
+			foreach ($rawProductType as $value) {
+				if (is_string($value) && $value !== '' && $value !== 'all') {
+					$handles[] = $value;
+				}
+			}
+		}
+
+		return $handles;
 	}
 }

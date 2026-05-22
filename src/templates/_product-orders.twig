@@ -38,7 +38,7 @@
 
 {% js %}
 document.addEventListener('DOMContentLoaded', function () {
-	var table = BestSellersReports.createAjaxTable({
+	const table = BestSellersReports.createAjaxTable({
 		loadingEl: document.getElementById('product-orders-loading'),
 		containerEl: document.getElementById('product-orders-container'),
 		tbodyEl: document.getElementById('product-orders-tbody'),
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		itemLabel: 'orders',
 		emptyMessage: 'No orders found for this period.',
 		buildRow: function (order) {
-			var row = document.createElement('tr');
+			const row = document.createElement('tr');
 			row.innerHTML =
 				'<td><a href="' + order.cpEditUrl + '" class="go">' + order.reference + '</a></td>' +
 				'<td>' + order.dateOrdered + '</td>' +

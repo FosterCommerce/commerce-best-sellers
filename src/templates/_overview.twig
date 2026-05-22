@@ -96,20 +96,20 @@
 {% if hasData %}
 {% js %}
 document.addEventListener('DOMContentLoaded', function () {
-	var labels = {{ dailyLabels|json_encode|raw }};
-	var ordersData = {{ dailyOrders|json_encode|raw }};
-	var revenueData = {{ dailyRevenue|json_encode|raw }};
+	const labels = {{ dailyLabels|json_encode|raw }};
+	const ordersData = {{ dailyOrders|json_encode|raw }};
+	const revenueData = {{ dailyRevenue|json_encode|raw }};
 
 	// Sparklines
-	var sparklineMap = {{ sparklines|json_encode|raw }};
+	const sparklineMap = {{ sparklines|json_encode|raw }};
 	Object.keys(sparklineMap).forEach(function (id) {
 		BestSellersReports.createSparkline(id, sparklineMap[id]);
 	});
 
 	// New vs Returning chart
 	{% if newVsReturning.labels|length > 0 %}
-	var nvrLabels = {{ newVsReturning.labels|json_encode|raw }};
-	var nvrTimeScale = BestSellersReports.getTimeScale(nvrLabels);
+	const nvrLabels = {{ newVsReturning.labels|json_encode|raw }};
+	const nvrTimeScale = BestSellersReports.getTimeScale(nvrLabels);
 
 	new Chart(document.getElementById('newVsReturningChart').getContext('2d'), {
 		type: 'line',
@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
 					tooltip: {
 						callbacks: {
 							title: function (items) {
-								var date = new Date(items[0].parsed.x);
+								const date = new Date(items[0].parsed.x);
 								return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 							}
 						}
@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 	// Toggle chart
-	var datasets = {
+	const datasets = {
 		revenue: {
 			current: revenueData,
 			prev: {{ prevDailyRevenue|json_encode|raw }},
@@ -188,10 +188,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	};
 
 	if (labels.length > 0) {
-		var timeScale = BestSellersReports.getTimeScale(labels);
-		var ctx = document.getElementById('overviewChart').getContext('2d');
+		const timeScale = BestSellersReports.getTimeScale(labels);
+		const ctx = document.getElementById('overviewChart').getContext('2d');
 
-		var overviewChart = new Chart(ctx, {
+		const overviewChart = new Chart(ctx, {
 			type: 'line',
 			data: {
 				labels: labels,
@@ -237,15 +237,15 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		});
 
-		document.querySelectorAll('.bs-chart-toggle__btn').forEach(function (btn) {
+		document.querySelectorAll('.bs-segmented__btn').forEach(function (btn) {
 			btn.addEventListener('click', function () {
-				document.querySelectorAll('.bs-chart-toggle__btn').forEach(function (b) {
-					b.classList.remove('bs-chart-toggle__btn--active');
+				document.querySelectorAll('.bs-segmented__btn').forEach(function (b) {
+					b.classList.remove('bs-segmented__btn--active');
 				});
-				this.classList.add('bs-chart-toggle__btn--active');
+				this.classList.add('bs-segmented__btn--active');
 
-				var key = this.getAttribute('data-chart');
-				var ds = datasets[key];
+				const key = this.getAttribute('data-chart');
+				const ds = datasets[key];
 				overviewChart.data.datasets[0].data = ds.current;
 				overviewChart.data.datasets[0].label = ds.label;
 				overviewChart.data.datasets[1].data = ds.prev;
@@ -255,10 +255,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 	// Cart abandonment widget
-	var abandonmentData = {{ cartAbandonment|json_encode|raw }};
-	var abandonmentContainer = document.getElementById('cart-abandonment-content');
-	var anonymousToggle = document.getElementById('include-anonymous-carts');
-	var currentAbandonmentTab = 'overview';
+	const abandonmentData = {{ cartAbandonment|json_encode|raw }};
+	const abandonmentContainer = document.getElementById('cart-abandonment-content');
+	const anonymousToggle = document.getElementById('include-anonymous-carts');
+	let currentAbandonmentTab = 'overview';
 
 	function formatAbandonmentNumber(number) {
 		return Number(number).toLocaleString();
@@ -271,18 +271,18 @@ document.addEventListener('DOMContentLoaded', function () {
 	function renderAbandonment() {
 		if (!abandonmentContainer || !abandonmentData) return;
 
-		var includeAnonymous = anonymousToggle && anonymousToggle.checked;
-		var data = abandonmentData;
+		const includeAnonymous = anonymousToggle && anonymousToggle.checked;
+		const data = abandonmentData;
 
 		// Calculate filtered totals
-		var totalAbandoned = includeAnonymous ? data.totalAbandoned : data.withCustomer;
-		var abandonedValue = includeAnonymous ? data.abandonedValue : data.abandonedValueWithEmail;
-		var totalCarts = totalAbandoned + data.totalCompleted;
-		var rate = totalCarts > 0 ? Math.round((totalAbandoned / totalCarts) * 1000) / 10 : 0;
+		const totalAbandoned = includeAnonymous ? data.totalAbandoned : data.withCustomer;
+		const abandonedValue = includeAnonymous ? data.abandonedValue : data.abandonedValueWithEmail;
+		const totalCarts = totalAbandoned + data.totalCompleted;
+		const rate = totalCarts > 0 ? Math.round((totalAbandoned / totalCarts) * 1000) / 10 : 0;
 
-		var html = '';
+		let html = '';
 
-		var tabDescriptions = {
+		const tabDescriptions = {
 			'overview': 'All carts with line items that haven\'t been updated for at least 4 hours. These numbers may differ from external analytics services which track intent differently.',
 			'4-24h': 'Carts abandoned between 4 and 24 hours ago.',
 			'1-7d': 'Carts abandoned between 1 and 7 days ago.',
@@ -306,13 +306,13 @@ document.addEventListener('DOMContentLoaded', function () {
 				html += '<div style="margin-top:1.5rem;">';
 				html += '<p class="bs-kpi-card__label" style="margin-bottom:0.5rem;">By age</p>';
 				html += '<div style="display:flex;height:24px;border-radius:4px;overflow:hidden;">';
-				var barColors = {'4-24h': 'rgba(0,115,170,0.4)', '1-7d': 'rgba(0,115,170,0.6)', '7d+': 'rgba(0,115,170,0.8)'};
-				var ageLabels = ['4-24h', '1-7d', '7d+'];
-				for (var ageIndex = 0; ageIndex < ageLabels.length; ageIndex++) {
-					var ageLabel = ageLabels[ageIndex];
-					var ageData = data.byAge[ageLabel];
-					var ageCount = includeAnonymous ? ageData.count : ageData.withCustomer;
-					var agePercent = totalAbandoned > 0 ? (ageCount / totalAbandoned * 100) : 0;
+				const barColors = {'4-24h': 'rgba(0,115,170,0.4)', '1-7d': 'rgba(0,115,170,0.6)', '7d+': 'rgba(0,115,170,0.8)'};
+				const ageLabels = ['4-24h', '1-7d', '7d+'];
+				for (let ageIndex = 0; ageIndex < ageLabels.length; ageIndex++) {
+					const ageLabel = ageLabels[ageIndex];
+					const ageData = data.byAge[ageLabel];
+					const ageCount = includeAnonymous ? ageData.count : ageData.withCustomer;
+					const agePercent = totalAbandoned > 0 ? (ageCount / totalAbandoned * 100) : 0;
 					if (agePercent > 0) {
 						html += '<div style="width:' + agePercent + '%;background:' + barColors[ageLabel] + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.7rem;font-weight:600;" title="' + ageLabel + ': ' + ageCount + ' carts">';
 						if (agePercent > 8) html += ageLabel;
@@ -321,21 +321,21 @@ document.addEventListener('DOMContentLoaded', function () {
 				}
 				html += '</div>';
 				html += '<div style="display:flex;margin-top:0.4rem;font-size:0.8rem;color:#999;">';
-				for (var ageIndex2 = 0; ageIndex2 < ageLabels.length; ageIndex2++) {
-					var ageLabel2 = ageLabels[ageIndex2];
-					var ageData2 = data.byAge[ageLabel2];
-					var ageCount2 = includeAnonymous ? ageData2.count : ageData2.withCustomer;
-					var labelPercent = totalAbandoned > 0 ? (ageCount2 / totalAbandoned * 100) : 0;
+				for (let ageIndex2 = 0; ageIndex2 < ageLabels.length; ageIndex2++) {
+					const ageLabel2 = ageLabels[ageIndex2];
+					const ageData2 = data.byAge[ageLabel2];
+					const ageCount2 = includeAnonymous ? ageData2.count : ageData2.withCustomer;
+					const labelPercent = totalAbandoned > 0 ? (ageCount2 / totalAbandoned * 100) : 0;
 					html += '<span style="width:' + labelPercent + '%;text-align:center;">' + formatAbandonmentNumber(ageCount2) + '</span>';
 				}
 				html += '</div></div>';
 			}
 		} else {
 			// Specific age tab
-			var selectedAge = data.byAge[currentAbandonmentTab];
+			const selectedAge = data.byAge[currentAbandonmentTab];
 			if (selectedAge) {
-				var tabCount = includeAnonymous ? selectedAge.count : selectedAge.withCustomer;
-				var tabValue = includeAnonymous ? selectedAge.value : selectedAge.valueWithEmail;
+				const tabCount = includeAnonymous ? selectedAge.count : selectedAge.withCustomer;
+				const tabValue = includeAnonymous ? selectedAge.value : selectedAge.valueWithEmail;
 
 				html += '<div class="bs-kpi-grid bs-kpi-grid--3">';
 				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandoned Carts</p></div>';
@@ -358,9 +358,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		tabButton.addEventListener('click', function () {
 			currentAbandonmentTab = this.getAttribute('data-abandonment-tab');
 			document.querySelectorAll('[data-abandonment-tab]').forEach(function (button) {
-				button.classList.remove('bs-chart-toggle__btn--active');
+				button.classList.remove('bs-segmented__btn--active');
 			});
-			this.classList.add('bs-chart-toggle__btn--active');
+			this.classList.add('bs-segmented__btn--active');
 			renderAbandonment();
 		});
 	});
@@ -374,8 +374,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	// Items per order chart (with clickable bars)
 	{% if itemsPerOrder.counts|length > 0 %}
-	var ipoLabels = {{ itemsPerOrder.labels|json_encode|raw }};
-	var ipoChart = new Chart(document.getElementById('itemsPerOrderChart').getContext('2d'), {
+	const ipoLabels = {{ itemsPerOrder.labels|json_encode|raw }};
+	const ipoChart = new Chart(document.getElementById('itemsPerOrderChart').getContext('2d'), {
 		type: 'bar',
 		data: {
 			labels: ipoLabels,
@@ -396,9 +396,9 @@ document.addEventListener('DOMContentLoaded', function () {
 				y: { beginAtZero: true, title: { display: true, text: '{{ "Orders"|t("best-sellers") }}' } }
 			},
 			onClick: function (evt) {
-				var points = ipoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+				const points = ipoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
 				if (points.length > 0) {
-					var bucket = ipoLabels[points[0].index];
+					const bucket = ipoLabels[points[0].index];
 					window.location.href = '{{ cpUrl("best-sellers/orders") }}' + '?itemsPerOrder=' + encodeURIComponent(bucket);
 				}
 			},
@@ -413,10 +413,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	document.querySelectorAll('.bs-copy-link').forEach(function (link) {
 		link.addEventListener('click', function (e) {
 			e.preventDefault();
-			var url = this.getAttribute('data-url');
-			var el = this;
+			const url = this.getAttribute('data-url');
+			const el = this;
 			navigator.clipboard.writeText(url).then(function () {
-				var original = el.textContent;
+				const original = el.textContent;
 				el.textContent = '{{ "Copied!"|t("best-sellers") }}';
 				setTimeout(function () { el.textContent = original; }, 1500);
 			});
@@ -424,17 +424,17 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 
 	// Anonymous cart toggle for abandoned carts table
-	var anonToggle = document.getElementById('include-anonymous-abandoned');
+	const anonToggle = document.getElementById('include-anonymous-abandoned');
 	if (anonToggle) {
 		// Default: hide anonymous rows
 		function filterAbandonedRows() {
-			var rows = document.querySelectorAll('#abandoned-carts-table tbody tr');
-			var showAnon = anonToggle.checked;
-			var visibleCount = 0;
-			var visibleTotal = 0;
-			var maxVisible = 5;
+			const rows = document.querySelectorAll('#abandoned-carts-table tbody tr');
+			const showAnon = anonToggle.checked;
+			let visibleCount = 0;
+			let visibleTotal = 0;
+			const maxVisible = 5;
 			rows.forEach(function (row) {
-				var isAnon = row.getAttribute('data-anonymous') === 'true';
+				const isAnon = row.getAttribute('data-anonymous') === 'true';
 				if ((isAnon && !showAnon) || visibleCount >= maxVisible) {
 					row.style.display = 'none';
 				} else {
@@ -443,11 +443,11 @@ document.addEventListener('DOMContentLoaded', function () {
 					visibleTotal += parseFloat(row.getAttribute('data-value') || '0');
 				}
 			});
-			var countEl = document.getElementById('abandoned-carts-count');
+			const countEl = document.getElementById('abandoned-carts-count');
 			if (countEl) {
 				countEl.textContent = visibleCount + ' {{ "carts"|t("best-sellers") }}';
 			}
-			var totalEl = document.getElementById('abandoned-carts-total');
+			const totalEl = document.getElementById('abandoned-carts-total');
 			if (totalEl) {
 				totalEl.textContent = BestSellersReports.formatCurrency(visibleTotal);
 			}

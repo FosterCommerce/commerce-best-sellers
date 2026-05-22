@@ -15,7 +15,7 @@
 {% block reportContent %}
 	{# Filters #}
 	<div class="bs-section">
-		<div class="bs-filter-bar" style="margin-bottom: 1rem;">
+		<div class="bs-filter-bar bs-filter-bar--spaced">
 			<div class="bs-multiselect" id="payment-status-multiselect">
 				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Payment Status'|t('best-sellers') }}">{{ "Payment Status"|t('best-sellers') }}</button>
 				<div class="bs-multiselect__dropdown">
@@ -118,25 +118,25 @@
 
 {% js %}
 document.addEventListener('DOMContentLoaded', function () {
-	var searchInput = document.getElementById('orders-search');
-	var searchTimer = null;
+	const searchInput = document.getElementById('orders-search');
+	let searchTimer = null;
 
-	var paymentStatusMulti = BestSellersReports.createMultiSelect({
+	const paymentStatusMulti = BestSellersReports.createMultiSelect({
 		container: document.getElementById('payment-status-multiselect'),
 		onChange: function () { table.reload(); }
 	});
 
-	var shippingMethodMulti = BestSellersReports.createMultiSelect({
+	const shippingMethodMulti = BestSellersReports.createMultiSelect({
 		container: document.getElementById('shipping-method-multiselect'),
 		onChange: function () { table.reload(); }
 	});
 
-	var discountStatusMulti = BestSellersReports.createMultiSelect({
+	const discountStatusMulti = BestSellersReports.createMultiSelect({
 		container: document.getElementById('discount-status-multiselect'),
 		onChange: function () { table.reload(); }
 	});
 
-	var table = BestSellersReports.createAjaxTable({
+	const table = BestSellersReports.createAjaxTable({
 		loadingEl: document.getElementById('orders-loading'),
 		containerEl: document.getElementById('orders-container'),
 		tbodyEl: document.getElementById('orders-tbody'),
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		itemLabel: 'orders',
 		emptyMessage: 'No orders found matching your filters.',
 		buildRow: function (order) {
-			var row = document.createElement('tr');
+			const row = document.createElement('tr');
 			row.innerHTML =
 				'<td><a href="' + order.cpEditUrl + '" class="go">' + order.reference + '</a></td>' +
 				'<td>' + order.dateOrdered + '</td>' +
@@ -179,10 +179,10 @@ document.addEventListener('DOMContentLoaded', function () {
 			);
 		},
 		getFilterParams: function () {
-			var params = {};
-			var searchValue = searchInput ? searchInput.value.trim() : '';
+			const params = {};
+			const searchValue = searchInput ? searchInput.value.trim() : '';
 			if (searchValue) { params.search = searchValue; }
-			var paymentStatuses = paymentStatusMulti.getSelected();
+			const paymentStatuses = paymentStatusMulti.getSelected();
 			if (paymentStatuses.length > 0) {
 				params['paymentStatus[]'] = paymentStatuses;
 			} else {
@@ -192,11 +192,11 @@ document.addEventListener('DOMContentLoaded', function () {
 				params['paymentStatus'] = '';
 			}
 			if (shippingMethodMulti) {
-				var shippingMethods = shippingMethodMulti.getSelected();
+				const shippingMethods = shippingMethodMulti.getSelected();
 				if (shippingMethods.length > 0) { params['shippingMethod'] = shippingMethods[0]; }
 			}
 			if (discountStatusMulti) {
-				var discountSelections = discountStatusMulti.getSelected();
+				const discountSelections = discountStatusMulti.getSelected();
 				discountSelections.forEach(function (val) {
 					if (val.indexOf('discount:') === 0) {
 						params['discountId'] = val.substring(9);
@@ -212,16 +212,16 @@ document.addEventListener('DOMContentLoaded', function () {
 				searchInput.value = filters.search;
 			}
 			if (filters['paymentStatus[]']) {
-				var paymentStatusContainer = document.getElementById('payment-status-multiselect');
-				var paymentStatusCheckboxes = paymentStatusContainer.querySelectorAll('input[type="checkbox"]');
-				var paymentStatusValues = filters['paymentStatus[]'];
+				const paymentStatusContainer = document.getElementById('payment-status-multiselect');
+				const paymentStatusCheckboxes = paymentStatusContainer.querySelectorAll('input[type="checkbox"]');
+				const paymentStatusValues = filters['paymentStatus[]'];
 				paymentStatusCheckboxes.forEach(function (checkbox) {
 					checkbox.checked = paymentStatusValues.indexOf(checkbox.value) !== -1;
 				});
 				paymentStatusMulti.refresh();
 			}
 			if (filters.shippingMethod && shippingMethodMulti) {
-				var shippingContainer = document.getElementById('shipping-method-multiselect');
+				const shippingContainer = document.getElementById('shipping-method-multiselect');
 				if (shippingContainer) {
 					shippingContainer.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
 						cb.checked = cb.value === filters.shippingMethod;
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				}
 			}
 			if ((filters.discountStatus || filters.discountId) && discountStatusMulti) {
-				var discountContainer = document.getElementById('discount-status-multiselect');
+				const discountContainer = document.getElementById('discount-status-multiselect');
 				if (discountContainer) {
 					discountContainer.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
 						if (filters.discountStatus && cb.value === filters.discountStatus) {
@@ -256,13 +256,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	// Pre-check dropdowns from URL params (for cross-page filter links)
 	try {
-		var urlParams = new URLSearchParams(window.location.search);
-		var urlShipping = urlParams.get('shippingMethod');
-		var urlDiscountStatus = urlParams.get('discountStatus');
-		var urlDiscountId = urlParams.get('discountId');
+		const urlParams = new URLSearchParams(window.location.search);
+		const urlShipping = urlParams.get('shippingMethod');
+		const urlDiscountStatus = urlParams.get('discountStatus');
+		const urlDiscountId = urlParams.get('discountId');
 
 		if (urlShipping && shippingMethodMulti) {
-			var shipContainer = document.getElementById('shipping-method-multiselect');
+			const shipContainer = document.getElementById('shipping-method-multiselect');
 			if (shipContainer) {
 				shipContainer.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
 					cb.checked = cb.value === urlShipping;
@@ -271,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		}
 		if ((urlDiscountStatus || urlDiscountId) && discountStatusMulti) {
-			var discContainer = document.getElementById('discount-status-multiselect');
+			const discContainer = document.getElementById('discount-status-multiselect');
 			if (discContainer) {
 				discContainer.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
 					if (urlDiscountStatus && cb.value === urlDiscountStatus) {

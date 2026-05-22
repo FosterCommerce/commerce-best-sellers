@@ -105,78 +105,57 @@
 
 {% js %}
 document.addEventListener('DOMContentLoaded', function () {
-	var searchInput = document.getElementById('transactions-search');
-	var searchTimer = null;
+	const searchInput = document.getElementById('transactions-search');
+	let searchTimer = null;
 
-	var typeMulti = BestSellersReports.createMultiSelect({
+	const typeMulti = BestSellersReports.createMultiSelect({
 		container: document.getElementById('transaction-type-multiselect'),
 		onChange: function () { table.reload(); }
 	});
 
-	var statusMulti = BestSellersReports.createMultiSelect({
+	const statusMulti = BestSellersReports.createMultiSelect({
 		container: document.getElementById('transaction-status-multiselect'),
 		onChange: function () { table.reload(); }
 	});
 
-	var gatewayContainer = document.getElementById('transaction-gateway-multiselect');
-	var gatewayMulti = gatewayContainer ? BestSellersReports.createMultiSelect({
+	const gatewayContainer = document.getElementById('transaction-gateway-multiselect');
+	const gatewayMulti = gatewayContainer ? BestSellersReports.createMultiSelect({
 		container: gatewayContainer,
 		onChange: function () { table.reload(); }
 	}) : null;
 
-	var orderFromInput = document.getElementById('transactions-order-from');
-	var orderToInput = document.getElementById('transactions-order-to');
-	var orderDateClearBtn = document.getElementById('transactions-order-date-clear');
-	var orderPickerContainer = document.querySelector('[data-order-date-range-picker]');
-	var orderPickerInitialized = false;
-	var orderPickerInstance = null;
+	const orderFromInput = document.getElementById('transactions-order-from');
+	const orderToInput = document.getElementById('transactions-order-to');
+	const orderDateClearBtn = document.getElementById('transactions-order-date-clear');
+	const orderPickerContainer = document.querySelector('[data-order-date-range-picker]');
+	let orderPickerInitialized = false;
+	let orderPickerInstance = null;
 
 	function parseDateString(value) {
 		if (!value) { return null; }
-		var parts = value.split('-');
+		const parts = value.split('-');
 		if (parts.length !== 3) { return null; }
-		var year = parseInt(parts[0], 10);
-		var month = parseInt(parts[1], 10);
-		var day = parseInt(parts[2], 10);
+		const year = parseInt(parts[0], 10);
+		const month = parseInt(parts[1], 10);
+		const day = parseInt(parts[2], 10);
 		if (isNaN(year) || isNaN(month) || isNaN(day)) { return null; }
 		return new Date(year, month - 1, day);
 	}
 
 	function formatDateString(date) {
 		if (!date) { return ''; }
-		var month = String(date.getMonth() + 1).padStart(2, '0');
-		var day = String(date.getDate()).padStart(2, '0');
+		const month = String(date.getMonth() + 1).padStart(2, '0');
+		const day = String(date.getDate()).padStart(2, '0');
 		return date.getFullYear() + '-' + month + '-' + day;
 	}
 
 	function syncOrderDateClearVisibility() {
 		if (!orderDateClearBtn) { return; }
-		var hasValue = (orderFromInput && orderFromInput.value) || (orderToInput && orderToInput.value);
+		const hasValue = (orderFromInput && orderFromInput.value) || (orderToInput && orderToInput.value);
 		orderDateClearBtn.hidden = !hasValue;
 	}
 
-	if (orderPickerContainer && Craft.ui && Craft.ui.createDateRangePicker) {
-		var pickerOptions = {
-			selected: (orderFromInput.value || orderToInput.value) ? 'custom' : '',
-			onChange: function (start, end, handle) {
-				if (!orderPickerInitialized) { return; }
-				orderFromInput.value = formatDateString(start);
-				orderToInput.value = formatDateString(end);
-				syncOrderDateClearVisibility();
-				table.reload();
-			}
-		};
-		var initialStart = parseDateString(orderFromInput.value);
-		var initialEnd = parseDateString(orderToInput.value);
-		if (initialStart) { pickerOptions.startDate = initialStart; }
-		if (initialEnd) { pickerOptions.endDate = initialEnd; }
-
-		orderPickerInstance = Craft.ui.createDateRangePicker(pickerOptions);
-		orderPickerInstance.appendTo(orderPickerContainer);
-		orderPickerInitialized = true;
-	}
-
-	var table = BestSellersReports.createAjaxTable({
+	const table = BestSellersReports.createAjaxTable({
 		loadingEl: document.getElementById('transactions-loading'),
 		containerEl: document.getElementById('transactions-container'),
 		tbodyEl: document.getElementById('transactions-tbody'),
@@ -191,11 +170,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		itemLabel: 'transactions',
 		emptyMessage: 'No transactions found matching your filters.',
 		buildRow: function (transaction) {
-			var row = document.createElement('tr');
-			var orderCell = transaction.cpEditUrl
+			const row = document.createElement('tr');
+			const orderCell = transaction.cpEditUrl
 				? '<td><a href="' + transaction.cpEditUrl + '" class="go">' + (transaction.orderReference || '') + '</a></td>'
 				: '<td>' + (transaction.orderReference || '') + '</td>';
-			var amountClass = transaction.isRefund ? 'bs-data-table--right bs-amount--refund' : 'bs-data-table--right';
+			const amountClass = transaction.isRefund ? 'bs-data-table--right bs-amount--refund' : 'bs-data-table--right';
 			row.innerHTML =
 				'<td>' + transaction.dateCreated + '</td>' +
 				'<td>' + transaction.type + '</td>' +
@@ -219,18 +198,18 @@ document.addEventListener('DOMContentLoaded', function () {
 			);
 		},
 		getFilterParams: function () {
-			var params = {};
-			var searchValue = searchInput ? searchInput.value.trim() : '';
+			const params = {};
+			const searchValue = searchInput ? searchInput.value.trim() : '';
 			if (searchValue) { params.search = searchValue; }
 
-			var types = typeMulti.getSelected();
+			const types = typeMulti.getSelected();
 			if (types.length > 0) {
 				params['type[]'] = types;
 			} else {
 				params['type'] = '';
 			}
 
-			var statuses = statusMulti.getSelected();
+			const statuses = statusMulti.getSelected();
 			if (statuses.length > 0) {
 				params['status[]'] = statuses;
 			} else {
@@ -238,15 +217,15 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 
 			if (gatewayMulti) {
-				var gateways = gatewayMulti.getSelected();
+				const gateways = gatewayMulti.getSelected();
 				if (gateways.length > 0) {
 					params['gatewayId[]'] = gateways;
 				}
 			}
 
-			var orderFromValue = orderFromInput ? orderFromInput.value.trim() : '';
+			const orderFromValue = orderFromInput ? orderFromInput.value.trim() : '';
 			if (orderFromValue) { params.orderFrom = orderFromValue; }
-			var orderToValue = orderToInput ? orderToInput.value.trim() : '';
+			const orderToValue = orderToInput ? orderToInput.value.trim() : '';
 			if (orderToValue) { params.orderTo = orderToValue; }
 
 			return params;
@@ -256,28 +235,28 @@ document.addEventListener('DOMContentLoaded', function () {
 				searchInput.value = filters.search;
 			}
 			if (filters['type[]']) {
-				var typeContainer = document.getElementById('transaction-type-multiselect');
-				var typeCheckboxes = typeContainer.querySelectorAll('input[type="checkbox"]');
-				var typeValues = filters['type[]'];
+				const typeContainer = document.getElementById('transaction-type-multiselect');
+				const typeCheckboxes = typeContainer.querySelectorAll('input[type="checkbox"]');
+				const typeValues = filters['type[]'];
 				typeCheckboxes.forEach(function (checkbox) {
 					checkbox.checked = typeValues.indexOf(checkbox.value) !== -1;
 				});
 				typeMulti.refresh();
 			}
 			if (filters['status[]']) {
-				var statusContainer = document.getElementById('transaction-status-multiselect');
-				var statusCheckboxes = statusContainer.querySelectorAll('input[type="checkbox"]');
-				var statusValues = filters['status[]'];
+				const statusContainer = document.getElementById('transaction-status-multiselect');
+				const statusCheckboxes = statusContainer.querySelectorAll('input[type="checkbox"]');
+				const statusValues = filters['status[]'];
 				statusCheckboxes.forEach(function (checkbox) {
 					checkbox.checked = statusValues.indexOf(checkbox.value) !== -1;
 				});
 				statusMulti.refresh();
 			}
 			if (filters['gatewayId[]'] && gatewayMulti) {
-				var gatewayContainerEl = document.getElementById('transaction-gateway-multiselect');
+				const gatewayContainerEl = document.getElementById('transaction-gateway-multiselect');
 				if (gatewayContainerEl) {
-					var gatewayCheckboxes = gatewayContainerEl.querySelectorAll('input[type="checkbox"]');
-					var gatewayValues = filters['gatewayId[]'];
+					const gatewayCheckboxes = gatewayContainerEl.querySelectorAll('input[type="checkbox"]');
+					const gatewayValues = filters['gatewayId[]'];
 					gatewayCheckboxes.forEach(function (checkbox) {
 						checkbox.checked = gatewayValues.indexOf(checkbox.value) !== -1;
 					});
@@ -327,5 +306,30 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	table.init();
+
+	// Build the order-date picker after table.init() so it reflects orderFrom /
+	// orderTo restored from sessionStorage. The header date-range picker submits a
+	// full page reload that drops these AJAX-only params, leaving the hidden inputs
+	// empty until restoreFilterState refills them.
+	if (orderPickerContainer && Craft.ui && Craft.ui.createDateRangePicker) {
+		const pickerOptions = {
+			selected: (orderFromInput.value || orderToInput.value) ? 'custom' : '',
+			onChange: function (start, end, handle) {
+				if (!orderPickerInitialized) { return; }
+				orderFromInput.value = formatDateString(start);
+				orderToInput.value = formatDateString(end);
+				syncOrderDateClearVisibility();
+				table.reload();
+			}
+		};
+		const initialStart = parseDateString(orderFromInput.value);
+		const initialEnd = parseDateString(orderToInput.value);
+		if (initialStart) { pickerOptions.startDate = initialStart; }
+		if (initialEnd) { pickerOptions.endDate = initialEnd; }
+
+		orderPickerInstance = Craft.ui.createDateRangePicker(pickerOptions);
+		orderPickerInstance.appendTo(orderPickerContainer);
+		orderPickerInitialized = true;
+	}
 });
 {% endjs %}

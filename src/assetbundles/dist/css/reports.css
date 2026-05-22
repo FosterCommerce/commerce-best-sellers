@@ -113,13 +113,13 @@
 }
 
 /* Chart toggle buttons */
-.bs-chart-toggle {
+.bs-segmented {
 	display: flex;
 	gap: 0;
 	margin-bottom: 1rem;
 }
 
-.bs-chart-toggle__btn {
+.bs-segmented__btn {
 	padding: 0.4rem 1rem;
 	border: 1px solid #ccc;
 	background: #f8f9fa;
@@ -129,22 +129,27 @@
 	transition: all 0.15s ease;
 }
 
-.bs-chart-toggle__btn:first-child {
+.bs-segmented__btn:first-child {
 	border-radius: 4px 0 0 4px;
 }
 
-.bs-chart-toggle__btn:last-child {
+.bs-segmented__btn:last-child {
 	border-radius: 0 4px 4px 0;
 }
 
-.bs-chart-toggle__btn + .bs-chart-toggle__btn {
+.bs-segmented__btn + .bs-segmented__btn {
 	border-left: none;
 }
 
-.bs-chart-toggle__btn--active {
+.bs-segmented__btn--active {
 	background: #0073aa;
 	color: #fff;
 	border-color: #0073aa;
+}
+
+/* In a filter bar the segmented control is a row item, not a chart header. */
+.bs-pov-toggle {
+	margin-bottom: 0;
 }
 
 /* Data tables */
@@ -467,6 +472,17 @@
 .bs-filter-bar__item {
 	flex: 1;
 	min-width: 140px;
+}
+
+/* Sits at its natural width (e.g. a btngroup toggle) instead of stretching. */
+.bs-filter-bar__item--shrink {
+	flex: 0 0 auto;
+	min-width: 0;
+}
+
+/* Fixed-width control (e.g. a select) that should not absorb free space. */
+.bs-filter-bar__item--fixed {
+	flex: 0 0 220px;
 }
 
 /* External link icon */

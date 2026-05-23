@@ -7,10 +7,15 @@
 	'Full-price orders',
 	'Discount ID: {id}',
 	'Items per order: {bucket}',
+	'orders.bulk.downloadPdf',
+	'orders.bulk.downloadPdfCount',
+	'orders.bulk.selectRowAria',
+	'orders.bulk.selectionsResetOnPaginate',
 ]) %}
 
 {% set title = "Orders"|t('best-sellers') %}
 {% set selectedSubnavItem = 'orders' %}
+{% set bulkPdfEnabled = enabledPdfs|length > 0 %}
 
 {% block reportContent %}
 	{# Filters #}
@@ -54,6 +59,43 @@
 				<input type="text" id="orders-search" class="text fullwidth" placeholder="{{ 'Search orders...'|t('best-sellers') }}" autocomplete="off">
 			</div>
 			<span id="orders-export"></span>
+			{% if bulkPdfEnabled %}
+				<div id="orders-bulk-actions" class="bs-bulk-actions hidden">
+					<button type="button" id="bs-bulk-download-btn" class="btn submit" aria-haspopup="true" aria-expanded="false">
+						{{ 'orders.bulk.downloadPdf'|t('best-sellers') }}
+					</button>
+					<div id="bs-download-pdf-menu" class="bs-bulk-actions__menu hidden">
+						<form id="bs-download-pdf-form" method="post" accept-charset="UTF-8" class="bs-download-pdf-form">
+							{{ csrfInput() }}
+							{{ actionInput('best-sellers/orders/download-pdfs') }}
+							<div class="field">
+								<div class="heading"><label for="bs-download-pdf-id">{{ 'orders.bulk.pdfLabel'|t('best-sellers') }}</label></div>
+								<div class="input">
+									<div class="select">
+										<select id="bs-download-pdf-id" name="pdfId">
+											{% for pdf in enabledPdfs %}
+												<option value="{{ pdf.id }}">{{ pdf.name|t('site') }}</option>
+											{% endfor %}
+										</select>
+									</div>
+								</div>
+							</div>
+							<div class="field">
+								<div class="heading"><label for="bs-download-pdf-type">{{ 'orders.bulk.downloadTypeLabel'|t('best-sellers') }}</label></div>
+								<div class="input">
+									<div class="select">
+										<select id="bs-download-pdf-type" name="downloadType">
+											<option value="zipArchive">{{ 'orders.bulk.zipFile'|t('best-sellers') }}</option>
+											<option value="pdfCollated">{{ 'orders.bulk.collatedPdf'|t('best-sellers') }}</option>
+										</select>
+									</div>
+								</div>
+							</div>
+							<button type="submit" class="btn submit">{{ 'orders.bulk.download'|t('best-sellers') }}</button>
+						</form>
+					</div>
+				</div>
+			{% endif %}
 		</div>
 
 		{# Loading State #}
@@ -80,6 +122,9 @@
 				<table class="bs-data-table" id="orders-table">
 					<thead>
 						<tr>
+							{% if bulkPdfEnabled %}
+								<th class="bs-data-table--checkbox"><input type="checkbox" id="bs-master-select" aria-label="{{ 'orders.bulk.selectAllAria'|t('best-sellers') }}"></th>
+							{% endif %}
 							<th data-sort="reference">{{ "Order #"|t('best-sellers') }}</th>
 							<th data-sort="dateOrdered">{{ "Date Ordered"|t('best-sellers') }}</th>
 							<th data-sort="orderStatusId">{{ "Status"|t('best-sellers') }}</th>
@@ -136,6 +181,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		onChange: function () { table.reload(); }
 	});
 
+	{% if bulkPdfEnabled %}
+		const selectRowAriaLabel = Craft.t('best-sellers', 'orders.bulk.selectRowAria');
+		const bulkDownloadLabel = Craft.t('best-sellers', 'orders.bulk.downloadPdf');
+	{% endif %}
+
 	const table = BestSellersReports.createAjaxTable({
 		loadingEl: document.getElementById('orders-loading'),
 		containerEl: document.getElementById('orders-container'),
@@ -153,6 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		buildRow: function (order) {
 			const row = document.createElement('tr');
 			row.innerHTML =
+				{% if bulkPdfEnabled %}'<td class="bs-data-table--checkbox"><input type="checkbox" name="orderIds[]" value="' + order.id + '" form="bs-download-pdf-form" class="bs-row-select" aria-label="' + selectRowAriaLabel + '"></td>' +{% endif %}
 				'<td><a href="' + order.cpEditUrl + '" class="go">' + order.reference + '</a></td>' +
 				'<td>' + order.dateOrdered + '</td>' +
 				'<td><span class="status ' + order.statusColor + '"></span> ' + order.statusName + '</td>' +
@@ -253,6 +304,78 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	table.init();
+
+	{% if bulkPdfEnabled %}
+		const bulkActionsWrapper = document.getElementById('orders-bulk-actions');
+		const bulkDownloadBtn = document.getElementById('bs-bulk-download-btn');
+		const bulkDownloadMenu = document.getElementById('bs-download-pdf-menu');
+		const masterSelectCheckbox = document.getElementById('bs-master-select');
+		const ordersTbody = document.getElementById('orders-tbody');
+		const ordersPagination = document.getElementById('orders-pagination');
+
+		function updateBulkDownloadState() {
+			const rowCheckboxes = ordersTbody.querySelectorAll('.bs-row-select');
+			const checkedCount = ordersTbody.querySelectorAll('.bs-row-select:checked').length;
+			bulkActionsWrapper.classList.toggle('hidden', checkedCount === 0);
+			if (checkedCount === 0) {
+				bulkDownloadMenu.classList.add('hidden');
+				bulkDownloadBtn.setAttribute('aria-expanded', 'false');
+			}
+			bulkDownloadBtn.textContent = checkedCount === 0
+				? bulkDownloadLabel
+				: Craft.t('best-sellers', 'orders.bulk.downloadPdfCount', { count: checkedCount });
+			masterSelectCheckbox.checked = rowCheckboxes.length > 0 && checkedCount === rowCheckboxes.length;
+			masterSelectCheckbox.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+		}
+
+		bulkDownloadBtn.addEventListener('click', function (event) {
+			event.stopPropagation();
+			const willOpen = bulkDownloadMenu.classList.contains('hidden');
+			bulkDownloadMenu.classList.toggle('hidden');
+			bulkDownloadBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+		});
+
+		document.addEventListener('click', function (event) {
+			if (bulkDownloadMenu.classList.contains('hidden')) {
+				return;
+			}
+			if (bulkDownloadMenu.contains(event.target) || event.target === bulkDownloadBtn) {
+				return;
+			}
+			bulkDownloadMenu.classList.add('hidden');
+			bulkDownloadBtn.setAttribute('aria-expanded', 'false');
+		});
+
+		masterSelectCheckbox.addEventListener('change', function () {
+			const checked = masterSelectCheckbox.checked;
+			ordersTbody.querySelectorAll('.bs-row-select').forEach(function (checkbox) {
+				checkbox.checked = checked;
+			});
+			updateBulkDownloadState();
+		});
+
+		ordersTbody.addEventListener('change', function (event) {
+			if (event.target.classList.contains('bs-row-select')) {
+				updateBulkDownloadState();
+			}
+		});
+
+		// Selections are per-page only. Pagination replaces the tbody, so warn
+		// the user when they leave a page with active selections.
+		ordersPagination.addEventListener('click', function (event) {
+			const button = event.target.closest('button');
+			if (button === null || button.classList.contains('bs-export-btn')) {
+				return;
+			}
+			const hasSelections = ordersTbody.querySelectorAll('.bs-row-select:checked').length > 0;
+			if (hasSelections) {
+				Craft.cp.displayNotice(Craft.t('best-sellers', 'orders.bulk.selectionsResetOnPaginate'));
+			}
+		});
+
+		// AJAX reload replaces tbody contents, so reset master + button after each render
+		new MutationObserver(updateBulkDownloadState).observe(ordersTbody, { childList: true });
+	{% endif %}
 
 	// Pre-check dropdowns from URL params (for cross-page filter links)
 	try {

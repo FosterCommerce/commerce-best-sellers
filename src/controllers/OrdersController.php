@@ -4,10 +4,12 @@ namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
 use craft\commerce\db\Table as CommerceTable;
+use craft\commerce\elements\actions\DownloadOrderPdfAction;
 use craft\commerce\elements\db\OrderQuery;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
+use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use craft\helpers\MoneyHelper;
 use craft\web\Request;
@@ -16,9 +18,13 @@ use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\VariantTitleHelper;
 use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\Plugin;
+use Illuminate\Support\Collection;
 use Money\Money;
+use Throwable;
 use yii\db\Expression;
+use yii\web\BadRequestHttpException;
 use yii\web\Response;
+use yii\web\ServerErrorHttpException;
 
 class OrdersController extends BaseReportController
 {
@@ -94,6 +100,13 @@ class OrdersController extends BaseReportController
 			$purchasableFilterLabel = $product?->title ?? '';
 		}
 
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		$primaryStore = $commerce->getStores()->getPrimaryStore();
+		$enabledPdfs = $primaryStore !== null
+			? $commerce->getPdfs()->getAllEnabledPdfs($primaryStore->id)
+			: new Collection();
+
 		return $this->renderTemplate('best-sellers/_sales', [
 			'title' => Craft::t('best-sellers', 'Orders'),
 			'selectedSubnavItem' => 'orders',
@@ -107,7 +120,68 @@ class OrdersController extends BaseReportController
 			'variantId' => $variantId,
 			'purchasableFilterLabel' => $purchasableFilterLabel,
 			'selectedPaymentStatuses' => $this->resolvePaymentStatusSelection(),
+			'enabledPdfs' => $enabledPdfs,
 		]);
+	}
+
+	/**
+	 * Bulk-download selected orders as PDFs. Gated behind Commerce's own
+	 * commerce-manageOrders permission since the action produces order
+	 * documents (invoices, packing slips with PII).
+	 *
+	 * @throws Throwable
+	 */
+	public function actionDownloadPdfs(): Response
+	{
+		$this->requirePostRequest();
+		$this->requirePermission('commerce-manageOrders');
+
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+
+		$rawPdfId = $request->getRequiredBodyParam('pdfId');
+		$rawDownloadType = $request->getRequiredBodyParam('downloadType');
+		$rawOrderIds = $request->getRequiredBodyParam('orderIds');
+
+		if (! is_numeric($rawPdfId) || ! is_string($rawDownloadType) || ! is_array($rawOrderIds)) {
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'orders.bulk.error.invalidRequest'));
+		}
+
+		$validTypes = [
+			DownloadOrderPdfAction::TYPE_ZIP_ARCHIVE,
+			DownloadOrderPdfAction::TYPE_PDF_COLLATED,
+		];
+		if (! in_array($rawDownloadType, $validTypes, true)) {
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'orders.bulk.error.invalidDownloadType'));
+		}
+
+		$orderIds = array_values(array_unique(array_map('intval', array_filter($rawOrderIds, 'is_scalar'))));
+		if ($orderIds === []) {
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'orders.bulk.error.noOrdersSelected'));
+		}
+
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		$primaryStore = $commerce->getStores()->getPrimaryStore();
+		if ($primaryStore === null) {
+			throw new ServerErrorHttpException(Craft::t('best-sellers', 'orders.bulk.error.primaryStoreMissing'));
+		}
+
+		$action = new DownloadOrderPdfAction([
+			'storeId' => $primaryStore->id,
+			'pdfId' => (int) $rawPdfId,
+			'downloadType' => $rawDownloadType,
+		]);
+
+		$ordersQuery = Order::find()
+			->id($orderIds)
+			->isCompleted(true);
+
+		if (! $action->performAction($ordersQuery)) {
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'orders.bulk.error.noMatchingOrders'));
+		}
+
+		return Craft::$app->getResponse();
 	}
 
 	/**
@@ -333,6 +407,7 @@ class OrdersController extends BaseReportController
 			$currency = $order->currency;
 
 			$rows[] = [
+				'id' => $order->id,
 				'reference' => $order->reference,
 				'cpEditUrl' => $order->cpEditUrl,
 				'dateOrdered' => $order->dateOrdered ? $order->dateOrdered->format('m/d/Y g:ia') : '',

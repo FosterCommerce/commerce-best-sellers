@@ -792,3 +792,46 @@
 	gap: 0.4rem;
 }
 
+.bs-data-table th.bs-data-table--checkbox,
+.bs-data-table td.bs-data-table--checkbox {
+	width: 1px;
+	white-space: nowrap;
+	padding-right: 0.25rem;
+	text-align: center;
+}
+
+/* Restore flex sizing to the column adjacent to the checkbox; the existing
+   "first-child is the flex column" rule otherwise leaves Order # fixed-width. */
+.bs-data-table th.bs-data-table--checkbox + th,
+.bs-data-table td.bs-data-table--checkbox + td {
+	width: auto;
+	white-space: normal;
+}
+
+.bs-bulk-actions {
+	position: relative;
+	display: inline-block;
+}
+
+.bs-bulk-actions__menu {
+	position: absolute;
+	right: 0;
+	top: 100%;
+	margin-top: 0.4rem;
+	z-index: 100;
+	min-width: 16rem;
+	padding: 0.85rem 1rem;
+	background: #fff;
+	border: 1px solid #cdd5dd;
+	border-radius: 4px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.bs-bulk-actions__menu .field + .field {
+	margin-top: 0.75rem;
+}
+
+.bs-bulk-actions__menu .submit {
+	margin-top: 0.85rem;
+}
+

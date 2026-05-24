@@ -223,10 +223,9 @@
 	opacity: 0.8;
 }
 
-.bs-data-table td:not(:first-child),
-.bs-data-table th:not(:first-child) {
+.bs-data-table td,
+.bs-data-table th {
 	white-space: nowrap;
-	width: 1%;
 }
 
 /* Section layout */
@@ -795,17 +794,8 @@
 .bs-data-table th.bs-data-table--checkbox,
 .bs-data-table td.bs-data-table--checkbox {
 	width: 1px;
-	white-space: nowrap;
 	padding-right: 0.25rem;
 	text-align: center;
-}
-
-/* Restore flex sizing to the column adjacent to the checkbox; the existing
-   "first-child is the flex column" rule otherwise leaves Order # fixed-width. */
-.bs-data-table th.bs-data-table--checkbox + th,
-.bs-data-table td.bs-data-table--checkbox + td {
-	width: auto;
-	white-space: normal;
 }
 
 .bs-bulk-actions {

@@ -1,224 +1,472 @@
-{% extends '_layouts/cp' %}
-{% import "_includes/forms" as forms %}
+{% extends 'best-sellers/_layouts/reports' %}
+{% do view.registerTranslations('best-sellers', [
+	'overview.abandonment.rate',
+	'overview.abandonment.value',
+	'overview.abandonment.carts',
+	'overview.abandonment.avgCartValue',
+	'overview.abandonment.byAge',
+	'overview.abandonment.outOf',
+	'overview.abandonment.description.overview',
+	'overview.abandonment.description.range4to24h',
+	'overview.abandonment.description.range1to7d',
+	'overview.abandonment.description.range7dPlus',
+]) %}
+{% import 'best-sellers/_includes/kpi-card' as kpi %}
+{% import 'best-sellers/_includes/summary' as summaryBlock %}
 
-{% set title = 'nav.bestSellers'|t('best-sellers') ~ ' - ' ~ title %}
+{% set title = 'Dashboard'|t('app') %}
 {% set selectedSubnavItem = 'dashboard' %}
 
-{% set additionalButtons %}
-	<form id="filter-form" method="get" style="display: flex; flex-direction: row; column-gap: 1rem;">
-		<div style="flex: 1;">
-			{{ forms.selectField({
-				first: true,
-				id: 'products-or-variants',
-				name: 'productsOrVariants',
-				options: [
-					{ label: 'Products'|t('commerce'), value: 'products' },
-					{ label: 'Variants'|t('commerce'), value: 'variants' },
-				],
-				toggle: true,
-				value: productsOrVariants,
-			}) }}
+{% block reportContent %}
+	{% if not hasData %}
+		<div class="bs-empty-state">
+			<p>{{ 'overview.empty.message'|t('best-sellers') }}</p>
+			{% if currentUser.can('best-sellers:backfill') %}
+				<a href="{{ cpUrl('utilities/best-sellers') }}" class="btn submit">{{ 'overview.empty.button'|t('best-sellers') }}</a>
+			{% endif %}
 		</div>
-
-		{% set productTypes = [{
-			label: 'dashboard.allProductTypes'|t('best-sellers'),
-			value: 'all',
-		}]|merge(craft.commerce.productTypes.allProductTypes|map(type => {
-			label: type.name,
-			value: type.handle,
-		})) %}
-		<div style="flex: 1;">
-			{{ forms.selectField({
-				first: true,
-				id: 'product-type',
-				name: 'productType',
-				options: productTypes,
-				toggle: true,
-				value: productType,
-			}) }}
-		</div>
-
-		<div style="flex: 1;">
-			<select id="date-presets" class="text fullwidth">
-				<option value="">{{ 'reports.preset.placeholder'|t('best-sellers') }}</option>
-				<option value="today" {% if preset == 'today' %}selected{% endif %}>{{ 'Today'|t('app') }}</option>
-				<option value="thisWeek" {% if preset == 'thisWeek' %}selected{% endif %}>{{ 'reports.preset.thisWeek'|t('best-sellers') }}</option>
-				<option value="thisMonth" {% if preset == 'thisMonth' %}selected{% endif %}>{{ 'reports.preset.thisMonth'|t('best-sellers') }}</option>
-				<option value="thisYear" {% if preset == 'thisYear' %}selected{% endif %}>{{ 'reports.preset.thisYear'|t('best-sellers') }}</option>
-				<option value="past7Days" {% if preset == 'past7Days' %}selected{% endif %}>{{ 'reports.preset.past7Days'|t('best-sellers') }}</option>
-				<option value="past30Days" {% if preset == 'past30Days' %}selected{% endif %}>{{ 'reports.preset.past30Days'|t('best-sellers') }}</option>
-				<option value="past90Days" {% if preset == 'past90Days' %}selected{% endif %}>{{ 'reports.preset.past90Days'|t('best-sellers') }}</option>
-				<option value="pastYear" {% if preset == 'pastYear' %}selected{% endif %}>{{ 'reports.preset.pastYear'|t('best-sellers') }}</option>
-			</select>
-		</div>
-
-		<input type="hidden" id="preset" name="preset" value="{{ preset|default('') }}">
-
-		<div style="flex: 1;">
-			<input type="text" id="from" name="from" value="{{ from }}" placeholder="{{ 'From'|t('app') }}" class="text fullwidth">
-		</div>
-
-		<div style="flex: 1;">
-			<input type="text" id="to" name="to" value="{{ to }}" placeholder="{{ 'To'|t('app') }}" class="text fullwidth">
-		</div>
-
-		<div style="align-self: flex-end;">
-			{{ forms.submitButton({
-				label: 'Update'|t('app')
-			}) }}
-		</div>
-	</form>
-{% endset %}
-
-{% set products = craft.commerce.products %}
-
-{% css %}
-	{% include 'best-sellers/_includes/plugin-footer-css' %}
-{% endcss %}
-
-{% set content %}
-	<main class="main-content">
-	<h2>{{ 'widgets.bestSellers.title'|t('best-sellers') }}</h2>
-	<br>
-	{% if items is empty %}
-		<p>{{ 'dashboard.noBestSellers'|t('best-sellers') }}</p>
 	{% else %}
-		<div class="main tablepane">
-			<table id="items" class="data fullwidth">
-				<thead>
-				{% if productsOrVariants == 'variants' %}
-					<th scope="col">{{ 'dashboard.col.variant'|t('best-sellers') }}</th>
-					<th scope="col">{{ 'SKU'|t('commerce') }}</th>
-					<th scope="col">{{ 'dashboard.col.totalSold'|t('best-sellers') }}</th>
-				{% else %}
-					<th scope="col">{{ 'products.col.product'|t('best-sellers') }}</th>
-					<th scope="col">{{ 'products.col.defaultSku'|t('best-sellers') }}</th>
-					<th scope="col">{{ 'Type'|t('app') }}</th>
-					<th scope="col">{{ 'dashboard.col.totalSold'|t('best-sellers') }}</th>
-				{% endif %}
-				</thead>
-				<tbody>
-				{% for item in items %}
-					<tr tabindex="0">
-						<td data-title="{{ 'dashboard.col.title'|t('best-sellers') }}">
-							{% set shownTitle = item.title|length > 100 ? item.title|slice(0, 100) ~ '…' : item.title %}
-							<span><a class="go" href="{{ item.url }}" title="{{ item.title }}">{{ shownTitle }}</a></span>
-						</td>
-						<td data-title="{{ 'Type'|t('app') }}">
-							{{ item.sku }}
-						</td>
-						{% if productsOrVariants == 'products' %}
-						<td data-title="{{ 'Type'|t('app') }}">
-							{{ item.type }}
-						</td>
-						{% endif %}
-						<td data-title="{{ 'Type'|t('app') }}">
-							{{ item.totalQtySold }}
-						</td>
-					</tr>
-				{% endfor %}
-				</tbody>
-			</table>
+	{# 1. Hero row #}
+	<div class="bs-section bs-section--hero">
+		{{ summaryBlock.render(summaries.orders) }}
+		<div class="bs-kpi-grid bs-kpi-grid--4">
+			{% for card in healthCheckCards %}
+				{{ kpi.card(card) }}
+			{% endfor %}
 		</div>
+		{% include 'best-sellers/_includes/widgets/overview-chart' %}
+	</div>
 
-		<div id="footer" class="flex">
-			<div id="count-container" class="light flex-grow">
-				{% include '_includes/pagination' with {
-					'pageInfo' : pagination,
-					'itemLabel' : 'dashboard.itemLabel'|t('best-sellers'),
-					'itemsLabel': 'dashboard.itemsLabel'|t('best-sellers')
-				} %}
-			</div>
+	{# 2. Discounts & Order Composition #}
+	<div class="bs-section bs-section--discounts">
+		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
+			<h3 class="bs-section__title" style="margin: 0;">{{ 'overview.section.discountsOrderComposition'|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/orders') }}" class="go" style="font-size: 0.85rem;">{{ 'overview.link.seeAllOrders'|t('best-sellers') }}</a>
 		</div>
+		{{ summaryBlock.render(summaries.discounts) }}
+		<div class="bs-kpi-grid bs-kpi-grid--3">
+			{% for card in discountCards %}
+				{{ kpi.card(card) }}
+			{% endfor %}
+		</div>
+		<div class="bs-columns">
+			{% include 'best-sellers/_includes/widgets/discounted-vs-fullprice' %}
+			{% include 'best-sellers/_includes/widgets/top-discounts' %}
+		</div>
+		<div class="bs-columns">
+			{% include 'best-sellers/_includes/widgets/items-per-order' %}
+			{% include 'best-sellers/_includes/widgets/shipping-methods' %}
+		</div>
+	</div>
+
+	{# 3. Customers & Retention #}
+	<div class="bs-section bs-section--customers">
+		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
+			<h3 class="bs-section__title" style="margin: 0;">{{ 'overview.section.customersRetention'|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/customers') }}" class="go" style="font-size: 0.85rem;">{{ 'overview.link.seeAllCustomers'|t('best-sellers') }}</a>
+		</div>
+		{{ summaryBlock.render(summaries.customers) }}
+		<div class="bs-kpi-grid bs-kpi-grid--3">
+			{% for card in customerCards %}
+				{{ kpi.card(card) }}
+			{% endfor %}
+		</div>
+		<div class="bs-columns">
+			{% include 'best-sellers/_includes/widgets/top-customers' %}
+			{% include 'best-sellers/_includes/widgets/ltv-table' %}
+		</div>
+		{% include 'best-sellers/_includes/widgets/new-vs-returning-chart' %}
+	</div>
+
+	{# 4. Product Performance #}
+	<div class="bs-section bs-section--products">
+		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
+			<h3 class="bs-section__title" style="margin: 0;">{{ 'overview.section.productPerformance'|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/products') }}" class="go" style="font-size: 0.85rem;">{{ 'overview.link.seeAllProducts'|t('best-sellers') }}</a>
+		</div>
+		{{ summaryBlock.render(summaries.products) }}
+		<div class="bs-kpi-grid bs-kpi-grid--{{ productCards|length }}">
+			{% for card in productCards %}
+				{{ kpi.card(card) }}
+			{% endfor %}
+		</div>
+		{% if bestSellers|length > 0 %}
+			{% include 'best-sellers/_includes/widgets/best-sellers-table' %}
+		{% endif %}
+	</div>
+
+	{# 5. Carts #}
+	<div class="bs-section bs-section--carts">
+		<h3 class="bs-section__title">{{ 'overview.section.carts'|t('best-sellers') }}</h3>
+		{{ summaryBlock.render(summaries.abandonment) }}
+		{% include 'best-sellers/_includes/widgets/cart-abandonment' %}
+		{% include 'best-sellers/_includes/widgets/top-abandoned-carts' %}
+	</div>
 	{% endif %}
-	</main>
-	{% include 'best-sellers/_includes/plugin-footer' %}
-{% endset %}
+{% endblock %}
 
+{% if hasData %}
 {% js %}
-	document.getElementById('product-type').addEventListener('change', function() {
-	document.getElementById('filter-form').submit();
+document.addEventListener('DOMContentLoaded', function () {
+	const labels = {{ dailyLabels|json_encode|raw }};
+	const ordersData = {{ dailyOrders|json_encode|raw }};
+	const revenueData = {{ dailyRevenue|json_encode|raw }};
+
+	// Sparklines
+	const sparklineMap = {{ sparklines|json_encode|raw }};
+	Object.keys(sparklineMap).forEach(function (id) {
+		BestSellersReports.createSparkline(id, sparklineMap[id]);
 	});
 
-	document.getElementById('products-or-variants').addEventListener('change', function() {
-	document.getElementById('filter-form').submit();
+	// New vs Returning chart
+	{% if newVsReturning.labels|length > 0 %}
+	const nvrLabels = {{ newVsReturning.labels|json_encode|raw }};
+	const nvrTimeScale = BestSellersReports.getTimeScale(nvrLabels);
+
+	new Chart(document.getElementById('newVsReturningChart').getContext('2d'), {
+		type: 'line',
+		data: {
+			labels: nvrLabels,
+			datasets: [
+				{
+					label: '{{ "overview.chart.new"|t("best-sellers") }}',
+					data: {{ newVsReturning.new|json_encode|raw }},
+					borderColor: '#27ae60',
+					backgroundColor: 'rgba(39, 174, 96, 0.1)',
+					fill: true,
+					cubicInterpolationMode: 'monotone',
+					pointRadius: nvrLabels.length === 1 ? 6 : 1,
+					borderWidth: 1.5
+				},
+				{
+					label: '{{ "overview.chart.returning"|t("best-sellers") }}',
+					data: {{ newVsReturning.returning|json_encode|raw }},
+					borderColor: '#0073aa',
+					backgroundColor: 'rgba(0, 115, 170, 0.1)',
+					fill: true,
+					cubicInterpolationMode: 'monotone',
+					pointRadius: nvrLabels.length === 1 ? 6 : 1,
+					borderWidth: 1.5
+				}
+			]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			interaction: { mode: 'index', intersect: false },
+			plugins: {
+					legend: { position: 'bottom' },
+					tooltip: {
+						callbacks: {
+							title: function (items) {
+								const date = new Date(items[0].parsed.x);
+								return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+							}
+						}
+					}
+				},
+			scales: {
+				x: {
+					type: 'time',
+					time: { unit: nvrTimeScale.unit, stepSize: nvrTimeScale.stepSize, displayFormats: { day: 'MMM d', month: 'MMM yyyy' }, tooltipFormat: 'MMM d, yyyy' }
+				},
+				y: { beginAtZero: true }
+			}
+		}
+	});
+	{% endif %}
+
+
+	// Toggle chart
+	const datasets = {
+		revenue: {
+			current: revenueData,
+			prev: {{ prevDailyRevenue|json_encode|raw }},
+			label: '{{ "Revenue"|t("commerce") }}',
+			prevLabel: '{{ "overview.chart.previousPeriod"|t("best-sellers") }}'
+		},
+		orders: {
+			current: ordersData,
+			prev: {{ prevDailyOrders|json_encode|raw }},
+			label: '{{ "Orders"|t("commerce") }}',
+			prevLabel: '{{ "overview.chart.previousPeriod"|t("best-sellers") }}'
+		},
+		aov: {
+			current: {{ dailyAov|json_encode|raw }},
+			prev: {{ prevDailyAov|json_encode|raw }},
+			label: '{{ "kpi.aov"|t("best-sellers") }}',
+			prevLabel: '{{ "overview.chart.previousPeriod"|t("best-sellers") }}'
+		}
+	};
+
+	if (labels.length > 0) {
+		const timeScale = BestSellersReports.getTimeScale(labels);
+		const ctx = document.getElementById('overviewChart').getContext('2d');
+
+		const overviewChart = new Chart(ctx, {
+			type: 'line',
+			data: {
+				labels: labels,
+				datasets: [
+					{
+						label: datasets.revenue.label,
+						data: datasets.revenue.current,
+						borderColor: '#0073aa',
+						backgroundColor: 'transparent',
+						fill: false,
+						cubicInterpolationMode: 'monotone',
+						pointRadius: labels.length === 1 ? 6 : 1,
+						borderWidth: 1.5
+					},
+					{
+						label: datasets.revenue.prevLabel,
+						data: datasets.revenue.prev,
+						borderColor: '#ccc',
+						backgroundColor: 'transparent',
+						borderDash: [5, 5],
+						cubicInterpolationMode: 'monotone',
+						pointRadius: 0,
+						borderWidth: 1.5
+					}
+				]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				interaction: { mode: 'index', intersect: false },
+				plugins: { legend: { position: 'bottom' } },
+				scales: {
+					x: {
+						type: 'time',
+						time: {
+							unit: timeScale.unit,
+							stepSize: timeScale.stepSize,
+							displayFormats: { day: 'MMM d', month: 'MMM yyyy' }
+						}
+					},
+					y: { beginAtZero: true }
+				}
+			}
+		});
+
+		document.querySelectorAll('.bs-segmented__btn').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				document.querySelectorAll('.bs-segmented__btn').forEach(function (b) {
+					b.classList.remove('bs-segmented__btn--active');
+				});
+				this.classList.add('bs-segmented__btn--active');
+
+				const key = this.getAttribute('data-chart');
+				const ds = datasets[key];
+				overviewChart.data.datasets[0].data = ds.current;
+				overviewChart.data.datasets[0].label = ds.label;
+				overviewChart.data.datasets[1].data = ds.prev;
+				overviewChart.data.datasets[1].label = ds.prevLabel;
+				overviewChart.update();
+			});
+		});
+	}
+	// Cart abandonment widget
+	const abandonmentData = {{ cartAbandonment|json_encode|raw }};
+	const abandonmentContainer = document.getElementById('cart-abandonment-content');
+	const anonymousToggle = document.getElementById('include-anonymous-carts');
+	let currentAbandonmentTab = 'overview';
+
+	function formatAbandonmentNumber(number) {
+		return Number(number).toLocaleString();
+	}
+
+	function formatAbandonmentCurrency(number) {
+		return BestSellersReports.formatCurrency(number);
+	}
+
+	function renderAbandonment() {
+		if (!abandonmentContainer || !abandonmentData) return;
+
+		const includeAnonymous = anonymousToggle && anonymousToggle.checked;
+		const data = abandonmentData;
+
+		// Calculate filtered totals
+		const totalAbandoned = includeAnonymous ? data.totalAbandoned : data.withCustomer;
+		const abandonedValue = includeAnonymous ? data.abandonedValue : data.abandonedValueWithEmail;
+		const totalCarts = totalAbandoned + data.totalCompleted;
+		const rate = totalCarts > 0 ? Math.round((totalAbandoned / totalCarts) * 1000) / 10 : 0;
+
+		let html = '';
+
+		const tabDescriptions = {
+			'overview': Craft.t('best-sellers', 'overview.abandonment.description.overview'),
+			'4-24h': Craft.t('best-sellers', 'overview.abandonment.description.range4to24h'),
+			'1-7d': Craft.t('best-sellers', 'overview.abandonment.description.range1to7d'),
+			'7d+': Craft.t('best-sellers', 'overview.abandonment.description.range7dPlus')
+		};
+
+		html += '<p style="font-size:0.85rem;color:#6c757d;margin:0 0 1rem;">' + tabDescriptions[currentAbandonmentTab] + '</p>';
+
+		if (currentAbandonmentTab === 'overview') {
+			html += '<div class="bs-kpi-grid" style="grid-template-columns: 1fr 1fr;">';
+			html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.rate') + '</p></div>';
+			html += '<p class="bs-kpi-card__value">' + rate + '%</p>';
+			html += '<p style="margin:0.5rem 0 0;font-size:0.8rem;color:#999;">' + Craft.t('best-sellers', 'overview.abandonment.outOf', { count: formatAbandonmentNumber(totalAbandoned), total: formatAbandonmentNumber(totalCarts) }) + '</p></div>';
+
+			html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.value') + '</p></div>';
+			html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(abandonedValue) + '</p></div>';
+			html += '</div>';
+
+			// Age breakdown
+			if (totalAbandoned > 0) {
+				html += '<div style="margin-top:1.5rem;">';
+				html += '<p class="bs-kpi-card__label" style="margin-bottom:0.5rem;">' + Craft.t('best-sellers', 'overview.abandonment.byAge') + '</p>';
+				html += '<div style="display:flex;height:24px;border-radius:4px;overflow:hidden;">';
+				const barColors = {'4-24h': 'rgba(0,115,170,0.4)', '1-7d': 'rgba(0,115,170,0.6)', '7d+': 'rgba(0,115,170,0.8)'};
+				const ageLabels = ['4-24h', '1-7d', '7d+'];
+				for (let ageIndex = 0; ageIndex < ageLabels.length; ageIndex++) {
+					const ageLabel = ageLabels[ageIndex];
+					const ageData = data.byAge[ageLabel];
+					const ageCount = includeAnonymous ? ageData.count : ageData.withCustomer;
+					const agePercent = totalAbandoned > 0 ? (ageCount / totalAbandoned * 100) : 0;
+					if (agePercent > 0) {
+						html += '<div style="width:' + agePercent + '%;background:' + barColors[ageLabel] + ';display:flex;align-items:center;justify-content:center;color:#fff;font-size:0.7rem;font-weight:600;" title="' + ageLabel + ': ' + ageCount + ' carts">';
+						if (agePercent > 8) html += ageLabel;
+						html += '</div>';
+					}
+				}
+				html += '</div>';
+				html += '<div style="display:flex;margin-top:0.4rem;font-size:0.8rem;color:#999;">';
+				for (let ageIndex2 = 0; ageIndex2 < ageLabels.length; ageIndex2++) {
+					const ageLabel2 = ageLabels[ageIndex2];
+					const ageData2 = data.byAge[ageLabel2];
+					const ageCount2 = includeAnonymous ? ageData2.count : ageData2.withCustomer;
+					const labelPercent = totalAbandoned > 0 ? (ageCount2 / totalAbandoned * 100) : 0;
+					html += '<span style="width:' + labelPercent + '%;text-align:center;">' + formatAbandonmentNumber(ageCount2) + '</span>';
+				}
+				html += '</div></div>';
+			}
+		} else {
+			// Specific age tab
+			const selectedAge = data.byAge[currentAbandonmentTab];
+			if (selectedAge) {
+				const tabCount = includeAnonymous ? selectedAge.count : selectedAge.withCustomer;
+				const tabValue = includeAnonymous ? selectedAge.value : selectedAge.valueWithEmail;
+
+				html += '<div class="bs-kpi-grid bs-kpi-grid--3">';
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.carts') + '</p></div>';
+				html += '<p class="bs-kpi-card__value">' + formatAbandonmentNumber(tabCount) + '</p></div>';
+
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.value') + '</p></div>';
+				html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(tabValue || 0) + '</p></div>';
+
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.avgCartValue') + '</p></div>';
+				html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(tabCount > 0 ? (tabValue || 0) / tabCount : 0) + '</p></div>';
+				html += '</div>';
+			}
+		}
+
+		abandonmentContainer.innerHTML = html;
+	}
+
+	// Tab switching
+	document.querySelectorAll('[data-abandonment-tab]').forEach(function (tabButton) {
+		tabButton.addEventListener('click', function () {
+			currentAbandonmentTab = this.getAttribute('data-abandonment-tab');
+			document.querySelectorAll('[data-abandonment-tab]').forEach(function (button) {
+				button.classList.remove('bs-segmented__btn--active');
+			});
+			this.classList.add('bs-segmented__btn--active');
+			renderAbandonment();
+		});
 	});
 
-	document.addEventListener('DOMContentLoaded', function() {
-	const presetSelector = document.getElementById('date-presets');
-	const fromInput = document.getElementById('from');
-	const toInput = document.getElementById('to');
-	const presetHidden = document.getElementById('preset');
+	// Anonymous toggle
+	if (anonymousToggle) {
+		anonymousToggle.addEventListener('change', renderAbandonment);
+	}
 
-	presetSelector.addEventListener('change', function() {
-	const preset = this.value;
-	const now = new Date();
-	let fromVal = '';
-	let toVal = '';
+	renderAbandonment();
 
-	switch(preset) {
-	case 'today':
-	fromVal = toVal = now.toISOString().split('T')[0];
-	break;
-	case 'thisWeek': {
-	const day = now.getDay() || 7; // treat Sunday as 7
-	const monday = new Date(now);
-	monday.setDate(now.getDate() - day + 1);
-	const sunday = new Date(now);
-	sunday.setDate(now.getDate() + (7 - day));
-	fromVal = monday.toISOString().split('T')[0];
-	toVal = sunday.toISOString().split('T')[0];
-	break;
-	}
-	case 'thisMonth': {
-	const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-	const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-	fromVal = firstDay.toISOString().split('T')[0];
-	toVal = lastDay.toISOString().split('T')[0];
-	break;
-	}
-	case 'thisYear': {
-	const firstDay = new Date(now.getFullYear(), 0, 1);
-	const lastDay = new Date(now.getFullYear(), 11, 31);
-	fromVal = firstDay.toISOString().split('T')[0];
-	toVal = lastDay.toISOString().split('T')[0];
-	break;
-	}
-	case 'past7Days': {
-	const past = new Date(now);
-	past.setDate(now.getDate() - 7);
-	fromVal = past.toISOString().split('T')[0];
-	toVal = now.toISOString().split('T')[0];
-	break;
-	}
-	case 'past30Days': {
-	const past = new Date(now);
-	past.setDate(now.getDate() - 30);
-	fromVal = past.toISOString().split('T')[0];
-	toVal = now.toISOString().split('T')[0];
-	break;
-	}
-	case 'past90Days': {
-	const past = new Date(now);
-	past.setDate(now.getDate() - 90);
-	fromVal = past.toISOString().split('T')[0];
-	toVal = now.toISOString().split('T')[0];
-	break;
-	}
-	case 'pastYear': {
-	const past = new Date(now);
-	past.setFullYear(now.getFullYear() - 1);
-	fromVal = past.toISOString().split('T')[0];
-	toVal = now.toISOString().split('T')[0];
-	break;
-	}
-	default:
-	fromVal = fromInput.value;
-	toVal = toInput.value;
-	}
-	fromInput.value = fromVal;
-	toInput.value = toVal;
-	presetHidden.value = preset;
+	// Items per order chart (with clickable bars)
+	{% if itemsPerOrder.counts|length > 0 %}
+	const ipoLabels = {{ itemsPerOrder.labels|json_encode|raw }};
+	const ipoChart = new Chart(document.getElementById('itemsPerOrderChart').getContext('2d'), {
+		type: 'bar',
+		data: {
+			labels: ipoLabels,
+			datasets: [{
+				label: '{{ "Orders"|t("commerce") }}',
+				data: {{ itemsPerOrder.counts|json_encode|raw }},
+				backgroundColor: 'rgba(0, 115, 170, 0.6)',
+				borderColor: '#0073aa',
+				borderWidth: 1
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: { legend: { display: false } },
+			scales: {
+				x: { title: { display: true, text: '{{ "Items"|t("commerce") }}' } },
+				y: { beginAtZero: true, title: { display: true, text: '{{ "Orders"|t("commerce") }}' } }
+			},
+			onClick: function (evt) {
+				const points = ipoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
+				if (points.length > 0) {
+					const bucket = ipoLabels[points[0].index];
+					window.location.href = '{{ cpUrl("best-sellers/orders") }}' + '?itemsPerOrder=' + encodeURIComponent(bucket);
+				}
+			},
+			onHover: function (evt, elements) {
+				evt.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+			}
+		}
 	});
+	{% endif %}
+
+	// Copy-to-clipboard for cart restore links
+	document.querySelectorAll('.bs-copy-link').forEach(function (link) {
+		link.addEventListener('click', function (e) {
+			e.preventDefault();
+			const url = this.getAttribute('data-url');
+			const el = this;
+			navigator.clipboard.writeText(url).then(function () {
+				const original = el.textContent;
+				el.textContent = '{{ "overview.copied"|t("best-sellers") }}';
+				setTimeout(function () { el.textContent = original; }, 1500);
+			});
+		});
 	});
+
+	// Anonymous cart toggle for abandoned carts table
+	const anonToggle = document.getElementById('include-anonymous-abandoned');
+	if (anonToggle) {
+		// Default: hide anonymous rows
+		function filterAbandonedRows() {
+			const rows = document.querySelectorAll('#abandoned-carts-table tbody tr');
+			const showAnon = anonToggle.checked;
+			let visibleCount = 0;
+			let visibleTotal = 0;
+			const maxVisible = 5;
+			rows.forEach(function (row) {
+				const isAnon = row.getAttribute('data-anonymous') === 'true';
+				if ((isAnon && !showAnon) || visibleCount >= maxVisible) {
+					row.style.display = 'none';
+				} else {
+					row.style.display = '';
+					visibleCount++;
+					visibleTotal += parseFloat(row.getAttribute('data-value') || '0');
+				}
+			});
+			const countEl = document.getElementById('abandoned-carts-count');
+			if (countEl) {
+				countEl.textContent = visibleCount + ' {{ "overview.cartsCount"|t("best-sellers") }}';
+			}
+			const totalEl = document.getElementById('abandoned-carts-total');
+			if (totalEl) {
+				totalEl.textContent = BestSellersReports.formatCurrency(visibleTotal);
+			}
+		}
+		anonToggle.addEventListener('change', filterAbandonedRows);
+		filterAbandonedRows();
+	}
+});
 {% endjs %}
+{% endif %}

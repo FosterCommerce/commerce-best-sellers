@@ -313,7 +313,7 @@ return [
 	'widgets.topCustomers.title' => 'Top Customers by Revenue',
 	'widgets.topCustomers.empty' => 'No customer data available.',
 
-	// Extra KPI cards built directly by OverviewController
+	// Extra KPI cards built directly by DashboardController
 	'kpi.avgCustomerLtv' => 'Avg Customer LTV',
 	'kpi.uniqueProductsSold' => 'Unique Products Sold',
 	'kpi.productRevenue' => 'Product Revenue',

@@ -159,9 +159,9 @@ class Plugin extends BasePlugin
 		$navItem['url'] = 'best-sellers';
 
 		$subnav = [
-			'overview' => [
+			'dashboard' => [
 				'label' => Craft::t('app', 'Dashboard'),
-				'url' => 'best-sellers/',
+				'url' => 'best-sellers',
 			],
 			'orders' => [
 				'label' => Craft::t('commerce', 'Orders'),
@@ -388,7 +388,7 @@ class Plugin extends BasePlugin
 			UrlManager::class,
 			UrlManager::EVENT_REGISTER_CP_URL_RULES,
 			static function (RegisterUrlRulesEvent $registerUrlRulesEvent): void {
-				$registerUrlRulesEvent->rules['best-sellers'] = 'best-sellers/overview';
+				$registerUrlRulesEvent->rules['best-sellers'] = 'best-sellers/dashboard';
 				$registerUrlRulesEvent->rules['best-sellers/orders'] = 'best-sellers/orders';
 				$registerUrlRulesEvent->rules['best-sellers/orders/orders-data'] = 'best-sellers/orders/orders-data';
 				$registerUrlRulesEvent->rules['best-sellers/orders/export-csv'] = 'best-sellers/orders/export-csv';
@@ -407,11 +407,6 @@ class Plugin extends BasePlugin
 				$registerUrlRulesEvent->rules['best-sellers/operations/clear-logs'] = 'best-sellers/operations/clear-logs';
 				$registerUrlRulesEvent->rules['best-sellers/settings'] = 'best-sellers/settings/index';
 				$registerUrlRulesEvent->rules['best-sellers/settings/save'] = 'best-sellers/settings/save';
-
-				// Backward compatibility redirects
-				$registerUrlRulesEvent->rules['best-sellers/reports'] = 'best-sellers/orders';
-				$registerUrlRulesEvent->rules['best-sellers/sales'] = 'best-sellers/orders';
-				$registerUrlRulesEvent->rules['best-sellers/dashboard'] = 'best-sellers/products';
 			}
 		);
 	}

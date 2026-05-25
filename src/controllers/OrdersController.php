@@ -107,7 +107,7 @@ class OrdersController extends BaseReportController
 			? $commerce->getPdfs()->getAllEnabledPdfs($primaryStore->id)
 			: new Collection();
 
-		return $this->renderTemplate('best-sellers/_sales', [
+		return $this->renderTemplate('best-sellers/_orders', [
 			'title' => Craft::t('commerce', 'Orders'),
 			'selectedSubnavItem' => 'orders',
 			'from' => $scope->from,
@@ -181,7 +181,7 @@ class OrdersController extends BaseReportController
 			throw new BadRequestHttpException(Craft::t('best-sellers', 'orders.bulk.error.noMatchingOrders'));
 		}
 
-		return Craft::$app->getResponse();
+		return $this->response;
 	}
 
 	/**

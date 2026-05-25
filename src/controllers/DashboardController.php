@@ -4,184 +4,195 @@ namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
 use craft\commerce\elements\Product;
-use craft\commerce\elements\Variant;
 use craft\commerce\Plugin as Commerce;
 use craft\helpers\DateTimeHelper;
-use craft\web\Controller;
-use craft\web\Request;
-use craft\web\twig\variables\Paginate;
-use DateTime;
-use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
-use fostercommerce\bestsellers\behaviors\SalesBehavior;
-use fostercommerce\bestsellers\helpers\VariantTitleHelper;
+use fostercommerce\bestsellers\assetbundles\ReportsAsset;
+use fostercommerce\bestsellers\helpers\KpiCards;
 use fostercommerce\bestsellers\Plugin;
-use yii\base\Action;
-use yii\base\InvalidConfigException;
+use fostercommerce\bestsellers\records\VariantSale;
 use yii\web\Response;
 
-class DashboardController extends Controller
+class DashboardController extends BaseReportController
 {
-	final public const ITEMS_PER_PAGE = 20;
-
-	protected array|bool|int $allowAnonymous = false;
-
-	/**
-	 * @param Action<static> $action
-	 */
-	public function beforeAction($action): bool
-	{
-		if (! parent::beforeAction($action)) {
-			return false;
-		}
-
-		$this->requirePermission(Plugin::PERMISSION_VIEW_REPORTS);
-
-		return true;
-	}
-
-	/**
-	 * @throws InvalidConfigException
-	 */
 	public function actionIndex(): Response
 	{
-		/** @var Request $request */
-		$request = Craft::$app->getRequest();
+		$view = Craft::$app->getView();
+		$view->registerAssetBundle(ReportsAsset::class);
 
-		$defaultFromDt = new DateTime('-1 month');
-		$defaultToDt = new DateTime('now');
+		$scope = $this->resolveScope();
+		$plugin = Plugin::getInstance();
+		$dailyStats = $plugin->dailyStats;
 
-		$rawPreset = $request->getQueryParam('preset', '');
-		$preset = is_string($rawPreset) ? $rawPreset : '';
+		// DailyStats uses pre-aggregated data (does not filter by status)
+		$stats = $dailyStats->getStatsForRange($scope->from, $scope->to);
+		$prevStats = $dailyStats->getStatsForRange($scope->getPrev()->from, $scope->getPrev()->to);
 
-		$rawFromInput = $request->getQueryParam('from', $defaultFromDt->format('Y-m-d'));
-		$fromInput = is_string($rawFromInput) ? $rawFromInput : $defaultFromDt->format('Y-m-d');
+		// Health Check hero row
+		$healthCheckKeys = ['revenue', 'orders', 'aov', 'repeatRate'];
+		$healthCheckCards = KpiCards::build($stats, $prevStats, $healthCheckKeys, $this->percentChange(...));
 
-		$rawToInput = $request->getQueryParam('to', $defaultToDt->format('Y-m-d'));
-		$toInput = is_string($rawToInput) ? $rawToInput : $defaultToDt->format('Y-m-d');
+		// Discounts section
+		$discountKeys = ['totalDiscount', 'itemsSold', 'avgItemsPerOrder'];
+		$discountCards = KpiCards::build($stats, $prevStats, $discountKeys, $this->percentChange(...));
 
-		$from = trim($fromInput);
-		$to = trim($toInput);
+		// Discount & order composition widgets
+		$operationsStats = $plugin->operationsStats;
+		$discountedVsFullPrice = $operationsStats->getDiscountedVsFullPrice($scope);
+		$topDiscounts = $operationsStats->getTopDiscounts($scope);
+		$itemsPerOrder = $operationsStats->getItemsPerOrderDistribution($scope);
+		$shippingMethods = $operationsStats->getShippingMethods($scope);
 
-		$fromDtObj = DateTimeHelper::toDateTime($from) ?: clone $defaultFromDt;
-		$fromDtObj->setTime(0, 0, 0);
+		// Customers & Retention section
+		$customerKeys = ['customers', 'newCustomers'];
+		$customerCards = KpiCards::build($stats, $prevStats, $customerKeys, $this->percentChange(...));
 
-		$fromDT = $fromDtObj->format('Y-m-d H:i:s');
+		// LTV card (built manually since it comes from LtvComparison, not PeriodStats)
+		$customerStats = $plugin->customerStats;
+		$ltvComparison = $customerStats->getLtvComparison($scope);
+		$prevScope = $scope->forDates($scope->getPrev()->from, $scope->getPrev()->to);
+		$prevLtvComparison = $customerStats->getLtvComparison($prevScope);
 
-		$toDtObj = DateTimeHelper::toDateTime($to) ?: clone $defaultToDt;
-		$toDtObj->setTime(23, 59, 59);
+		$totalCustomers = ($ltvComparison->credentialed->count ?? 0) + ($ltvComparison->guest->count ?? 0);
+		$totalRevenueLtv = ($ltvComparison->credentialed->totalRevenue ?? 0) + ($ltvComparison->guest->totalRevenue ?? 0);
+		$avgLtv = $totalCustomers > 0 ? $totalRevenueLtv / $totalCustomers : 0;
 
-		$toDT = $toDtObj->format('Y-m-d H:i:s');
+		$prevTotalCustomers = ($prevLtvComparison->credentialed->count ?? 0) + ($prevLtvComparison->guest->count ?? 0);
+		$prevTotalRevenueLtv = ($prevLtvComparison->credentialed->totalRevenue ?? 0) + ($prevLtvComparison->guest->totalRevenue ?? 0);
+		$prevAvgLtv = $prevTotalCustomers > 0 ? $prevTotalRevenueLtv / $prevTotalCustomers : 0;
 
-		$rawProductsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
-		$productsOrVariants = is_string($rawProductsOrVariants) ? $rawProductsOrVariants : 'products';
-		$fetchVariants = $productsOrVariants === 'variants';
+		$customerCards[] = [
+			'label' => Craft::t('best-sellers', 'kpi.avgCustomerLtv'),
+			'value' => $avgLtv,
+			'change' => $this->percentChange($avgLtv, $prevAvgLtv),
+			'format' => 'currency',
+		];
 
-		$rawProductType = $request->getQueryParam('productType', 'all');
-		$productType = is_string($rawProductType) ? $rawProductType : 'all';
+		// Sparkline data for all card keys
+		$allKeys = array_merge($healthCheckKeys, $discountKeys, $customerKeys);
+		$sparklines = [];
+		foreach (KpiCards::sparklineColumns($allKeys) as $id => $column) {
+			$sparklines[$id] = $dailyStats->getSparklineData($column, $scope->from, $scope->to);
+		}
 
-		if ($fetchVariants) {
-			$query = Variant::find();
-			if ($productType !== 'all') {
-				$productTypeId = Commerce::getInstance()
-					?->productTypes
-					->getProductTypeByHandle($productType)
-					?->id;
-				$query->typeId($productTypeId);
-			}
-		} else {
-			$query = Product::find();
-			if ($productType !== 'all') {
-				$query->type($productType);
+		// Top customers
+		$topCustomers = $customerStats->getTopCustomers($scope, 5);
+
+		// Customer charts
+		$newVsReturning = $customerStats->getNewVsReturningByDay($scope);
+
+		// Cart abandonment
+		$cartAbandonment = $plugin->cartAbandonment->getAbandonmentStats($scope);
+		$topAbandonedCarts = $plugin->cartAbandonment->getTopAbandonedCarts($scope, 100);
+
+		// Commerce cart settings
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		$commerceSettings = $commerce->getSettings();
+		$activeCartDuration = DateTimeHelper::humanDuration($commerceSettings->activeCartDuration);
+		$purgeEnabled = $commerceSettings->purgeInactiveCarts;
+		$purgeDuration = $purgeEnabled ? DateTimeHelper::humanDuration($commerceSettings->purgeInactiveCartsDuration) : null;
+
+		// Products section
+		$productStats = $plugin->productStats;
+		$productSummary = $productStats->getSummaryStats($scope);
+		$prevProductSummary = $productStats->getSummaryStats($prevScope);
+		$bestSellers = $productStats->getTopProducts($scope, 'units', 10);
+
+		// Batch-load product elements for CP URLs
+		$bestSellerProductIds = array_unique(array_column($bestSellers, 'productId'));
+		$bestSellerElements = [];
+		if ($bestSellerProductIds !== []) {
+			$productElements = Product::find()->id($bestSellerProductIds)->status(null)->all();
+			foreach ($productElements as $productElement) {
+				$bestSellerElements[$productElement->id] = $productElement;
 			}
 		}
 
-		/** @var SaleQueryBehavior<array-key, Product|Variant> $bestSellersBehavior */
-		$bestSellersBehavior = $query->getBehavior('bestSellers');
-		$bestSellersBehavior->bestSellers($fromDT, $toDT);
-
-		/** @var array<array-key, string> $selectedStatuses */
-		$selectedStatuses = (array) $request->getQueryParam('orderStatuses', []);
-		if (! empty($selectedStatuses)) {
-			$query->andWhere([
-				'orderStatus' => $selectedStatuses,
-			]);
-		}
-
-		$query->andWhere([
-			'not', [
-				'totalQtySold' => null,
+		$productCards = [
+			[
+				'label' => Craft::t('best-sellers', 'kpi.uniqueProductsSold'),
+				'value' => $productSummary->uniqueProducts,
+				'change' => $this->percentChange($productSummary->uniqueProducts, $prevProductSummary->uniqueProducts),
+				'format' => 'number',
 			],
-		])->orderBy([
-			'totalQtySold' => SORT_DESC,
-		]);
-
-		$pageNum = $request->getPageNum();
-		$offset = (self::ITEMS_PER_PAGE * ($pageNum - 1));
-		/** @var int $total */
-		$total = $query->count();
-
-		$map = static function (Product|Variant $element) use ($fetchVariants): array {
-			if ($fetchVariants) {
-				/** @var (Variant & SalesBehavior) $element */
-				/** @var ?Product $product */
-				$product = $element->getOwner();
-				$totalQtySold = (int) ($element->totalQtySold ?? 0);
-				$displayTitle = VariantTitleHelper::buildDisplayTitle($product?->title ?? '', $element->title);
-				return [
-					'url' => $product?->getCpEditUrl(),
-					'title' => $displayTitle,
-					'sku' => $element->sku,
-					'totalQtySold' => $totalQtySold,
-					'type' => $product?->getType()->name,
-				];
-			}
-
-			/** @var Product $element */
-			$totalQtySold = (int) ($element->totalQtySold ?? 0);
-			return [
-				'url' => $element->getCpEditUrl(),
-				'title' => $element->title,
-				'sku' => $element->defaultSku,
-				'totalQtySold' => $totalQtySold,
-				'type' => $element->getType()->name,
-			];
-		};
-
-		$query->andWhere([
-			'not', [
-				'totalQtySold' => null,
+			[
+				'label' => Craft::t('best-sellers', 'kpi.productRevenue'),
+				'value' => $productSummary->totalProductRevenue,
+				'change' => $this->percentChange($productSummary->totalProductRevenue, $prevProductSummary->totalProductRevenue),
+				'format' => 'currency',
 			],
-		]);
+		];
 
-		/** @var array<int, Product|Variant> $elements */
-		$elements = $query
-			->limit(self::ITEMS_PER_PAGE)
-			->offset($offset)
-			->all();
+		// Summaries
+		$summaryResult = $plugin->summaryEngine->generate($scope);
 
-		$page = array_map($map, $elements);
+		// Daily chart data
+		$dailyRows = $dailyStats->getDailyRows($scope->from, $scope->to);
+		$dailyLabels = array_column($dailyRows, 'date');
+		/** @var list<string> $rawOrders */
+		$rawOrders = array_column($dailyRows, 'totalOrders');
+		$dailyOrders = array_map(intval(...), $rawOrders);
+		/** @var list<string> $rawRevenue */
+		$rawRevenue = array_column($dailyRows, 'totalRevenue');
+		$dailyRevenue = array_map(floatval(...), $rawRevenue);
+		/** @var list<string> $rawAov */
+		$rawAov = array_column($dailyRows, 'averageOrderValue');
+		$dailyAov = array_map(floatval(...), $rawAov);
 
-		$pagination = Craft::createObject([
-			'class' => Paginate::class,
-			'first' => $offset + 1,
-			'last' => min($offset + self::ITEMS_PER_PAGE, $total),
-			'total' => $total,
-			'currentPage' => $pageNum,
-			'totalPages' => ceil($total / self::ITEMS_PER_PAGE),
-		]);
+		// Previous period
+		$prevDailyRows = $dailyStats->getDailyRows($scope->getPrev()->from, $scope->getPrev()->to);
+		/** @var list<string> $prevRawOrders */
+		$prevRawOrders = array_column($prevDailyRows, 'totalOrders');
+		$prevDailyOrders = array_map(intval(...), $prevRawOrders);
+		/** @var list<string> $prevRawRevenue */
+		$prevRawRevenue = array_column($prevDailyRows, 'totalRevenue');
+		$prevDailyRevenue = array_map(floatval(...), $prevRawRevenue);
+		/** @var list<string> $prevRawAov */
+		$prevRawAov = array_column($prevDailyRows, 'averageOrderValue');
+		$prevDailyAov = array_map(floatval(...), $prevRawAov);
 
-		$titleText = $productsOrVariants === 'variants' ? Craft::t('commerce', 'Variants') : Craft::t('commerce', 'Products');
+		$hasData = VariantSale::find()->exists();
 
 		return $this->renderTemplate('best-sellers/_dashboard', [
-			'items' => $page,
-			'title' => $titleText,
-			'from' => $from,
-			'to' => $to,
-			'preset' => $preset,
-			'productType' => $productType,
-			'productsOrVariants' => $productsOrVariants,
-			'pagination' => $pagination,
-			'selectedStatuses' => $selectedStatuses,
+			'title' => Craft::t('app', 'Dashboard'),
+			'selectedSubnavItem' => 'dashboard',
+			'hasData' => $hasData,
+			'from' => $scope->from,
+			'to' => $scope->to,
+			'preset' => $scope->preset,
+			'scope' => $scope,
+			// Section cards
+			'healthCheckCards' => $healthCheckCards,
+			'discountCards' => $discountCards,
+			'discountedVsFullPrice' => $discountedVsFullPrice,
+			'topDiscounts' => $topDiscounts,
+			'itemsPerOrder' => $itemsPerOrder,
+			'shippingMethods' => $shippingMethods,
+			'customerCards' => $customerCards,
+			'productCards' => $productCards,
+			// Sparklines
+			'sparklines' => $sparklines,
+			// Chart data
+			'dailyLabels' => $dailyLabels,
+			'dailyOrders' => $dailyOrders,
+			'dailyRevenue' => $dailyRevenue,
+			'dailyAov' => $dailyAov,
+			'prevDailyOrders' => $prevDailyOrders,
+			'prevDailyRevenue' => $prevDailyRevenue,
+			'prevDailyAov' => $prevDailyAov,
+			// Widgets
+			'bestSellers' => $bestSellers,
+			'bestSellerElements' => $bestSellerElements,
+			'topCustomers' => $topCustomers,
+			'newVsReturning' => $newVsReturning,
+			'ltvComparison' => $ltvComparison,
+			'cartAbandonment' => $cartAbandonment,
+			'topAbandonedCarts' => $topAbandonedCarts,
+			'activeCartDuration' => $activeCartDuration,
+			'purgeEnabled' => $purgeEnabled,
+			'purgeDuration' => $purgeDuration,
+			// Summaries
+			'summaries' => $summaryResult,
 		]);
 	}
 }

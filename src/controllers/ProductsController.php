@@ -35,7 +35,7 @@ class ProductsController extends BaseReportController
 		$sortBy = $request->getQueryParam('sortBy', 'revenue');
 
 		return $this->renderTemplate('best-sellers/_products', [
-			'title' => Craft::t('best-sellers', 'Products'),
+			'title' => Craft::t('commerce', 'Products'),
 			'selectedSubnavItem' => 'products',
 			'from' => $dateRange->from,
 			'to' => $dateRange->to,
@@ -272,14 +272,14 @@ class ProductsController extends BaseReportController
 		];
 
 		return $this->asCsv($csvRows, [
-			Craft::t('best-sellers', 'Product'),
-			Craft::t('best-sellers', 'SKU'),
-			Craft::t('best-sellers', 'Type'),
-			Craft::t('best-sellers', 'Units Sold'),
-			Craft::t('best-sellers', 'Orders'),
-			Craft::t('best-sellers', 'Item Subtotal'),
-			Craft::t('best-sellers', 'Item Sales (Net)'),
-			Craft::t('best-sellers', 'Avg Price'),
+			Craft::t('best-sellers', 'products.col.product'),
+			Craft::t('commerce', 'SKU'),
+			Craft::t('app', 'Type'),
+			Craft::t('best-sellers', 'products.col.unitsSold'),
+			Craft::t('commerce', 'Orders'),
+			Craft::t('commerce', 'Item Subtotal'),
+			Craft::t('best-sellers', 'products.col.itemSalesNet'),
+			Craft::t('best-sellers', 'products.col.avgPrice'),
 		], 'products');
 	}
 
@@ -304,7 +304,7 @@ class ProductsController extends BaseReportController
 		$variantId = (int) $variantId;
 
 		if ($productId === 0 && $variantId === 0) {
-			throw new BadRequestHttpException(Craft::t('best-sellers', 'productId or variantId is required.'));
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'productOrders.error.idRequired'));
 		}
 
 		/** @var array{productTitle: string, variantTitle: string}|null $titleRow */

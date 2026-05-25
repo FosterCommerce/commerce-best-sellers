@@ -120,16 +120,16 @@ class Plugin extends BasePlugin
 			UserPermissions::EVENT_REGISTER_PERMISSIONS,
 			static function (RegisterUserPermissionsEvent $event): void {
 				$event->permissions[] = [
-					'heading' => Craft::t('best-sellers', 'Best Sellers'),
+					'heading' => Craft::t('best-sellers', 'nav.bestSellers'),
 					'permissions' => [
 						self::PERMISSION_VIEW_REPORTS => [
-							'label' => Craft::t('best-sellers', 'View reports'),
+							'label' => Craft::t('best-sellers', 'permissions.viewReports'),
 						],
 						self::PERMISSION_BACKFILL => [
-							'label' => Craft::t('best-sellers', 'Backfill order data'),
+							'label' => Craft::t('best-sellers', 'permissions.backfillOrderData'),
 						],
 						self::PERMISSION_MANAGE_SETTINGS => [
-							'label' => Craft::t('best-sellers', 'Manage plugin settings'),
+							'label' => Craft::t('best-sellers', 'permissions.manageSettings'),
 						],
 					],
 				];
@@ -155,39 +155,39 @@ class Plugin extends BasePlugin
 		}
 
 		$navItem = parent::getCpNavItem();
-		$navItem['label'] = Craft::t('best-sellers', 'Best Sellers');
+		$navItem['label'] = Craft::t('best-sellers', 'nav.bestSellers');
 		$navItem['url'] = 'best-sellers';
 
 		$subnav = [
 			'overview' => [
-				'label' => Craft::t('best-sellers', 'Dashboard'),
+				'label' => Craft::t('app', 'Dashboard'),
 				'url' => 'best-sellers/',
 			],
 			'orders' => [
-				'label' => Craft::t('best-sellers', 'Orders'),
+				'label' => Craft::t('commerce', 'Orders'),
 				'url' => 'best-sellers/orders',
 			],
 			'transactions' => [
-				'label' => Craft::t('best-sellers', 'Transactions'),
+				'label' => Craft::t('commerce', 'Transactions'),
 				'url' => 'best-sellers/transactions',
 			],
 			'products' => [
-				'label' => Craft::t('best-sellers', 'Products'),
+				'label' => Craft::t('commerce', 'Products'),
 				'url' => 'best-sellers/products',
 			],
 			'customers' => [
-				'label' => Craft::t('best-sellers', 'Customers'),
+				'label' => Craft::t('best-sellers', 'nav.customers'),
 				'url' => 'best-sellers/customers',
 			],
 			'operations' => [
-				'label' => Craft::t('best-sellers', 'Operations'),
+				'label' => Craft::t('best-sellers', 'nav.operations'),
 				'url' => 'best-sellers/operations',
 			],
 		];
 
 		if (Craft::$app->getUser()->checkPermission(self::PERMISSION_MANAGE_SETTINGS)) {
 			$subnav['settings'] = [
-				'label' => Craft::t('best-sellers', 'Settings'),
+				'label' => Craft::t('app', 'Settings'),
 				'url' => 'best-sellers/settings',
 			];
 		}

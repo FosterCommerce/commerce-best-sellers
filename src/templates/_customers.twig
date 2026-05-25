@@ -1,20 +1,20 @@
 {% extends 'best-sellers/_layouts/reports' %}
 
-{% set title = "Customers"|t('best-sellers') %}
+{% set title = 'nav.customers'|t('best-sellers') %}
 {% set selectedSubnavItem = 'customers' %}
 
 {% block reportContent %}
 	{# Filters #}
 	<div class="bs-filter-bar bs-filter-bar--spaced">
 		<div class="bs-multiselect" id="customer-type-multiselect">
-			<button type="button" class="bs-multiselect__btn" data-label="{{ 'Customer Type'|t('best-sellers') }}">{{ "Customer Type"|t('best-sellers') }}</button>
+			<button type="button" class="bs-multiselect__btn" data-label="{{ 'customers.filter.customerType'|t('best-sellers') }}">{{ 'customers.filter.customerType'|t('best-sellers') }}</button>
 			<div class="bs-multiselect__dropdown">
-				<label><input type="checkbox" value="credentialed"> {{ "Credentialed"|t('best-sellers') }}</label>
-				<label><input type="checkbox" value="guest"> {{ "Guest"|t('best-sellers') }}</label>
+				<label><input type="checkbox" value="credentialed"> {{ 'customers.filter.credentialed'|t('best-sellers') }}</label>
+				<label><input type="checkbox" value="guest"> {{ 'customers.filter.guest'|t('best-sellers') }}</label>
 			</div>
 		</div>
 		<div class="bs-filter-bar__item">
-			<input type="text" id="customer-search" class="text fullwidth" placeholder="{{ 'Search customers...'|t('best-sellers') }}" autocomplete="off">
+			<input type="text" id="customer-search" class="text fullwidth" placeholder="{{ 'customers.filter.searchPlaceholder'|t('best-sellers') }}" autocomplete="off">
 		</div>
 		<span id="customers-export"></span>
 	</div>
@@ -22,7 +22,7 @@
 	{# Loading State #}
 	<div id="customers-loading" class="bs-loading">
 		<div class="bs-loading__spinner"></div>
-		<p class="bs-loading__message">{{ "Crunching numbers at elf speed..."|t('best-sellers') }}</p>
+		<p class="bs-loading__message">{{ 'customers.loading'|t('best-sellers') }}</p>
 	</div>
 
 	{# Customers Table (hidden until loaded) #}
@@ -32,12 +32,12 @@
 			<table class="bs-data-table" id="customers-table">
 				<thead>
 					<tr>
-						<th data-sort="email">{{ "Email"|t('best-sellers') }}</th>
-						<th data-sort="status">{{ "Status"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" data-sort="orderCount">{{ "# Orders"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" data-sort="totalSpent">{{ "Total Spent"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" data-sort="aov">{{ "AOV"|t('best-sellers') }}</th>
-						<th data-sort="lastOrder">{{ "Last Purchase"|t('best-sellers') }}</th>
+						<th data-sort="email">{{ 'Email'|t('app') }}</th>
+						<th data-sort="status">{{ 'Status'|t('app') }}</th>
+						<th class="bs-data-table--right" data-sort="orderCount">{{ 'customers.col.orderCount'|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="totalSpent">{{ 'customers.col.totalSpent'|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="aov">{{ 'kpi.aov'|t('best-sellers') }}</th>
+						<th data-sort="lastOrder">{{ 'customers.col.lastPurchase'|t('best-sellers') }}</th>
 					</tr>
 				</thead>
 				<tbody id="customers-tbody"></tbody>
@@ -46,13 +46,13 @@
 		<div id="customers-pagination" class="bs-pagination"></div>
 
 		<details class="bs-data-notes">
-			<summary>{{ "About these numbers"|t('best-sellers') }}</summary>
+			<summary>{{ 'table.aboutTheseNumbers'|t('best-sellers') }}</summary>
 			<ul>
-				<li>{{ "Customers are grouped by email. A guest checkout and a logged-in checkout that share an email appear as one row."|t('best-sellers') }}</li>
-				<li>{{ "{label} sums the order’s <code>totalPrice</code> (after tax, shipping, and discount) across the customer’s orders in this window. Refunds are not netted out."|t('best-sellers', { label: '<strong>' ~ 'Total Spent'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-				<li>{{ "{label} is {totalSpent} ÷ {orderCount}."|t('best-sellers', { label: '<strong>' ~ 'AOV'|t('best-sellers') ~ '</strong>', totalSpent: '<strong>' ~ 'Total Spent'|t('best-sellers') ~ '</strong>', orderCount: '<strong>' ~ '# Orders'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-				<li>{{ "Only completed, non-trashed orders are counted."|t('best-sellers') }}</li>
-				<li>{{ "Dates are bucketed in the site’s timezone ({tz})."|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</li>
+				<li>{{ 'customers.notes.grouping'|t('best-sellers') }}</li>
+				<li>{{ 'customers.notes.totalSpent'|t('best-sellers', { label: '<strong>' ~ 'customers.col.totalSpent'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+				<li>{{ 'customers.notes.aov'|t('best-sellers', { label: '<strong>' ~ 'kpi.aov'|t('best-sellers') ~ '</strong>', totalSpent: '<strong>' ~ 'customers.col.totalSpent'|t('best-sellers') ~ '</strong>', orderCount: '<strong>' ~ 'customers.col.orderCount'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+				<li>{{ 'customers.notes.onlyCompleted'|t('best-sellers') }}</li>
+				<li>{{ 'sales.notes.timezone'|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</li>
 			</ul>
 		</details>
 	</div>
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		defaultSort: 'totalSpent',
 		defaultSortDir: 'desc',
 		itemLabel: 'customers',
-		emptyMessage: 'No customers found matching your filters.',
+		emptyMessage: '{{ "customers.empty"|t("best-sellers") }}',
 		buildRow: function (customer) {
 			const row = document.createElement('tr');
 			const emailCell = customer.cpUrl
@@ -89,7 +89,10 @@ document.addEventListener('DOMContentLoaded', function () {
 				: customer.email;
 
 			const statusColors = { credentialed: 'green', guest: '' };
-			const statusLabels = { credentialed: 'Credentialed', guest: 'Guest' };
+			const statusLabels = {
+				credentialed: '{{ "customers.filter.credentialed"|t("best-sellers") }}',
+				guest: '{{ "customers.filter.guest"|t("best-sellers") }}'
+			};
 			const statusColor = statusColors[customer.status] || '';
 			const statusLabel = statusLabels[customer.status] || customer.status;
 			const statusCell = '<span class="status ' + statusColor + '"></span> ' + statusLabel;
@@ -105,10 +108,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		},
 		buildTotalsBar: function (totals) {
 			return BestSellersReports.buildTotalsBar(
-				'{{ "Filtered Results Total"|t("best-sellers") }}',
+				'{{ "table.filteredResultsTotal"|t("best-sellers") }}',
 				[
-					{ label: '{{ "Orders"|t("best-sellers") }}', value: totals.orderCount },
-					{ label: '{{ "Total Spent"|t("best-sellers") }}', value: totals.totalSpent }
+					{ label: '{{ "Orders"|t("commerce") }}', value: totals.orderCount },
+					{ label: '{{ "customers.col.totalSpent"|t("best-sellers") }}', value: totals.totalSpent }
 				]
 			);
 		},

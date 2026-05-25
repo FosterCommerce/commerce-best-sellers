@@ -1,6 +1,9 @@
 {% extends 'best-sellers/_layouts/reports' %}
+{% do view.registerTranslations('best-sellers', [
+	'products.inOrders',
+]) %}
 
-{% set title = "Products"|t('best-sellers') %}
+{% set title = 'Products'|t('commerce') %}
 {% set selectedSubnavItem = 'products' %}
 
 {% block reportContent %}
@@ -8,15 +11,15 @@
 	<div class="bs-filter-bar bs-filter-bar--spaced">
 		<div class="bs-filter-bar__item bs-filter-bar__item--shrink">
 			<input type="hidden" id="products-or-variants" value="{{ productsOrVariants }}">
-			<div class="bs-segmented bs-pov-toggle" role="group" aria-label="{{ 'Show products or variants'|t('best-sellers') }}">
-				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'products' ? ' bs-segmented__btn--active' : '' }}" data-value="products" aria-pressed="{{ productsOrVariants == 'products' ? 'true' : 'false' }}">{{ "Products"|t('best-sellers') }}</button>
-				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'variants' ? ' bs-segmented__btn--active' : '' }}" data-value="variants" aria-pressed="{{ productsOrVariants == 'variants' ? 'true' : 'false' }}">{{ "Variants"|t('best-sellers') }}</button>
+			<div class="bs-segmented bs-pov-toggle" role="group" aria-label="{{ 'products.filter.showProductsOrVariants'|t('best-sellers') }}">
+				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'products' ? ' bs-segmented__btn--active' : '' }}" data-value="products" aria-pressed="{{ productsOrVariants == 'products' ? 'true' : 'false' }}">{{ 'Products'|t('commerce') }}</button>
+				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'variants' ? ' bs-segmented__btn--active' : '' }}" data-value="variants" aria-pressed="{{ productsOrVariants == 'variants' ? 'true' : 'false' }}">{{ 'Variants'|t('commerce') }}</button>
 			</div>
 		</div>
 		{% set allProductTypes = craft.commerce.productTypes.allProductTypes %}
 		{% if allProductTypes|length > 1 %}
 			<div class="bs-multiselect" id="product-type-multiselect">
-				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Product Type'|t('best-sellers') }}">{{ "Product Type"|t('best-sellers') }}</button>
+				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Product Type'|t('commerce') }}">{{ 'Product Type'|t('commerce') }}</button>
 				<div class="bs-multiselect__dropdown">
 					{% for type in allProductTypes %}
 						<label><input type="checkbox" value="{{ type.handle }}"{% if type.handle in selectedProductTypes %} checked{% endif %}> {{ type.name }}</label>
@@ -25,7 +28,7 @@
 			</div>
 		{% endif %}
 		<div class="bs-filter-bar__item">
-			<input type="text" id="product-search" class="text fullwidth" placeholder="{{ 'Search...'|t('best-sellers') }}" autocomplete="off">
+			<input type="text" id="product-search" class="text fullwidth" placeholder="{{ 'products.filter.searchPlaceholder'|t('best-sellers') }}" autocomplete="off">
 		</div>
 		<span id="products-export"></span>
 	</div>
@@ -33,7 +36,7 @@
 	{# Loading State #}
 	<div id="products-loading" class="bs-loading">
 		<div class="bs-loading__spinner"></div>
-		<p class="bs-loading__message">{{ "Fetching your data from the vault..."|t('best-sellers') }}</p>
+		<p class="bs-loading__message">{{ 'products.loading'|t('best-sellers') }}</p>
 	</div>
 
 	{# Products Table (hidden until loaded) #}
@@ -43,14 +46,14 @@
 			<table class="bs-data-table" id="products-table">
 				<thead>
 					<tr>
-						<th data-sort="productTitle">{{ "Product"|t('best-sellers') }}</th>
-						<th data-sort="sku">{{ "Default SKU"|t('best-sellers') }}</th>
-						<th data-sort="productType">{{ "Type"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" data-sort="unitsSold">{{ "Units Sold"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" data-sort="itemSubtotal">{{ "Item Subtotal"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" data-sort="revenue">{{ "Item Sales (Net)"|t('best-sellers') }}</th>
-						<th class="bs-data-table--right" data-sort="avgPrice">{{ "Avg Price"|t('best-sellers') }}</th>
-						<th style="width: 32px; text-align: center;"><span data-icon="world" aria-label="{{ 'Link'|t('best-sellers') }}"></span></th>
+						<th data-sort="productTitle">{{ 'products.col.product'|t('best-sellers') }}</th>
+						<th data-sort="sku">{{ 'products.col.defaultSku'|t('best-sellers') }}</th>
+						<th data-sort="productType">{{ 'Type'|t('app') }}</th>
+						<th class="bs-data-table--right" data-sort="unitsSold">{{ 'products.col.unitsSold'|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="itemSubtotal">{{ 'Item Subtotal'|t('commerce') }}</th>
+						<th class="bs-data-table--right" data-sort="revenue">{{ 'products.col.itemSalesNet'|t('best-sellers') }}</th>
+						<th class="bs-data-table--right" data-sort="avgPrice">{{ 'products.col.avgPrice'|t('best-sellers') }}</th>
+						<th style="width: 32px; text-align: center;"><span data-icon="world" aria-label="{{ 'products.col.linkAria'|t('best-sellers') }}"></span></th>
 					</tr>
 				</thead>
 				<tbody id="products-tbody"></tbody>
@@ -59,17 +62,17 @@
 		<div id="products-pagination" class="bs-pagination"></div>
 
 		<details class="bs-data-notes">
-			<summary>{{ "About these numbers"|t('best-sellers') }}</summary>
+			<summary>{{ 'table.aboutTheseNumbers'|t('best-sellers') }}</summary>
 			<ul>
-				<li>{{ "{label} is quantity × sale price across the contributing line items. Sale-price promotions are already baked in; coupon and manual discounts are not subtracted here, so this column reconciles with the Orders report's {ordersLabel} column when summed across the same orders."|t('best-sellers', { label: '<strong>' ~ 'Item Subtotal'|t('best-sellers') ~ '</strong>', ordersLabel: '<strong>' ~ 'Item Subtotal'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-				<li>{{ "{label} is {subtotalLabel} minus any coupon or manual discounts attributed to the line."|t('best-sellers', { label: '<strong>' ~ 'Item Sales (Net)'|t('best-sellers') ~ '</strong>', subtotalLabel: '<strong>' ~ 'Item Subtotal'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-				<li>{{ "Coupon and manual discounts are netted out, including order-level discounts (Commerce always attaches Discount adjustments to specific line items, even when the rule is configured order-wide)."|t('best-sellers') }}</li>
-				<li>{{ "Tax and shipping are not included."|t('best-sellers') }}</li>
-				<li>{{ "Refunds: fully refunded orders are dropped via the full-balance-owed exclusion. Partial refunds still count the full original sale amount for the line; the refund is not netted against the row."|t('best-sellers') }}</li>
-				<li>{{ "Orders with a full balance owed (totalPaid ≤ 0 AND totalPrice > 0) are excluded. This drops orders that were authorized but never captured, were fully refunded, or had a failed payment; completion is not the same as money received. Partially paid orders are still counted, and a ⚠ next to a row’s units count means at least one of that row’s orders is currently partially paid. For actual money received, use the Orders report’s Total Paid column."|t('best-sellers') }}</li>
-				<li>{{ "Bundle sales (subtotals and discounts both) are distributed proportionally across the constituent variants, not the bundle itself."|t('best-sellers') }}</li>
-				<li>{{ "Sales numbers re-sync automatically when an order is saved (initial completion, admin edits, status changes, etc.). The ⚠ partial-payment marker is live and reflects current payment state."|t('best-sellers') }}</li>
-				<li>{{ "{label} averages the line-item list price (pre-promotion), so it does not divide cleanly into {revLabel}."|t('best-sellers', { label: '<strong>' ~ 'Avg Price'|t('best-sellers') ~ '</strong>', revLabel: '<strong>' ~ 'Item Sales (Net)'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+				<li>{{ 'products.notes.itemSubtotal'|t('best-sellers', { label: '<strong>' ~ 'Item Subtotal'|t('commerce') ~ '</strong>', ordersLabel: '<strong>' ~ 'Item Subtotal'|t('commerce') ~ '</strong>' })|raw }}</li>
+				<li>{{ 'products.notes.itemSalesNet'|t('best-sellers', { label: '<strong>' ~ 'products.col.itemSalesNet'|t('best-sellers') ~ '</strong>', subtotalLabel: '<strong>' ~ 'Item Subtotal'|t('commerce') ~ '</strong>' })|raw }}</li>
+				<li>{{ 'products.notes.discountsNetted'|t('best-sellers') }}</li>
+				<li>{{ 'products.notes.taxShipping'|t('best-sellers') }}</li>
+				<li>{{ 'products.notes.refunds'|t('best-sellers') }}</li>
+				<li>{{ 'products.notes.fullBalanceOwed'|t('best-sellers') }}</li>
+				<li>{{ 'products.notes.bundles'|t('best-sellers') }}</li>
+				<li>{{ 'products.notes.resync'|t('best-sellers') }}</li>
+				<li>{{ 'products.notes.avgPrice'|t('best-sellers', { label: '<strong>' ~ 'products.col.avgPrice'|t('best-sellers') ~ '</strong>', revLabel: '<strong>' ~ 'products.col.itemSalesNet'|t('best-sellers') ~ '</strong>' })|raw }}</li>
 			</ul>
 		</details>
 	</div>
@@ -110,7 +113,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		defaultSort: 'revenue',
 		defaultSortDir: 'desc',
 		itemLabel: 'products',
-		emptyMessage: 'No product sales data for this period.',
+		emptyMessage: '{{ "products.empty"|t("best-sellers") }}',
 		buildRow: function (item) {
 			const row = document.createElement('tr');
 			const fullTitle = item.displayTitle || '';
@@ -120,15 +123,15 @@ document.addEventListener('DOMContentLoaded', function () {
 				? '<a href="' + item.cpEditUrl + '" class="go"' + titleAttr + '>' + shownTitle + '</a>'
 				: '<span' + titleAttr + '>' + shownTitle + '</span>';
 			if (item.fromBundle) {
-				titleCell += ' <span class="bs-bundle-marker" title="{{ "Sold as part of a bundle"|t('best-sellers') }}" aria-label="{{ "Sold as part of a bundle"|t('best-sellers') }}">⧉</span>';
+				titleCell += ' <span class="bs-bundle-marker" title="{{ "products.bundleMarker"|t('best-sellers') }}" aria-label="{{ "products.bundleMarker"|t('best-sellers') }}">⧉</span>';
 			}
 			const linkCell = item.frontEndUrl
 				? '<a href="' + item.frontEndUrl + '" target="_blank" rel="noopener" class="bs-external-link"><span data-icon="world"></span></a>'
 				: '';
-			const ordersLink = '<a href="' + item.ordersUrl + '" class="light" style="text-decoration:underline">in ' + item.orderCount + ' orders</a>';
+			const ordersLink = '<a href="' + item.ordersUrl + '" class="light" style="text-decoration:underline">' + Craft.t('best-sellers', 'products.inOrders', { count: item.orderCount }) + '</a>';
 
 			const unpaidMarker = item.hasUnpaidOrder
-				? '<span class="bs-unpaid-marker" title="{{ "At least one contributing order is not fully paid"|t('best-sellers') }}" aria-label="{{ "At least one contributing order is not fully paid"|t('best-sellers') }}">⚠</span> '
+				? '<span class="bs-unpaid-marker" title="{{ "products.unpaidMarker"|t('best-sellers') }}" aria-label="{{ "products.unpaidMarker"|t('best-sellers') }}">⚠</span> '
 				: '';
 			row.innerHTML =
 				'<td>' + titleCell + '</td>' +
@@ -143,11 +146,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		},
 		buildTotalsBar: function (totals) {
 			return BestSellersReports.buildTotalsBar(
-				'{{ "Filtered Results Total"|t("best-sellers") }}',
+				'{{ "table.filteredResultsTotal"|t("best-sellers") }}',
 				[
-					{ label: '{{ "Units Sold"|t("best-sellers") }}', value: totals.unitsSold },
-					{ label: '{{ "Item Subtotal"|t("best-sellers") }}', value: totals.itemSubtotal },
-					{ label: '{{ "Item Sales (Net)"|t("best-sellers") }}', value: totals.revenue }
+					{ label: '{{ "products.col.unitsSold"|t("best-sellers") }}', value: totals.unitsSold },
+					{ label: '{{ "Item Subtotal"|t("commerce") }}', value: totals.itemSubtotal },
+					{ label: '{{ "products.col.itemSalesNet"|t("best-sellers") }}', value: totals.revenue }
 				]
 			);
 		},

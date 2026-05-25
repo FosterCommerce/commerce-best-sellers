@@ -20,14 +20,14 @@
 
 	{% block filtersBefore %}{% endblock %}
 
-	<span class="light bs-timezone-indicator" title="{{ craft.app.getTimeZone() }}">{{ "All times in {tz}"|t('best-sellers', { tz: 'now'|date('T') }) }}</span>
+	<span class="light bs-timezone-indicator" title="{{ craft.app.getTimeZone() }}">{{ 'datePicker.allTimes'|t('best-sellers', { tz: 'now'|date('T') }) }}</span>
 
 	<div data-date-range-picker></div>
 
 	{% set allOrderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
 	{% if allOrderStatuses|length > 0 %}
 		<button type="button" class="btn menubtn" id="bs-scope-status-btn" style="margin-left: 0.5rem;">
-			{{ "Order statuses"|t('best-sellers') }}
+			{{ 'datePicker.orderStatuses'|t('best-sellers') }}
 			{% if scope is defined and scope and scope.hasStatusFilter() %}
 				<span class="bs-multiselect__badge">{{ scope.orderStatusIds|length }}</span>
 			{% endif %}

@@ -1,7 +1,7 @@
 {# Best Sellers Top 10 #}
 {% set maxUnits = bestSellers|first.unitsSold %}
 <div class="bs-chart-container">
-	<h3 class="bs-chart-container__title">{{ "Best Sellers"|t('best-sellers') }}</h3>
+	<h3 class="bs-chart-container__title">{{ 'widgets.bestSellers.title'|t('best-sellers') }}</h3>
 	<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
 		<tbody>
 			{% for item in bestSellers %}
@@ -19,7 +19,7 @@
 							{% endif %}
 						</span>
 					</td>
-					<td style="padding: 0.4rem 0.5rem; text-align: right; white-space: nowrap;">{{ item.unitsSold }} {{ "units"|t('best-sellers') }}</td>
+					<td style="padding: 0.4rem 0.5rem; text-align: right; white-space: nowrap;">{{ item.unitsSold }} {{ 'widgets.bestSellers.units'|t('best-sellers') }}</td>
 					<td style="padding: 0.4rem 0; text-align: right; white-space: nowrap;">{{ item.revenue|commerceCurrency }}</td>
 				</tr>
 			{% endfor %}
@@ -27,10 +27,10 @@
 		<tfoot>
 			<tr>
 				<td style="padding: 0.4rem 0; border-top: 2px solid #e0e0e0;"></td>
-				<td style="padding: 0.4rem 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ "Top"|t('best-sellers') }} {{ bestSellers|length }}</td>
+				<td style="padding: 0.4rem 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ 'widgets.bestSellers.top'|t('best-sellers') }} {{ bestSellers|length }}</td>
 				<td style="padding: 0.4rem 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0; white-space: nowrap;">
 					{% set totalUnits = 0 %}{% for i in bestSellers %}{% set totalUnits = totalUnits + i.unitsSold %}{% endfor %}
-					{{ totalUnits|number_format }} {{ "units"|t('best-sellers') }}
+					{{ totalUnits|number_format }} {{ 'widgets.bestSellers.units'|t('best-sellers') }}
 				</td>
 				<td style="padding: 0.4rem 0; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0; white-space: nowrap;">
 					{% set totalRev = 0 %}{% for i in bestSellers %}{% set totalRev = totalRev + i.revenue %}{% endfor %}

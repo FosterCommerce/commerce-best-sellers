@@ -1,10 +1,28 @@
 {% extends '_layouts/cp' %}
 {% do view.registerTranslations('best-sellers', [
-	'Showing {start}\u2013{end} of {total} {label}',
-	'Previous',
-	'Next',
-	'Export CSV',
-	'Failed to load data: {error}',
+	'pagination.showingRange',
+	'pagination.previous',
+	'pagination.next',
+	'pagination.pageOf',
+	'pagination.exportCsv',
+	'errors.loadData',
+	'chip.filtered',
+	'chip.clearFilter',
+	'sales.urlFilter.shipping',
+	'sales.urlFilter.discountedOrders',
+	'sales.urlFilter.fullPriceOrders',
+	'sales.urlFilter.discountId',
+	'sales.urlFilter.itemsPerOrder',
+	'loading.phrase.archives',
+	'loading.phrase.elfBoxes',
+	'loading.phrase.ledger',
+	'loading.phrase.gnome',
+	'loading.phrase.spreadsheets',
+	'loading.phrase.elfReceipts',
+	'loading.phrase.elfSpeed',
+	'loading.phrase.vault',
+	'loading.phrase.fairy',
+	'loading.phrase.packingSlips',
 ]) %}
 
 {% set selectedSubnavItem = selectedSubnavItem ?? 'overview' %}

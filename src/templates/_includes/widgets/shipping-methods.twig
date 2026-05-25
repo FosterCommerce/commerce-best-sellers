@@ -1,14 +1,14 @@
 {# Shipping Methods Ranked List #}
 <div class="bs-chart-container">
-	<h3 class="bs-chart-container__title">{{ "Shipping Methods"|t('best-sellers') }}</h3>
+	<h3 class="bs-chart-container__title">{{ 'widgets.shippingMethods.title'|t('best-sellers') }}</h3>
 	{% if shippingMethods|length > 0 %}
 		{% set maxCount = shippingMethods|first.count %}
 		<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
 			<thead>
 				<tr>
-					<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Method"|t('best-sellers') }}</th>
-					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Orders"|t('best-sellers') }}</th>
-					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Shipping Revenue"|t('best-sellers') }}</th>
+					<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'widgets.shippingMethods.col.method'|t('best-sellers') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Orders'|t('commerce') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'widgets.shippingMethods.col.shippingRevenue'|t('best-sellers') }}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -28,7 +28,7 @@
 			</tbody>
 			<tfoot>
 				<tr>
-					<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ shippingMethods|length }} {{ "methods"|t('best-sellers') }}</td>
+					<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ shippingMethods|length }} {{ 'widgets.shippingMethods.countSuffix'|t('best-sellers') }}</td>
 					<td style="padding: 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0;">
 						{% set totalOrders = 0 %}{% for m in shippingMethods %}{% set totalOrders = totalOrders + m.count %}{% endfor %}
 						{{ totalOrders|number_format }}
@@ -41,6 +41,6 @@
 			</tfoot>
 		</table>
 	{% else %}
-		<p style="color: #999; font-size: 0.9rem;">{{ "No data available"|t('best-sellers') }}</p>
+		<p style="color: #999; font-size: 0.9rem;">{{ 'table.noData'|t('best-sellers') }}</p>
 	{% endif %}
 </div>

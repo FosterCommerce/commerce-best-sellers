@@ -6,7 +6,7 @@
 {% set fullPageForm = true %}
 
 {% set crumbs = [
-	{ label: 'Best Sellers'|t('best-sellers'), url: cpUrl('best-sellers') },
+	{ label: 'nav.bestSellers'|t('best-sellers'), url: cpUrl('best-sellers') },
 ] %}
 
 {% set allOrderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
@@ -24,8 +24,8 @@
 
 	{{ forms.checkboxGroupField({
 		first: true,
-		label: 'Default order statuses'|t('best-sellers'),
-		instructions: 'Statuses pre-selected in the global order status filter when first opening a report. Users can override the selection per session.'|t('best-sellers'),
+		label: 'settings.defaultStatuses.label'|t('best-sellers'),
+		instructions: 'settings.defaultStatuses.instructions'|t('best-sellers'),
 		id: 'defaultOrderStatusHandles',
 		name: 'defaultOrderStatusHandles',
 		attribute: 'defaultOrderStatusHandles',

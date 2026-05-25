@@ -111,7 +111,7 @@ class TransactionsController extends BaseReportController
 		$orderTo = is_string($rawOrderTo) ? $rawOrderTo : '';
 
 		return $this->renderTemplate('best-sellers/_transactions', [
-			'title' => Craft::t('best-sellers', 'Transactions'),
+			'title' => Craft::t('commerce', 'Transactions'),
 			'selectedSubnavItem' => 'transactions',
 			'from' => $scope->from,
 			'to' => $scope->to,
@@ -233,15 +233,15 @@ class TransactionsController extends BaseReportController
 
 		foreach ([
 			[
-				'label' => Craft::t('best-sellers', 'Captured'),
+				'label' => Craft::t('best-sellers', 'transactions.col.captured'),
 				'money' => $captured,
 			],
 			[
-				'label' => Craft::t('best-sellers', 'Refunded'),
+				'label' => Craft::t('best-sellers', 'transactions.col.refunded'),
 				'money' => $refunded,
 			],
 			[
-				'label' => Craft::t('best-sellers', 'Net'),
+				'label' => Craft::t('best-sellers', 'transactions.col.net'),
 				'money' => $net,
 			],
 		] as $summaryRow) {
@@ -259,15 +259,15 @@ class TransactionsController extends BaseReportController
 		}
 
 		return $this->asCsv($csvRows, [
-			Craft::t('best-sellers', 'Date'),
-			Craft::t('best-sellers', 'Type'),
-			Craft::t('best-sellers', 'Status'),
-			Craft::t('best-sellers', 'Gateway'),
-			Craft::t('best-sellers', 'Amount'),
-			Craft::t('best-sellers', 'Order #'),
-			Craft::t('best-sellers', 'Order Date'),
-			Craft::t('best-sellers', 'Email'),
-			Craft::t('best-sellers', 'Reference'),
+			Craft::t('app', 'Date'),
+			Craft::t('app', 'Type'),
+			Craft::t('app', 'Status'),
+			Craft::t('commerce', 'Gateway'),
+			Craft::t('commerce', 'Amount'),
+			Craft::t('best-sellers', 'transactions.col.orderNumber'),
+			Craft::t('best-sellers', 'transactions.col.orderDate'),
+			Craft::t('app', 'Email'),
+			Craft::t('commerce', 'Reference'),
 		], 'transactions');
 	}
 

@@ -97,9 +97,9 @@ abstract class SignalClassifier
 	public static function directionWord(string $signal): string
 	{
 		return match ($signal) {
-			self::UP, self::SLIGHTLY_UP => Craft::t('best-sellers', 'up'),
-			self::DOWN, self::SLIGHTLY_DOWN => Craft::t('best-sellers', 'down'),
-			default => Craft::t('best-sellers', 'flat'),
+			self::UP, self::SLIGHTLY_UP => Craft::t('best-sellers', 'signal.up'),
+			self::DOWN, self::SLIGHTLY_DOWN => Craft::t('best-sellers', 'signal.down'),
+			default => Craft::t('best-sellers', 'signal.flat'),
 		};
 	}
 

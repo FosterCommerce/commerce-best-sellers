@@ -1,19 +1,12 @@
 {% extends 'best-sellers/_layouts/reports' %}
 {% do view.registerTranslations('best-sellers', [
-	'Filtered: {label}',
-	'Clear filter',
-	'Shipping: {method}',
-	'Discounted orders',
-	'Full-price orders',
-	'Discount ID: {id}',
-	'Items per order: {bucket}',
 	'orders.bulk.downloadPdf',
 	'orders.bulk.downloadPdfCount',
 	'orders.bulk.selectRowAria',
 	'orders.bulk.selectionsResetOnPaginate',
 ]) %}
 
-{% set title = "Orders"|t('best-sellers') %}
+{% set title = 'Orders'|t('commerce') %}
 {% set selectedSubnavItem = 'orders' %}
 {% set bulkPdfEnabled = enabledPdfs|length > 0 %}
 
@@ -22,17 +15,17 @@
 	<div class="bs-section">
 		<div class="bs-filter-bar bs-filter-bar--spaced">
 			<div class="bs-multiselect" id="payment-status-multiselect">
-				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Payment Status'|t('best-sellers') }}">{{ "Payment Status"|t('best-sellers') }}</button>
+				<button type="button" class="bs-multiselect__btn" data-label="{{ 'sales.filter.paymentStatus'|t('best-sellers') }}">{{ 'sales.filter.paymentStatus'|t('best-sellers') }}</button>
 				<div class="bs-multiselect__dropdown">
-					<label><input type="checkbox" value="paid"{% if 'paid' in selectedPaymentStatuses %} checked{% endif %}> {{ "Paid"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="partial"{% if 'partial' in selectedPaymentStatuses %} checked{% endif %}> {{ "Partial"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="unpaid"{% if 'unpaid' in selectedPaymentStatuses %} checked{% endif %}> {{ "Unpaid"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="overpaid"{% if 'overpaid' in selectedPaymentStatuses %} checked{% endif %}> {{ "Overpaid"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="paid"{% if 'paid' in selectedPaymentStatuses %} checked{% endif %}> {{ 'Paid'|t('commerce') }}</label>
+					<label><input type="checkbox" value="partial"{% if 'partial' in selectedPaymentStatuses %} checked{% endif %}> {{ 'Partial'|t('commerce') }}</label>
+					<label><input type="checkbox" value="unpaid"{% if 'unpaid' in selectedPaymentStatuses %} checked{% endif %}> {{ 'Unpaid'|t('commerce') }}</label>
+					<label><input type="checkbox" value="overpaid"{% if 'overpaid' in selectedPaymentStatuses %} checked{% endif %}> {{ 'Overpaid'|t('commerce') }}</label>
 				</div>
 			</div>
 			{% if shippingMethods is defined and shippingMethods|length > 0 %}
 				<div class="bs-multiselect" id="shipping-method-multiselect">
-					<button type="button" class="bs-multiselect__btn" data-label="{{ 'Shipping'|t('best-sellers') }}">{{ "Shipping"|t('best-sellers') }}</button>
+					<button type="button" class="bs-multiselect__btn" data-label="{{ 'Shipping'|t('commerce') }}">{{ 'Shipping'|t('commerce') }}</button>
 					<div class="bs-multiselect__dropdown">
 						{% for method in shippingMethods %}
 							<label><input type="checkbox" value="{{ method.method }}"> {{ method.method }}</label>
@@ -41,10 +34,10 @@
 				</div>
 			{% endif %}
 			<div class="bs-multiselect" id="discount-status-multiselect">
-				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Discount'|t('best-sellers') }}">{{ "Discount"|t('best-sellers') }}</button>
+				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Discount'|t('commerce') }}">{{ 'Discount'|t('commerce') }}</button>
 				<div class="bs-multiselect__dropdown">
-					<label><input type="checkbox" value="discounted"> {{ "Discounted"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="fullPrice"> {{ "Full Price"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="discounted"> {{ 'sales.filter.discounted'|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="fullPrice"> {{ 'sales.filter.fullPrice'|t('best-sellers') }}</label>
 					{% if topDiscounts is defined and topDiscounts|length > 0 %}
 						<hr style="margin: 0.3rem 1rem; border: none; border-top: 1px solid #e0e0e0;">
 						{% for discount in topDiscounts %}
@@ -56,7 +49,7 @@
 				</div>
 			</div>
 			<div class="bs-filter-bar__item">
-				<input type="text" id="orders-search" class="text fullwidth" placeholder="{{ 'Search orders...'|t('best-sellers') }}" autocomplete="off">
+				<input type="text" id="orders-search" class="text fullwidth" placeholder="{{ 'sales.filter.searchPlaceholder'|t('best-sellers') }}" autocomplete="off">
 			</div>
 			<span id="orders-export"></span>
 			{% if bulkPdfEnabled %}
@@ -101,16 +94,16 @@
 		{# Loading State #}
 		<div id="orders-loading" class="bs-loading">
 			<div class="bs-loading__spinner"></div>
-			<p class="bs-loading__message">{{ "Rummaging through the order archives..."|t('best-sellers') }}</p>
+			<p class="bs-loading__message">{{ 'sales.loading'|t('best-sellers') }}</p>
 		</div>
 
 		{% if purchasableFilterLabel %}
 			{% set clearUrl = url('best-sellers/orders') %}
 			<div class="bs-filter-chip-bar">
 				<span class="bs-filter-chip">
-					<span class="bs-filter-chip__label">{{ "Filtered to:"|t('best-sellers') }}</span>
+					<span class="bs-filter-chip__label">{{ 'chip.filteredTo'|t('best-sellers') }}</span>
 					<span class="bs-filter-chip__value">{{ purchasableFilterLabel }}</span>
-					<a href="{{ clearUrl }}" class="bs-filter-chip__clear" title="{{ 'Clear filter'|t('best-sellers') }}">×</a>
+					<a href="{{ clearUrl }}" class="bs-filter-chip__clear" title="{{ 'chip.clearFilter'|t('best-sellers') }}">×</a>
 				</span>
 			</div>
 		{% endif %}
@@ -125,16 +118,16 @@
 							{% if bulkPdfEnabled %}
 								<th class="bs-data-table--checkbox"><input type="checkbox" id="bs-master-select" aria-label="{{ 'orders.bulk.selectAllAria'|t('best-sellers') }}"></th>
 							{% endif %}
-							<th data-sort="reference">{{ "Order #"|t('best-sellers') }}</th>
-							<th data-sort="dateOrdered">{{ "Date Ordered"|t('best-sellers') }}</th>
-							<th data-sort="orderStatusId">{{ "Status"|t('best-sellers') }}</th>
-							<th class="bs-data-table--right" data-sort="itemSubtotal">{{ "Item Subtotal"|t('best-sellers') }}</th>
-							<th class="bs-data-table--right" data-sort="totalTax">{{ "Tax"|t('best-sellers') }}</th>
-							<th class="bs-data-table--right" data-sort="totalDiscount">{{ "Discount"|t('best-sellers') }}</th>
-							<th class="bs-data-table--right" data-sort="totalShippingCost">{{ "Shipping"|t('best-sellers') }}</th>
-							<th class="bs-data-table--right" data-sort="totalPaid">{{ "Total Paid"|t('best-sellers') }}</th>
-							<th class="bs-data-table--right">{{ "Items Sold"|t('best-sellers') }}</th>
-							<th data-sort="paidStatus">{{ "Payment"|t('best-sellers') }}</th>
+							<th data-sort="reference">{{ 'sales.col.orderNumber'|t('best-sellers') }}</th>
+							<th data-sort="dateOrdered">{{ 'Date Ordered'|t('commerce') }}</th>
+							<th data-sort="orderStatusId">{{ 'Status'|t('app') }}</th>
+							<th class="bs-data-table--right" data-sort="itemSubtotal">{{ 'Item Subtotal'|t('commerce') }}</th>
+							<th class="bs-data-table--right" data-sort="totalTax">{{ 'Tax'|t('commerce') }}</th>
+							<th class="bs-data-table--right" data-sort="totalDiscount">{{ 'Discount'|t('commerce') }}</th>
+							<th class="bs-data-table--right" data-sort="totalShippingCost">{{ 'Shipping'|t('commerce') }}</th>
+							<th class="bs-data-table--right" data-sort="totalPaid">{{ 'Total Paid'|t('commerce') }}</th>
+							<th class="bs-data-table--right">{{ 'kpi.itemsSold'|t('best-sellers') }}</th>
+							<th data-sort="paidStatus">{{ 'sales.col.payment'|t('best-sellers') }}</th>
 						</tr>
 					</thead>
 					<tbody id="orders-tbody"></tbody>
@@ -144,13 +137,13 @@
 			<div id="orders-pagination" class="bs-pagination"></div>
 
 			<details class="bs-data-notes">
-				<summary>{{ "About these numbers"|t('best-sellers') }}</summary>
+				<summary>{{ 'table.aboutTheseNumbers'|t('best-sellers') }}</summary>
 				<ul>
-					<li>{{ "{label} is the order’s <code>itemSubtotal</code>: quantity × sale price across every line item. Sale-price promotions are already baked in; coupon and manual discounts (line-level or order-level) are not subtracted here. They appear in the {discountLabel} column."|t('best-sellers', { label: '<strong>' ~ 'Item Subtotal'|t('best-sellers') ~ '</strong>', discountLabel: '<strong>' ~ 'Discount'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-					<li>{{ "{label} sums all Discount adjustments on the order (coupons, manual, line-level and order-level). It does not include sale-price promotions."|t('best-sellers', { label: '<strong>' ~ 'Discount'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-					<li>{{ "{label} is the live sum of successful gateway transactions minus refunds. This is the closest figure to what was settled."|t('best-sellers', { label: '<strong>' ~ 'Total Paid'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-					<li>{{ "Soft-deleted orders are excluded."|t('best-sellers') }}</li>
-					<li>{{ "Dates are bucketed in the site’s timezone ({tz})."|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</li>
+					<li>{{ 'sales.notes.itemSubtotal'|t('best-sellers', { label: '<strong>' ~ 'Item Subtotal'|t('commerce') ~ '</strong>', discountLabel: '<strong>' ~ 'Discount'|t('commerce') ~ '</strong>' })|raw }}</li>
+					<li>{{ 'sales.notes.discount'|t('best-sellers', { label: '<strong>' ~ 'Discount'|t('commerce') ~ '</strong>' })|raw }}</li>
+					<li>{{ 'sales.notes.totalPaid'|t('best-sellers', { label: '<strong>' ~ 'Total Paid'|t('commerce') ~ '</strong>' })|raw }}</li>
+					<li>{{ 'sales.notes.softDeleted'|t('best-sellers') }}</li>
+					<li>{{ 'sales.notes.timezone'|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</li>
 				</ul>
 			</details>
 		</div>
@@ -199,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		defaultSort: 'dateOrdered',
 		defaultSortDir: 'desc',
 		itemLabel: 'orders',
-		emptyMessage: 'No orders found matching your filters.',
+		emptyMessage: '{{ "sales.empty"|t("best-sellers") }}',
 		buildRow: function (order) {
 			const row = document.createElement('tr');
 			row.innerHTML =
@@ -218,14 +211,14 @@ document.addEventListener('DOMContentLoaded', function () {
 		},
 		buildTotalsBar: function (totals) {
 			return BestSellersReports.buildTotalsBar(
-				'{{ "Filtered Results Total"|t("best-sellers") }}',
+				'{{ "table.filteredResultsTotal"|t("best-sellers") }}',
 				[
-					{ label: '{{ "Item Subtotal"|t("best-sellers") }}', value: totals.itemSubtotal },
-					{ label: '{{ "Tax"|t("best-sellers") }}', value: totals.totalTax },
-					{ label: '{{ "Discount"|t("best-sellers") }}', value: totals.totalDiscount },
-					{ label: '{{ "Shipping"|t("best-sellers") }}', value: totals.totalShippingCost },
-					{ label: '{{ "Total Paid"|t("best-sellers") }}', value: totals.totalPaid },
-					{ label: '{{ "Items"|t("best-sellers") }}', value: totals.itemsSold }
+					{ label: '{{ "Item Subtotal"|t("commerce") }}', value: totals.itemSubtotal },
+					{ label: '{{ "Tax"|t("commerce") }}', value: totals.totalTax },
+					{ label: '{{ "Discount"|t("commerce") }}', value: totals.totalDiscount },
+					{ label: '{{ "Shipping"|t("commerce") }}', value: totals.totalShippingCost },
+					{ label: '{{ "Total Paid"|t("commerce") }}', value: totals.totalPaid },
+					{ label: '{{ "Items"|t("commerce") }}', value: totals.itemsSold }
 				]
 			);
 		},

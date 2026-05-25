@@ -1,14 +1,14 @@
 {# Most Used Discounts #}
 <div class="bs-chart-container">
-	<h3 class="bs-chart-container__title">{{ "Most Used Discounts"|t('best-sellers') }}</h3>
+	<h3 class="bs-chart-container__title">{{ 'widgets.topDiscounts.title'|t('best-sellers') }}</h3>
 	{% if topDiscounts|length > 0 %}
 		{% set maxUses = topDiscounts|first.uses %}
 		<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
 			<thead>
 				<tr>
-					<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Discount"|t('best-sellers') }}</th>
-					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Orders"|t('best-sellers') }}</th>
-					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Total Discount"|t('best-sellers') }}</th>
+					<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Discount'|t('commerce') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Orders'|t('commerce') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Total Discount'|t('commerce') }}</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -32,7 +32,7 @@
 			</tbody>
 			<tfoot>
 				<tr>
-					<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ topDiscounts|length }} {{ "discounts"|t('best-sellers') }}</td>
+					<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ topDiscounts|length }} {{ 'widgets.topDiscounts.countSuffix'|t('best-sellers') }}</td>
 					<td style="padding: 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0;">
 						{% set totalUses = 0 %}{% for d in topDiscounts %}{% set totalUses = totalUses + d.uses %}{% endfor %}
 						{{ totalUses|number_format }}
@@ -45,6 +45,6 @@
 			</tfoot>
 		</table>
 	{% else %}
-		<p style="color: #999; font-size: 0.9rem;">{{ "No discounts used in this period."|t('best-sellers') }}</p>
+		<p style="color: #999; font-size: 0.9rem;">{{ 'widgets.topDiscounts.empty'|t('best-sellers') }}</p>
 	{% endif %}
 </div>

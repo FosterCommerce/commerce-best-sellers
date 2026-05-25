@@ -1,7 +1,7 @@
 {% extends '_layouts/cp' %}
 {% import "_includes/forms" as forms %}
 
-{% set title = "Best Sellers - " ~ title|t('best-sellers') %}
+{% set title = 'nav.bestSellers'|t('best-sellers') ~ ' - ' ~ title %}
 {% set selectedSubnavItem = 'dashboard' %}
 
 {% set additionalButtons %}
@@ -12,8 +12,8 @@
 				id: 'products-or-variants',
 				name: 'productsOrVariants',
 				options: [
-					{ label: 'Products', value: 'products' },
-					{ label: 'Variants', value: 'variants' },
+					{ label: 'Products'|t('commerce'), value: 'products' },
+					{ label: 'Variants'|t('commerce'), value: 'variants' },
 				],
 				toggle: true,
 				value: productsOrVariants,
@@ -21,7 +21,7 @@
 		</div>
 
 		{% set productTypes = [{
-			label: 'All product types',
+			label: 'dashboard.allProductTypes'|t('best-sellers'),
 			value: 'all',
 		}]|merge(craft.commerce.productTypes.allProductTypes|map(type => {
 			label: type.name,
@@ -40,31 +40,31 @@
 
 		<div style="flex: 1;">
 			<select id="date-presets" class="text fullwidth">
-				<option value="">{{ "Select a preset"|t('best-sellers') }}</option>
-				<option value="today" {% if preset == 'today' %}selected{% endif %}>{{ "Today"|t('best-sellers') }}</option>
-				<option value="thisWeek" {% if preset == 'thisWeek' %}selected{% endif %}>{{ "This Week"|t('best-sellers') }}</option>
-				<option value="thisMonth" {% if preset == 'thisMonth' %}selected{% endif %}>{{ "This Month"|t('best-sellers') }}</option>
-				<option value="thisYear" {% if preset == 'thisYear' %}selected{% endif %}>{{ "This Year"|t('best-sellers') }}</option>
-				<option value="past7Days" {% if preset == 'past7Days' %}selected{% endif %}>{{ "Past 7 Days"|t('best-sellers') }}</option>
-				<option value="past30Days" {% if preset == 'past30Days' %}selected{% endif %}>{{ "Past 30 Days"|t('best-sellers') }}</option>
-				<option value="past90Days" {% if preset == 'past90Days' %}selected{% endif %}>{{ "Past 90 Days"|t('best-sellers') }}</option>
-				<option value="pastYear" {% if preset == 'pastYear' %}selected{% endif %}>{{ "Past Year"|t('best-sellers') }}</option>
+				<option value="">{{ 'reports.preset.placeholder'|t('best-sellers') }}</option>
+				<option value="today" {% if preset == 'today' %}selected{% endif %}>{{ 'Today'|t('app') }}</option>
+				<option value="thisWeek" {% if preset == 'thisWeek' %}selected{% endif %}>{{ 'reports.preset.thisWeek'|t('best-sellers') }}</option>
+				<option value="thisMonth" {% if preset == 'thisMonth' %}selected{% endif %}>{{ 'reports.preset.thisMonth'|t('best-sellers') }}</option>
+				<option value="thisYear" {% if preset == 'thisYear' %}selected{% endif %}>{{ 'reports.preset.thisYear'|t('best-sellers') }}</option>
+				<option value="past7Days" {% if preset == 'past7Days' %}selected{% endif %}>{{ 'reports.preset.past7Days'|t('best-sellers') }}</option>
+				<option value="past30Days" {% if preset == 'past30Days' %}selected{% endif %}>{{ 'reports.preset.past30Days'|t('best-sellers') }}</option>
+				<option value="past90Days" {% if preset == 'past90Days' %}selected{% endif %}>{{ 'reports.preset.past90Days'|t('best-sellers') }}</option>
+				<option value="pastYear" {% if preset == 'pastYear' %}selected{% endif %}>{{ 'reports.preset.pastYear'|t('best-sellers') }}</option>
 			</select>
 		</div>
 
 		<input type="hidden" id="preset" name="preset" value="{{ preset|default('') }}">
 
 		<div style="flex: 1;">
-			<input type="text" id="from" name="from" value="{{ from }}" placeholder="{{ 'From'|t('best-sellers') }}" class="text fullwidth">
+			<input type="text" id="from" name="from" value="{{ from }}" placeholder="{{ 'From'|t('app') }}" class="text fullwidth">
 		</div>
 
 		<div style="flex: 1;">
-			<input type="text" id="to" name="to" value="{{ to }}" placeholder="{{ 'To'|t('best-sellers') }}" class="text fullwidth">
+			<input type="text" id="to" name="to" value="{{ to }}" placeholder="{{ 'To'|t('app') }}" class="text fullwidth">
 		</div>
 
 		<div style="align-self: flex-end;">
 			{{ forms.submitButton({
-				label: "Update"|t('best-sellers')
+				label: 'Update'|t('app')
 			}) }}
 		</div>
 	</form>
@@ -78,41 +78,41 @@
 
 {% set content %}
 	<main class="main-content">
-	<h2>{{ "Best Sellers"|t("best-sellers") }}</h2>
+	<h2>{{ 'widgets.bestSellers.title'|t('best-sellers') }}</h2>
 	<br>
 	{% if items is empty %}
-		<p>{{ "No best sellers yet."|t("best-sellers") }}</p>
+		<p>{{ 'dashboard.noBestSellers'|t('best-sellers') }}</p>
 	{% else %}
 		<div class="main tablepane">
 			<table id="items" class="data fullwidth">
 				<thead>
 				{% if productsOrVariants == 'variants' %}
-					<th scope="col">{{ 'Variant'|t('best-sellers') }}</th>
-					<th scope="col">{{ 'SKU'|t('best-sellers') }}</th>
-					<th scope="col">{{ 'Total Sold'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'dashboard.col.variant'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'SKU'|t('commerce') }}</th>
+					<th scope="col">{{ 'dashboard.col.totalSold'|t('best-sellers') }}</th>
 				{% else %}
-					<th scope="col">{{ 'Product'|t('best-sellers') }}</th>
-					<th scope="col">{{ 'Default SKU'|t('best-sellers') }}</th>
-					<th scope="col">{{ 'Type'|t('best-sellers') }}</th>
-					<th scope="col">{{ 'Total Sold'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'products.col.product'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'products.col.defaultSku'|t('best-sellers') }}</th>
+					<th scope="col">{{ 'Type'|t('app') }}</th>
+					<th scope="col">{{ 'dashboard.col.totalSold'|t('best-sellers') }}</th>
 				{% endif %}
 				</thead>
 				<tbody>
 				{% for item in items %}
 					<tr tabindex="0">
-						<td data-title="{{ "Title"|t("best-sellers") }}">
+						<td data-title="{{ 'dashboard.col.title'|t('best-sellers') }}">
 							{% set shownTitle = item.title|length > 100 ? item.title|slice(0, 100) ~ '…' : item.title %}
 							<span><a class="go" href="{{ item.url }}" title="{{ item.title }}">{{ shownTitle }}</a></span>
 						</td>
-						<td data-title="{{ "Type"|t('best-sellers') }}">
+						<td data-title="{{ 'Type'|t('app') }}">
 							{{ item.sku }}
 						</td>
 						{% if productsOrVariants == 'products' %}
-						<td data-title="{{ "Type"|t('best-sellers') }}">
+						<td data-title="{{ 'Type'|t('app') }}">
 							{{ item.type }}
 						</td>
 						{% endif %}
-						<td data-title="{{ "Type"|t('best-sellers') }}">
+						<td data-title="{{ 'Type'|t('app') }}">
 							{{ item.totalQtySold }}
 						</td>
 					</tr>
@@ -125,8 +125,8 @@
 			<div id="count-container" class="light flex-grow">
 				{% include '_includes/pagination' with {
 					'pageInfo' : pagination,
-					'itemLabel' : 'item'|t('best-sellers'),
-					'itemsLabel': 'items'|t('best-sellers')
+					'itemLabel' : 'dashboard.itemLabel'|t('best-sellers'),
+					'itemsLabel': 'dashboard.itemsLabel'|t('best-sellers')
 				} %}
 			</div>
 		</div>

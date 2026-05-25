@@ -1,16 +1,28 @@
 {% extends 'best-sellers/_layouts/reports' %}
+{% do view.registerTranslations('best-sellers', [
+	'overview.abandonment.rate',
+	'overview.abandonment.value',
+	'overview.abandonment.carts',
+	'overview.abandonment.avgCartValue',
+	'overview.abandonment.byAge',
+	'overview.abandonment.outOf',
+	'overview.abandonment.description.overview',
+	'overview.abandonment.description.range4to24h',
+	'overview.abandonment.description.range1to7d',
+	'overview.abandonment.description.range7dPlus',
+]) %}
 {% import 'best-sellers/_includes/kpi-card' as kpi %}
 {% import 'best-sellers/_includes/summary' as summaryBlock %}
 
-{% set title = "Dashboard"|t('best-sellers') %}
+{% set title = 'Dashboard'|t('app') %}
 {% set selectedSubnavItem = 'overview' %}
 
 {% block reportContent %}
 	{% if not hasData %}
 		<div class="bs-empty-state">
-			<p>{{ "No order data has been processed yet. If you have existing orders, run the backfill utility to import historical data."|t('best-sellers') }}</p>
+			<p>{{ 'overview.empty.message'|t('best-sellers') }}</p>
 			{% if currentUser.can('best-sellers:backfill') %}
-				<a href="{{ cpUrl('utilities/best-sellers') }}" class="btn submit">{{ "Go to Backfill Utility"|t('best-sellers') }}</a>
+				<a href="{{ cpUrl('utilities/best-sellers') }}" class="btn submit">{{ 'overview.empty.button'|t('best-sellers') }}</a>
 			{% endif %}
 		</div>
 	{% else %}
@@ -28,8 +40,8 @@
 	{# 2. Discounts & Order Composition #}
 	<div class="bs-section bs-section--discounts">
 		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
-			<h3 class="bs-section__title" style="margin: 0;">{{ "Discounts & Order Composition"|t('best-sellers') }}</h3>
-			<a href="{{ cpUrl('best-sellers/orders') }}" class="go" style="font-size: 0.85rem;">{{ "See all orders"|t('best-sellers') }}</a>
+			<h3 class="bs-section__title" style="margin: 0;">{{ 'overview.section.discountsOrderComposition'|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/orders') }}" class="go" style="font-size: 0.85rem;">{{ 'overview.link.seeAllOrders'|t('best-sellers') }}</a>
 		</div>
 		{{ summaryBlock.render(summaries.discounts) }}
 		<div class="bs-kpi-grid bs-kpi-grid--3">
@@ -50,8 +62,8 @@
 	{# 3. Customers & Retention #}
 	<div class="bs-section bs-section--customers">
 		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
-			<h3 class="bs-section__title" style="margin: 0;">{{ "Customers & Retention"|t('best-sellers') }}</h3>
-			<a href="{{ cpUrl('best-sellers/customers') }}" class="go" style="font-size: 0.85rem;">{{ "See all customers"|t('best-sellers') }}</a>
+			<h3 class="bs-section__title" style="margin: 0;">{{ 'overview.section.customersRetention'|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/customers') }}" class="go" style="font-size: 0.85rem;">{{ 'overview.link.seeAllCustomers'|t('best-sellers') }}</a>
 		</div>
 		{{ summaryBlock.render(summaries.customers) }}
 		<div class="bs-kpi-grid bs-kpi-grid--3">
@@ -69,8 +81,8 @@
 	{# 4. Product Performance #}
 	<div class="bs-section bs-section--products">
 		<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
-			<h3 class="bs-section__title" style="margin: 0;">{{ "Product Performance"|t('best-sellers') }}</h3>
-			<a href="{{ cpUrl('best-sellers/products') }}" class="go" style="font-size: 0.85rem;">{{ "See all products"|t('best-sellers') }}</a>
+			<h3 class="bs-section__title" style="margin: 0;">{{ 'overview.section.productPerformance'|t('best-sellers') }}</h3>
+			<a href="{{ cpUrl('best-sellers/products') }}" class="go" style="font-size: 0.85rem;">{{ 'overview.link.seeAllProducts'|t('best-sellers') }}</a>
 		</div>
 		{{ summaryBlock.render(summaries.products) }}
 		<div class="bs-kpi-grid bs-kpi-grid--{{ productCards|length }}">
@@ -85,7 +97,7 @@
 
 	{# 5. Carts #}
 	<div class="bs-section bs-section--carts">
-		<h3 class="bs-section__title">{{ "Carts"|t('best-sellers') }}</h3>
+		<h3 class="bs-section__title">{{ 'overview.section.carts'|t('best-sellers') }}</h3>
 		{{ summaryBlock.render(summaries.abandonment) }}
 		{% include 'best-sellers/_includes/widgets/cart-abandonment' %}
 		{% include 'best-sellers/_includes/widgets/top-abandoned-carts' %}
@@ -117,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			labels: nvrLabels,
 			datasets: [
 				{
-					label: '{{ "New"|t("best-sellers") }}',
+					label: '{{ "overview.chart.new"|t("best-sellers") }}',
 					data: {{ newVsReturning.new|json_encode|raw }},
 					borderColor: '#27ae60',
 					backgroundColor: 'rgba(39, 174, 96, 0.1)',
@@ -127,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
 					borderWidth: 1.5
 				},
 				{
-					label: '{{ "Returning"|t("best-sellers") }}',
+					label: '{{ "overview.chart.returning"|t("best-sellers") }}',
 					data: {{ newVsReturning.returning|json_encode|raw }},
 					borderColor: '#0073aa',
 					backgroundColor: 'rgba(0, 115, 170, 0.1)',
@@ -170,20 +182,20 @@ document.addEventListener('DOMContentLoaded', function () {
 		revenue: {
 			current: revenueData,
 			prev: {{ prevDailyRevenue|json_encode|raw }},
-			label: '{{ "Revenue"|t("best-sellers") }}',
-			prevLabel: '{{ "Previous Period"|t("best-sellers") }}'
+			label: '{{ "Revenue"|t("commerce") }}',
+			prevLabel: '{{ "overview.chart.previousPeriod"|t("best-sellers") }}'
 		},
 		orders: {
 			current: ordersData,
 			prev: {{ prevDailyOrders|json_encode|raw }},
-			label: '{{ "Orders"|t("best-sellers") }}',
-			prevLabel: '{{ "Previous Period"|t("best-sellers") }}'
+			label: '{{ "Orders"|t("commerce") }}',
+			prevLabel: '{{ "overview.chart.previousPeriod"|t("best-sellers") }}'
 		},
 		aov: {
 			current: {{ dailyAov|json_encode|raw }},
 			prev: {{ prevDailyAov|json_encode|raw }},
-			label: '{{ "AOV"|t("best-sellers") }}',
-			prevLabel: '{{ "Previous Period"|t("best-sellers") }}'
+			label: '{{ "kpi.aov"|t("best-sellers") }}',
+			prevLabel: '{{ "overview.chart.previousPeriod"|t("best-sellers") }}'
 		}
 	};
 
@@ -283,28 +295,28 @@ document.addEventListener('DOMContentLoaded', function () {
 		let html = '';
 
 		const tabDescriptions = {
-			'overview': 'All carts with line items that haven\'t been updated for at least 4 hours. These numbers may differ from external analytics services which track intent differently.',
-			'4-24h': 'Carts abandoned between 4 and 24 hours ago.',
-			'1-7d': 'Carts abandoned between 1 and 7 days ago.',
-			'7d+': 'Carts abandoned more than 7 days ago.'
+			'overview': Craft.t('best-sellers', 'overview.abandonment.description.overview'),
+			'4-24h': Craft.t('best-sellers', 'overview.abandonment.description.range4to24h'),
+			'1-7d': Craft.t('best-sellers', 'overview.abandonment.description.range1to7d'),
+			'7d+': Craft.t('best-sellers', 'overview.abandonment.description.range7dPlus')
 		};
 
 		html += '<p style="font-size:0.85rem;color:#6c757d;margin:0 0 1rem;">' + tabDescriptions[currentAbandonmentTab] + '</p>';
 
 		if (currentAbandonmentTab === 'overview') {
 			html += '<div class="bs-kpi-grid" style="grid-template-columns: 1fr 1fr;">';
-			html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandonment Rate</p></div>';
+			html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.rate') + '</p></div>';
 			html += '<p class="bs-kpi-card__value">' + rate + '%</p>';
-			html += '<p style="margin:0.5rem 0 0;font-size:0.8rem;color:#999;">' + formatAbandonmentNumber(totalAbandoned) + ' out of ' + formatAbandonmentNumber(totalCarts) + ' carts</p></div>';
+			html += '<p style="margin:0.5rem 0 0;font-size:0.8rem;color:#999;">' + Craft.t('best-sellers', 'overview.abandonment.outOf', { count: formatAbandonmentNumber(totalAbandoned), total: formatAbandonmentNumber(totalCarts) }) + '</p></div>';
 
-			html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandoned Value</p></div>';
+			html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.value') + '</p></div>';
 			html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(abandonedValue) + '</p></div>';
 			html += '</div>';
 
 			// Age breakdown
 			if (totalAbandoned > 0) {
 				html += '<div style="margin-top:1.5rem;">';
-				html += '<p class="bs-kpi-card__label" style="margin-bottom:0.5rem;">By age</p>';
+				html += '<p class="bs-kpi-card__label" style="margin-bottom:0.5rem;">' + Craft.t('best-sellers', 'overview.abandonment.byAge') + '</p>';
 				html += '<div style="display:flex;height:24px;border-radius:4px;overflow:hidden;">';
 				const barColors = {'4-24h': 'rgba(0,115,170,0.4)', '1-7d': 'rgba(0,115,170,0.6)', '7d+': 'rgba(0,115,170,0.8)'};
 				const ageLabels = ['4-24h', '1-7d', '7d+'];
@@ -338,13 +350,13 @@ document.addEventListener('DOMContentLoaded', function () {
 				const tabValue = includeAnonymous ? selectedAge.value : selectedAge.valueWithEmail;
 
 				html += '<div class="bs-kpi-grid bs-kpi-grid--3">';
-				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandoned Carts</p></div>';
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.carts') + '</p></div>';
 				html += '<p class="bs-kpi-card__value">' + formatAbandonmentNumber(tabCount) + '</p></div>';
 
-				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Abandoned Value</p></div>';
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.value') + '</p></div>';
 				html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(tabValue || 0) + '</p></div>';
 
-				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">Avg Cart Value</p></div>';
+				html += '<div class="bs-kpi-card"><div class="bs-kpi-card__header"><p class="bs-kpi-card__label">' + Craft.t('best-sellers', 'overview.abandonment.avgCartValue') + '</p></div>';
 				html += '<p class="bs-kpi-card__value">' + formatAbandonmentCurrency(tabCount > 0 ? (tabValue || 0) / tabCount : 0) + '</p></div>';
 				html += '</div>';
 			}
@@ -380,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		data: {
 			labels: ipoLabels,
 			datasets: [{
-				label: '{{ "Orders"|t("best-sellers") }}',
+				label: '{{ "Orders"|t("commerce") }}',
 				data: {{ itemsPerOrder.counts|json_encode|raw }},
 				backgroundColor: 'rgba(0, 115, 170, 0.6)',
 				borderColor: '#0073aa',
@@ -392,8 +404,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			maintainAspectRatio: false,
 			plugins: { legend: { display: false } },
 			scales: {
-				x: { title: { display: true, text: '{{ "Items"|t("best-sellers") }}' } },
-				y: { beginAtZero: true, title: { display: true, text: '{{ "Orders"|t("best-sellers") }}' } }
+				x: { title: { display: true, text: '{{ "Items"|t("commerce") }}' } },
+				y: { beginAtZero: true, title: { display: true, text: '{{ "Orders"|t("commerce") }}' } }
 			},
 			onClick: function (evt) {
 				const points = ipoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, false);
@@ -417,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			const el = this;
 			navigator.clipboard.writeText(url).then(function () {
 				const original = el.textContent;
-				el.textContent = '{{ "Copied!"|t("best-sellers") }}';
+				el.textContent = '{{ "overview.copied"|t("best-sellers") }}';
 				setTimeout(function () { el.textContent = original; }, 1500);
 			});
 		});
@@ -445,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 			const countEl = document.getElementById('abandoned-carts-count');
 			if (countEl) {
-				countEl.textContent = visibleCount + ' {{ "carts"|t("best-sellers") }}';
+				countEl.textContent = visibleCount + ' {{ "overview.cartsCount"|t("best-sellers") }}';
 			}
 			const totalEl = document.getElementById('abandoned-carts-total');
 			if (totalEl) {

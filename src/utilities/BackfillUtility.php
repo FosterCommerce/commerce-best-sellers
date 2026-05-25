@@ -10,7 +10,7 @@ class BackfillUtility extends Utility
 {
 	public static function displayName(): string
 	{
-		return Craft::t('best-sellers', 'Best Sellers');
+		return Craft::t('best-sellers', 'nav.bestSellers');
 	}
 
 	public static function id(): string

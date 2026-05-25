@@ -24,7 +24,7 @@ class CustomersController extends BaseReportController
 		$scope = $this->resolveScope();
 
 		return $this->renderTemplate('best-sellers/_customers', [
-			'title' => Craft::t('best-sellers', 'Customers'),
+			'title' => Craft::t('best-sellers', 'nav.customers'),
 			'selectedSubnavItem' => 'customers',
 			'from' => $scope->from,
 			'to' => $scope->to,
@@ -204,12 +204,12 @@ class CustomersController extends BaseReportController
 		];
 
 		return $this->asCsv($csvRows, [
-			Craft::t('best-sellers', 'Email'),
-			Craft::t('best-sellers', 'Status'),
-			Craft::t('best-sellers', '# Orders'),
-			Craft::t('best-sellers', 'Total Spent'),
-			Craft::t('best-sellers', 'AOV'),
-			Craft::t('best-sellers', 'Last Purchase'),
+			Craft::t('app', 'Email'),
+			Craft::t('app', 'Status'),
+			Craft::t('best-sellers', 'customers.col.orderCount'),
+			Craft::t('best-sellers', 'customers.col.totalSpent'),
+			Craft::t('best-sellers', 'kpi.aov'),
+			Craft::t('best-sellers', 'customers.col.lastPurchase'),
 		], 'customers');
 	}
 }

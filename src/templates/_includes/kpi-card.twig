@@ -3,7 +3,10 @@
  #
  # Usage:
  #   {% import 'best-sellers/_includes/kpi-card' as kpi %}
- #   {{ kpi.card({ label: 'Revenue', value: '$1,234', change: 12.5, sparklineId: 'sparkRevenue' }) }}
+ #   {{ kpi.card({ label: 'Revenue'|t('commerce'), value: '$1,234', change: 12.5, sparklineId: 'sparkRevenue' }) }}
+ #
+ # The caller is responsible for translating `label` and `description` before
+ # passing them in. KpiCards::definitions() does this for built-in cards.
  #}
 
 {% macro card(params) %}
@@ -16,7 +19,7 @@
 
 	<div class="bs-kpi-card">
 		<div class="bs-kpi-card__header">
-			<p class="bs-kpi-card__label">{{ label|t('best-sellers') }}</p>
+			<p class="bs-kpi-card__label">{{ label }}</p>
 			{% if change is not null %}
 				{% if change > 0 %}
 					<span class="bs-kpi-card__change bs-kpi-card__change--up">&#9650; {{ change|abs|number_format(2) }}%</span>
@@ -41,7 +44,7 @@
 			{% endif %}
 		</p>
 		{% if description %}
-			<p style="margin: 0.5rem 0 0; font-size: 0.8rem; color: #999;">{{ description|t('best-sellers') }}</p>
+			<p style="margin: 0.5rem 0 0; font-size: 0.8rem; color: #999;">{{ description }}</p>
 		{% endif %}
 		{% if sparklineId %}
 			<canvas id="{{ sparklineId }}" class="bs-kpi-card__sparkline"></canvas>

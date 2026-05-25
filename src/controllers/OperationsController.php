@@ -63,7 +63,7 @@ class OperationsController extends BaseReportController
 		$backfillLogs = Plugin::getInstance()->backfillLogs->getAll();
 
 		return $this->renderTemplate('best-sellers/_operations', [
-			'title' => Craft::t('best-sellers', 'Operations'),
+			'title' => Craft::t('best-sellers', 'nav.operations'),
 			'selectedSubnavItem' => 'operations',
 			'storeId' => $store?->id,
 			'statusEmails' => $statusEmails,
@@ -77,7 +77,7 @@ class OperationsController extends BaseReportController
 	{
 		$this->requirePostRequest();
 		Plugin::getInstance()->backfillLogs->deleteAll();
-		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Backfill logs cleared.'));
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.logsCleared'));
 
 		return $this->redirectToPostedUrl();
 	}

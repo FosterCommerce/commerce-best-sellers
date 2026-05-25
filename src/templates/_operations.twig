@@ -12,24 +12,24 @@
 			<div class="bs-section">
 				<div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 1rem;">
 					<h3 class="bs-section__title" style="margin: 0;">
-						{{ "Backfill Logs ({count})"|t('best-sellers', {count: backfillLogs|length}) }}
+						{{ 'operations.logs.title'|t('best-sellers', {count: backfillLogs|length}) }}
 					</h3>
 					<form method="POST" style="margin: 0;">
 						{{ actionInput('best-sellers/operations/clear-logs') }}
 						{{ csrfInput() }}
 						{{ redirectInput(cpUrl('best-sellers/operations')) }}
-						<button type="submit" class="btn small">{{ "Clear All"|t('best-sellers') }}</button>
+						<button type="submit" class="btn small">{{ 'operations.logs.clearAll'|t('best-sellers') }}</button>
 					</form>
 				</div>
 				<div class="bs-chart-container" style="border-color: #e74c3c;">
 					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
 						<thead>
 							<tr>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Level"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Type"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Reference"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Message"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Date"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'operations.logs.col.level'|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Type'|t('app') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Reference'|t('commerce') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'operations.logs.col.message'|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Date'|t('app') }}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -46,16 +46,16 @@
 									</td>
 									<td style="padding: 0.5rem; white-space: nowrap;">
 										{% if entry.type == 'backfill' %}
-											{{ "Order Backfill"|t('best-sellers') }}
+											{{ 'operations.logs.type.backfill'|t('best-sellers') }}
 										{% elseif entry.type == 'daily-stats' %}
-											{{ "Daily Stats"|t('best-sellers') }}
+											{{ 'operations.logs.type.dailyStats'|t('best-sellers') }}
 										{% else %}
 											{{ entry.type }}
 										{% endif %}
 									</td>
 									<td style="padding: 0.5rem; white-space: nowrap;">
 										{% if entry.type == 'backfill' %}
-											<a href="{{ cpUrl('commerce/orders/' ~ entry.reference) }}">{{ 'Order #{id}'|t('best-sellers', {id: entry.reference}) }}</a>
+											<a href="{{ cpUrl('commerce/orders/' ~ entry.reference) }}">{{ 'operations.logs.orderRef'|t('best-sellers', {id: entry.reference}) }}</a>
 										{% else %}
 											{{ entry.reference }}
 										{% endif %}
@@ -72,11 +72,11 @@
 
 		{# Commerce Settings Links #}
 		<div class="bs-section">
-			<h3 class="bs-section__title">{{ "Commerce Settings"|t('best-sellers') }}</h3>
+			<h3 class="bs-section__title">{{ 'Commerce Settings'|t('commerce') }}</h3>
 			<div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-				<a href="{{ cpUrl('commerce/settings/general', {site: craft.app.sites.currentSite.handle}) }}" class="btn">{{ "General Settings"|t('best-sellers') }}</a>
+				<a href="{{ cpUrl('commerce/settings/general', {site: craft.app.sites.currentSite.handle}) }}" class="btn">{{ 'General Settings'|t('app') }}</a>
 				{% if storeId %}
-					<a href="{{ cpUrl('commerce/settings/stores/' ~ storeId, {site: craft.app.sites.currentSite.handle}) }}#settings" class="btn">{{ "Store Settings"|t('best-sellers') }}</a>
+					<a href="{{ cpUrl('commerce/settings/stores/' ~ storeId, {site: craft.app.sites.currentSite.handle}) }}#settings" class="btn">{{ 'operations.storeSettings'|t('best-sellers') }}</a>
 				{% endif %}
 			</div>
 		</div>
@@ -84,20 +84,20 @@
 		{# Email Notifications #}
 		<div class="bs-section">
 			<div style="display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1rem;">
-				<h3 class="bs-section__title" style="margin: 0;">{{ "Email Notifications"|t('best-sellers') }}</h3>
-				<a href="{{ cpUrl('commerce/settings/emails') }}" class="go" style="font-size: 0.85rem;">{{ "Manage emails"|t('best-sellers') }}</a>
+				<h3 class="bs-section__title" style="margin: 0;">{{ 'operations.emails.title'|t('best-sellers') }}</h3>
+				<a href="{{ cpUrl('commerce/settings/emails') }}" class="go" style="font-size: 0.85rem;">{{ 'operations.emails.manage'|t('best-sellers') }}</a>
 			</div>
 
 			{% if statusEmails|length > 0 %}
 				<div class="bs-chart-container">
-					<h3 class="bs-chart-container__title">{{ "Order Status Emails"|t('best-sellers') }}</h3>
-					<p style="font-size: 0.85rem; color: #6c757d; margin: 0 0 1rem;">{{ "Emails triggered when an order transitions to each status."|t('best-sellers') }}</p>
+					<h3 class="bs-chart-container__title">{{ 'operations.emails.statusEmails'|t('best-sellers') }}</h3>
+					<p style="font-size: 0.85rem; color: #6c757d; margin: 0 0 1rem;">{{ 'operations.emails.statusEmailsDescription'|t('best-sellers') }}</p>
 					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
 						<thead>
 							<tr>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Status"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Emails Sent"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Recipient"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Status'|t('app') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'operations.emails.col.emailsSent'|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Recipient'|t('commerce') }}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -118,12 +118,12 @@
 													{% endif %}
 													{{ email.name }}
 													{% if not email.enabled %}
-														<span style="color: #999; font-size: 0.8rem;">({{ "disabled"|t('best-sellers') }})</span>
+														<span style="color: #999; font-size: 0.8rem;">({{ 'operations.emails.disabled'|t('best-sellers') }})</span>
 													{% endif %}
 												</div>
 											{% endfor %}
 										{% else %}
-											<span style="color: #999;">{{ "None"|t('best-sellers') }}</span>
+											<span style="color: #999;">{{ 'None'|t('app') }}</span>
 										{% endif %}
 									</td>
 									<td style="padding: 0.5rem; color: #6c757d;">
@@ -144,15 +144,15 @@
 
 			{% if allEmails|length > 0 %}
 				<div class="bs-chart-container">
-					<h3 class="bs-chart-container__title">{{ "All Configured Emails"|t('best-sellers') }}</h3>
+					<h3 class="bs-chart-container__title">{{ 'operations.emails.allConfigured'|t('best-sellers') }}</h3>
 					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
 						<thead>
 							<tr>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Name"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Subject"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "To"|t('best-sellers') }}</th>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Template"|t('best-sellers') }}</th>
-								<th style="text-align: center; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Enabled"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Name'|t('app') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Subject'|t('app') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'To'|t('app') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Template'|t('app') }}</th>
+								<th style="text-align: center; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Enabled'|t('app') }}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -179,15 +179,15 @@
 
 		{# Coupon Usage (All Time) #}
 		<div class="bs-section">
-			<h3 class="bs-section__title">{{ "Coupon Usage (All Time)"|t('best-sellers') }}</h3>
+			<h3 class="bs-section__title">{{ 'operations.coupons.title'|t('best-sellers') }}</h3>
 			{% if couponUsage|length > 0 %}
 				<div class="bs-chart-container">
 					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
 						<thead>
 							<tr>
-								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Code"|t('best-sellers') }}</th>
-								<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Uses"|t('best-sellers') }}</th>
-								<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Total Discount"|t('best-sellers') }}</th>
+								<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Code'|t('commerce') }}</th>
+								<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'operations.coupons.col.uses'|t('best-sellers') }}</th>
+								<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Total Discount'|t('commerce') }}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -206,7 +206,7 @@
 						</tbody>
 						<tfoot>
 							<tr>
-								<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ couponUsage|length }} {{ "codes"|t('best-sellers') }}</td>
+								<td style="padding: 0.5rem; font-weight: 600; border-top: 2px solid #e0e0e0;">{{ couponUsage|length }} {{ 'operations.coupons.codesCount'|t('best-sellers') }}</td>
 								<td style="padding: 0.5rem; text-align: right; font-weight: 600; border-top: 2px solid #e0e0e0;">
 									{% set totalUses = 0 %}{% for c in couponUsage %}{% set totalUses = totalUses + c.uses %}{% endfor %}
 									{{ totalUses|number_format }}
@@ -220,7 +220,7 @@
 					</table>
 				</div>
 			{% else %}
-				<p style="color: #999; font-size: 0.9rem;">{{ "No coupon codes have been used."|t('best-sellers') }}</p>
+				<p style="color: #999; font-size: 0.9rem;">{{ 'operations.coupons.empty'|t('best-sellers') }}</p>
 			{% endif %}
 		</div>
 	</div>

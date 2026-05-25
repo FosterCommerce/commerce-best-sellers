@@ -1,7 +1,90 @@
 <?php
 
 return [
-	// Orders bulk actions
+	// Nav
+	'nav.bestSellers' => 'Best Sellers',
+	'nav.operations' => 'Operations',
+	'nav.customers' => 'Customers',
+
+	// Permissions
+	'permissions.viewReports' => 'View reports',
+	'permissions.backfillOrderData' => 'Backfill order data',
+	'permissions.manageSettings' => 'Manage plugin settings',
+
+	// Reports (legacy date-range header)
+	'reports.title' => 'Commerce Reports',
+	'reports.preset.placeholder' => 'Select a preset',
+	'reports.preset.thisWeek' => 'This Week',
+	'reports.preset.thisMonth' => 'This Month',
+	'reports.preset.thisYear' => 'This Year',
+	'reports.preset.past7Days' => 'Past 7 Days',
+	'reports.preset.past30Days' => 'Past 30 Days',
+	'reports.preset.past90Days' => 'Past 90 Days',
+	'reports.preset.pastYear' => 'Past Year',
+	'reports.section.salesRevenueThisPeriod' => 'Sales & Revenue This Period',
+	'reports.section.summariesThisPeriod' => 'Summaries This Period',
+
+	// KPI labels
+	'kpi.customers' => 'Customers',
+	'kpi.aov' => 'AOV',
+	'kpi.avgOrderValue' => 'Avg. Order Value',
+	'kpi.itemsSold' => 'Items Sold',
+	'kpi.avgItemsPerOrder' => 'Avg Items / Order',
+	'kpi.newCustomers' => 'New Customers',
+	'kpi.repeatRate' => 'Repeat Rate',
+	'kpi.totalDiscounts' => 'Total Discounts',
+
+	// Overview / Dashboard
+	'overview.empty.message' => 'No order data has been processed yet. If you have existing orders, run the backfill utility to import historical data.',
+	'overview.empty.button' => 'Go to Backfill Utility',
+	'overview.section.discountsOrderComposition' => 'Discounts & Order Composition',
+	'overview.section.customersRetention' => 'Customers & Retention',
+	'overview.section.productPerformance' => 'Product Performance',
+	'overview.section.carts' => 'Carts',
+	'overview.link.seeAllOrders' => 'See all orders',
+	'overview.link.seeAllCustomers' => 'See all customers',
+	'overview.link.seeAllProducts' => 'See all products',
+	'overview.chart.new' => 'New',
+	'overview.chart.returning' => 'Returning',
+	'overview.chart.previousPeriod' => 'Previous Period',
+	'overview.copied' => 'Copied!',
+	'overview.cartsCount' => 'carts',
+	'overview.abandonment.rate' => 'Abandonment Rate',
+	'overview.abandonment.value' => 'Abandoned Value',
+	'overview.abandonment.carts' => 'Abandoned Carts',
+	'overview.abandonment.avgCartValue' => 'Avg Cart Value',
+	'overview.abandonment.byAge' => 'By age',
+	'overview.abandonment.outOf' => '{count} out of {total} carts',
+	'overview.abandonment.description.overview' => 'All carts with line items that haven’t been updated for at least 4 hours. These numbers may differ from external analytics services which track intent differently.',
+	'overview.abandonment.description.range4to24h' => 'Carts abandoned between 4 and 24 hours ago.',
+	'overview.abandonment.description.range1to7d' => 'Carts abandoned between 1 and 7 days ago.',
+	'overview.abandonment.description.range7dPlus' => 'Carts abandoned more than 7 days ago.',
+
+	// Sales / Orders report
+	'sales.filter.paymentStatus' => 'Payment Status',
+	'sales.filter.shipping' => 'Shipping',
+	'sales.filter.discount' => 'Discount',
+	'sales.filter.discounted' => 'Discounted',
+	'sales.filter.fullPrice' => 'Full Price',
+	'sales.filter.searchPlaceholder' => 'Search orders…',
+	'sales.col.orderNumber' => 'Order #',
+	'sales.col.payment' => 'Payment',
+	'sales.loading' => 'Rummaging through the order archives…',
+	'sales.empty' => 'No orders found matching your filters.',
+	'sales.notes.itemSubtotal' => '{label} is the order’s <code>itemSubtotal</code>: quantity × sale price across every line item. Sale-price promotions are already baked in; coupon and manual discounts (line-level or order-level) are not subtracted here. They appear in the {discountLabel} column.',
+	'sales.notes.discount' => '{label} sums all Discount adjustments on the order (coupons, manual, line-level and order-level). It does not include sale-price promotions.',
+	'sales.notes.totalPaid' => '{label} is the live sum of successful gateway transactions minus refunds. This is the closest figure to what was settled.',
+	'sales.notes.softDeleted' => 'Soft-deleted orders are excluded.',
+	'sales.notes.timezone' => 'Dates are bucketed in the site’s timezone ({tz}).',
+
+	// URL-filter labels
+	'sales.urlFilter.shipping' => 'Shipping: {method}',
+	'sales.urlFilter.discountedOrders' => 'Discounted orders',
+	'sales.urlFilter.fullPriceOrders' => 'Full-price orders',
+	'sales.urlFilter.discountId' => 'Discount ID: {id}',
+	'sales.urlFilter.itemsPerOrder' => 'Items per order: {bucket}',
+
+	// Orders bulk PDF download
 	'orders.bulk.downloadPdf' => 'Download PDF…',
 	'orders.bulk.downloadPdfCount' => 'Download PDF ({count})…',
 	'orders.bulk.pdfLabel' => 'PDF',
@@ -12,11 +95,408 @@ return [
 	'orders.bulk.selectAllAria' => 'Select all orders on this page',
 	'orders.bulk.selectRowAria' => 'Select order',
 	'orders.bulk.selectionsResetOnPaginate' => 'Selections cleared. Bulk selections apply to one page at a time.',
-
-	// Orders bulk download errors
 	'orders.bulk.error.invalidRequest' => 'Invalid request.',
 	'orders.bulk.error.invalidDownloadType' => 'Invalid download type.',
 	'orders.bulk.error.noOrdersSelected' => 'No orders selected.',
 	'orders.bulk.error.noMatchingOrders' => 'No matching orders.',
 	'orders.bulk.error.primaryStoreMissing' => 'Primary store is not configured.',
+
+	// Customers report
+	'customers.filter.customerType' => 'Customer Type',
+	'customers.filter.credentialed' => 'Credentialed',
+	'customers.filter.guest' => 'Guest',
+	'customers.filter.searchPlaceholder' => 'Search customers…',
+	'customers.loading' => 'Crunching numbers at elf speed…',
+	'customers.empty' => 'No customers found matching your filters.',
+	'customers.col.orderCount' => '# Orders',
+	'customers.col.totalSpent' => 'Total Spent',
+	'customers.col.lastPurchase' => 'Last Purchase',
+	'customers.notes.grouping' => 'Customers are grouped by email. A guest checkout and a logged-in checkout that share an email appear as one row.',
+	'customers.notes.totalSpent' => '{label} sums the order’s <code>totalPrice</code> (after tax, shipping, and discount) across the customer’s orders in this window. Refunds are not netted out.',
+	'customers.notes.aov' => '{label} is {totalSpent} ÷ {orderCount}.',
+	'customers.notes.onlyCompleted' => 'Only completed, non-trashed orders are counted.',
+
+	// Products report
+	'products.filter.showProductsOrVariants' => 'Show products or variants',
+	'products.filter.searchPlaceholder' => 'Search…',
+	'products.loading' => 'Fetching your data from the vault…',
+	'products.empty' => 'No product sales data for this period.',
+	'products.col.product' => 'Product',
+	'products.col.defaultSku' => 'Default SKU',
+	'products.col.unitsSold' => 'Units Sold',
+	'products.col.itemSalesNet' => 'Item Sales (Net)',
+	'products.col.avgPrice' => 'Avg Price',
+	'products.col.linkAria' => 'Link',
+	'products.bundleMarker' => 'Sold as part of a bundle',
+	'products.unpaidMarker' => 'At least one contributing order is not fully paid',
+	'products.inOrders' => 'in {count} orders',
+	'products.notes.itemSubtotal' => '{label} is quantity × sale price across the contributing line items. Sale-price promotions are already baked in; coupon and manual discounts are not subtracted here, so this column reconciles with the Orders report’s {ordersLabel} column when summed across the same orders.',
+	'products.notes.itemSalesNet' => '{label} is {subtotalLabel} minus any coupon or manual discounts attributed to the line.',
+	'products.notes.discountsNetted' => 'Coupon and manual discounts are netted out, including order-level discounts (Commerce always attaches Discount adjustments to specific line items, even when the rule is configured order-wide).',
+	'products.notes.taxShipping' => 'Tax and shipping are not included.',
+	'products.notes.refunds' => 'Refunds: fully refunded orders are dropped via the full-balance-owed exclusion. Partial refunds still count the full original sale amount for the line; the refund is not netted against the row.',
+	'products.notes.fullBalanceOwed' => 'Orders with a full balance owed (totalPaid ≤ 0 AND totalPrice > 0) are excluded. This drops orders that were authorized but never captured, were fully refunded, or had a failed payment; completion is not the same as money received. Partially paid orders are still counted, and a ⚠ next to a row’s units count means at least one of that row’s orders is currently partially paid. For actual money received, use the Orders report’s Total Paid column.',
+	'products.notes.bundles' => 'Bundle sales (subtotals and discounts both) are distributed proportionally across the constituent variants, not the bundle itself.',
+	'products.notes.resync' => 'Sales numbers re-sync automatically when an order is saved (initial completion, admin edits, status changes, etc.). The ⚠ partial-payment marker is live and reflects current payment state.',
+	'products.notes.avgPrice' => '{label} averages the line-item list price (pre-promotion), so it does not divide cleanly into {revLabel}.',
+
+	// Product orders drill-down
+	'productOrders.titleSuffix' => '{title}: Orders',
+	'productOrders.back' => 'Back to Products',
+	'productOrders.loading' => 'Our diligent elf is sorting receipts…',
+	'productOrders.empty' => 'No orders found for this period.',
+	'productOrders.col.lineRevenue' => 'Line Revenue',
+	'productOrders.col.orderTotal' => 'Order Total',
+
+	// Transactions report
+	'transactions.filter.type' => 'Type',
+	'transactions.filter.status' => 'Status',
+	'transactions.type.purchase' => 'Purchase',
+	'transactions.type.authorize' => 'Authorize',
+	'transactions.status.redirect' => 'Redirect',
+	'transactions.filter.orderDate' => 'Order date',
+	'transactions.filter.clearOrderDate' => 'Clear order date filter',
+	'transactions.filter.searchPlaceholder' => 'Search by order #, email, reference…',
+	'transactions.loading' => 'Reconciling the books…',
+	'transactions.empty' => 'No transactions found matching your filters.',
+	'transactions.col.orderNumber' => 'Order #',
+	'transactions.col.orderDate' => 'Order Date',
+	'transactions.col.captured' => 'Captured',
+	'transactions.col.refunded' => 'Refunded',
+	'transactions.col.net' => 'Net',
+	'transactions.notes.dateRange' => 'The header date picker bounds the transaction’s {column}, not the order’s {orderColumn}. Refunds appear on the day the refund was processed, not when the original order was placed.',
+	'transactions.notes.orderDate' => 'The {orderDateLabel} filter is an additional intersection on the order’s {orderColumn}. Set both to answer questions like “refunds processed in May for orders placed in March.” Leave it empty to filter by transaction date alone.',
+	'transactions.notes.netCalc' => 'Refunds are shown as negative amounts. {netLabel} = {capturedLabel} − {refundedLabel} for the filtered rows.',
+	'transactions.notes.singleCurrency' => 'Only transactions recorded in the store currency ({code}) are included. Multi-currency transactions, if any, are excluded.',
+	'transactions.notes.authorize' => '{authorizeLabel} rows are not money movement on their own. Enabling the {authorizeLabel} type filter will include them in {capturedLabel}, which double-counts the matching {captureLabel}.',
+	'transactions.notes.softDeleted' => 'Transactions for soft-deleted orders are excluded.',
+
+	// Operations page
+	'operations.logs.title' => 'Backfill Logs ({count})',
+	'operations.logs.clearAll' => 'Clear All',
+	'operations.logs.col.level' => 'Level',
+	'operations.logs.col.message' => 'Message',
+	'operations.logs.type.backfill' => 'Order Backfill',
+	'operations.logs.type.dailyStats' => 'Daily Stats',
+	'operations.logs.orderRef' => 'Order #{id}',
+	'operations.storeSettings' => 'Store Settings',
+	'operations.emails.title' => 'Email Notifications',
+	'operations.emails.manage' => 'Manage emails',
+	'operations.emails.statusEmails' => 'Order Status Emails',
+	'operations.emails.statusEmailsDescription' => 'Emails triggered when an order transitions to each status.',
+	'operations.emails.col.emailsSent' => 'Emails Sent',
+	'operations.emails.allConfigured' => 'All Configured Emails',
+	'operations.emails.disabled' => 'disabled',
+	'operations.coupons.title' => 'Coupon Usage (All Time)',
+	'operations.coupons.col.uses' => 'Uses',
+	'operations.coupons.codesCount' => 'codes',
+	'operations.coupons.empty' => 'No coupon codes have been used.',
+
+	// Backfill utility
+	'backfill.title' => 'Backfill Orders',
+	'backfill.intro' => 'Import completed orders that were placed before the plugin was installed. Only orders not already recorded will be processed.',
+	'backfill.dateRangeHint' => 'Leave both dates empty to backfill all completed orders. Set a date range to limit which orders are imported.',
+	'backfill.startDate' => 'Start Date',
+	'backfill.endDate' => 'End Date',
+	'backfill.start' => 'Start Backfill',
+	'backfill.clearAndReprocess' => 'Clear and Reprocess',
+	'backfill.clearOrderData' => 'Clear Order Data',
+	'backfill.rebuildTitle' => 'Rebuild Daily Stats',
+	'backfill.rebuildIntro' => 'Rebuild the pre-aggregated daily statistics table from commerce order data. This is useful after a backfill or if stats appear out of sync.',
+	'backfill.rebuild' => 'Rebuild Daily Stats',
+	'backfill.clearAndRebuild' => 'Clear and Rebuild',
+	'backfill.clearDailyStats' => 'Clear Daily Stats',
+	'backfill.notice.queued' => 'Backfill queued for {count} orders.',
+	'backfill.notice.noCompletedOrders' => 'No completed orders found.',
+	'backfill.notice.dailyStatsRebuildQueued' => 'Daily stats rebuild queued.',
+	'backfill.notice.variantSalesCleared' => 'Variant sales cleared.',
+	'backfill.notice.dailyStatsCleared' => 'Daily stats cleared.',
+	'backfill.notice.logsCleared' => 'Backfill logs cleared.',
+
+	// Settings page
+	'settings.defaultStatuses.label' => 'Default order statuses',
+	'settings.defaultStatuses.instructions' => 'Statuses pre-selected in the global order status filter when first opening a report. Users can override the selection per session.',
+
+	// Shared table affordances
+	'table.aboutTheseNumbers' => 'About these numbers',
+	'table.filteredResultsTotal' => 'Filtered Results Total',
+	'table.noData' => 'No data available',
+
+	// Pagination
+	'pagination.previous' => 'Previous',
+	'pagination.next' => 'Next',
+	'pagination.showingRange' => 'Showing {start}–{end} of {total} {label}',
+	'pagination.pageOf' => 'Page {current} of {total}',
+	'pagination.exportCsv' => 'Export CSV',
+
+	// Filter chip
+	'chip.filteredTo' => 'Filtered to:',
+	'chip.clearFilter' => 'Clear filter',
+	'chip.filtered' => 'Filtered: {label}',
+
+	// AJAX errors
+	'errors.loadData' => 'Failed to load data: {error}',
+
+	// Cart-restore controller
+	'cart.error.numberRequired' => 'Cart number is required.',
+	'cart.error.notFound' => 'Cart not found.',
+	'cart.error.completed' => 'This order has already been completed.',
+	'cart.error.belongsToOther' => 'This cart belongs to another account. Please log in as the cart owner to continue.',
+	'cart.error.loginRequired' => 'This cart belongs to a user account. Please log in to continue.',
+	'cart.restored' => 'Your cart has been restored.',
+
+	// Product orders controller error
+	'productOrders.error.idRequired' => 'productId or variantId is required.',
+
+	// Top discounts widget
+	'widgets.topDiscounts.title' => 'Most Used Discounts',
+	'widgets.topDiscounts.countSuffix' => 'discounts',
+	'widgets.topDiscounts.empty' => 'No discounts used in this period.',
+
+	// Items-per-order widget
+	'widgets.itemsPerOrder.title' => 'Items Per Order',
+
+	// Shipping methods widget
+	'widgets.shippingMethods.title' => 'Shipping Methods',
+	'widgets.shippingMethods.col.method' => 'Method',
+	'widgets.shippingMethods.col.shippingRevenue' => 'Shipping Revenue',
+	'widgets.shippingMethods.countSuffix' => 'methods',
+
+	// Discounted vs. full price widget
+	'widgets.discountedVsFullPrice.title' => 'Discounted vs. Full-Price Orders',
+	'widgets.discountedVsFullPrice.fullPriceTitle' => 'Full price',
+
+	// LTV widget
+	'widgets.ltv.title' => 'Credentialed vs Guest',
+	'widgets.ltv.row.avgLtv' => 'Avg LTV',
+	'widgets.ltv.row.avgOrders' => 'Avg Orders',
+	'widgets.ltv.row.totalRevenue' => 'Total Revenue',
+
+	// Cart abandonment widget
+	'widgets.cartAbandonment.title' => 'Cart Abandonment',
+	'widgets.cartAbandonment.includeAnonymous' => 'Include anonymous carts',
+	'widgets.cartAbandonment.tab.overview' => 'Overview',
+	'widgets.cartAbandonment.tab.range4to24h' => '4-24 hours',
+	'widgets.cartAbandonment.tab.range1to7d' => '1-7 days',
+	'widgets.cartAbandonment.tab.range7dPlus' => '7+ days',
+	'widgets.cartAbandonment.storeSettings' => 'Store cart settings',
+	'widgets.cartAbandonment.activeDuration' => 'Active cart duration:',
+	'widgets.cartAbandonment.purgedAfter' => 'Carts are purged after',
+	'widgets.cartAbandonment.purgingDisabled' => 'Cart purging is disabled.',
+	'widgets.cartAbandonment.recommendation' => 'Recommended: Keep carts active for at least 30 days, purge after 90 days.',
+
+	// Highest-value abandoned carts widget
+	'widgets.abandonedCarts.title' => 'Highest-Value Abandoned Carts',
+	'widgets.abandonedCarts.col.age' => 'Age',
+	'widgets.abandonedCarts.anonymous' => 'Anonymous',
+	'widgets.abandonedCarts.unit.hours' => 'h',
+	'widgets.abandonedCarts.unit.days' => 'd',
+	'widgets.abandonedCarts.unit.weeks' => 'w',
+	'widgets.abandonedCarts.action.share' => 'Share',
+	'widgets.abandonedCarts.action.shareTitle' => 'Copy cart restore link to share with the customer',
+	'widgets.abandonedCarts.countSuffix' => 'carts',
+	'widgets.abandonedCarts.note.share' => 'Share copies a link that restores the cart when the customer visits it.',
+	'widgets.abandonedCarts.note.restoreAccount' => 'Carts belonging to registered customers can only be restored by the account holder.',
+	'widgets.abandonedCarts.note.linksExpire' => 'Links expire when carts are purged (after {duration}).',
+	'widgets.abandonedCarts.note.purgingDisabled' => 'Cart purging is disabled. Links remain valid indefinitely.',
+	'widgets.abandonedCarts.empty' => 'No abandoned carts in this period.',
+
+	// New vs returning widget
+	'widgets.newVsReturning.title' => 'New vs Returning Customers',
+
+	// Best sellers widget
+	'widgets.bestSellers.title' => 'Best Sellers',
+	'widgets.bestSellers.units' => 'units',
+	'widgets.bestSellers.top' => 'Top',
+
+	// Top customers widget
+	'widgets.topCustomers.title' => 'Top Customers by Revenue',
+	'widgets.topCustomers.empty' => 'No customer data available.',
+
+	// Extra KPI cards built directly by OverviewController
+	'kpi.avgCustomerLtv' => 'Avg Customer LTV',
+	'kpi.uniqueProductsSold' => 'Unique Products Sold',
+	'kpi.productRevenue' => 'Product Revenue',
+
+	// Summary range labels (current period)
+	'range.today' => 'today',
+	'range.thisPastWeek' => 'this past week',
+	'range.last30Days' => 'the last 30 days',
+	'range.last90Days' => 'the last 90 days',
+	'range.lastYear' => 'the last year',
+	'range.thisWeekSoFar' => 'this week so far',
+	'range.monthSoFar' => '{month} so far',
+	'range.yearSoFar' => '{year} so far',
+	'range.allTime' => 'all time',
+
+	// Summary range labels (comparison period)
+	'comparison.yesterday' => 'yesterday',
+	'comparison.priorWeek' => 'the prior week',
+	'comparison.prior30Days' => 'the prior 30 days',
+	'comparison.prior90Days' => 'the prior 90 days',
+	'comparison.priorYear' => 'the prior year',
+	'comparison.samePointLastWeek' => 'the same point last week',
+	'comparison.samePointInMonth' => 'the same point in {month}',
+	'comparison.samePointInYear' => 'the same point in {year}',
+	'comparison.priorDays' => 'the prior {days} days',
+
+	// Direction words for narrative templates
+	'signal.up' => 'up',
+	'signal.down' => 'down',
+	'signal.flat' => 'flat',
+
+	// Summary warnings
+	'warning.partialPeriod' => 'This period is not complete. Totals will change.',
+	'warning.shortRange' => 'Weekly data can be volatile. A single large order can skew these numbers.',
+	'warning.longRange' => 'This is a long date range. Short-term changes may not be visible.',
+	'warning.noYoy' => 'Year-over-year data is unavailable. Site data begins {date}.',
+	'warning.lowChunkCount' => 'The 12-month average is based on only {count} comparable periods and may not be representative.',
+	'warning.prorated' => 'Averages are prorated to {days} days for a fair comparison.',
+
+	// Summary sentences (Discounts section)
+	'summary.discounts.empty' => 'No discounted orders in this period.',
+	'summary.discounts.aovAbove' => '{pct} of orders used a discount, accounting for {revenue} in revenue. Discounted orders have a {discountedAov} AOV vs. {fullPriceAov} for full-price, suggesting discounts are driving larger buyers.',
+	'summary.discounts.aovBelow' => '{pct} of orders used a discount, accounting for {revenue} in revenue. Discounted orders have a {discountedAov} AOV vs. {fullPriceAov} for full-price.',
+	'summary.discounts.shareOnly' => '{pct} of orders used a discount, accounting for {revenue} in revenue.',
+	'summary.discounts.prevShare' => 'Discount share was {prevPct} last period',
+	'summary.discounts.smallShare' => 'A small share of overall volume',
+	'summary.discounts.majorityShare' => 'More than half of orders are discounted',
+
+	// Summary annotations (Products / Baselines)
+	'summary.products.yoy' => 'This period last year: product revenue {direction} {delta}',
+	'summary.baseline.declineConsistent' => 'Decline is consistent across all comparison periods',
+	'summary.baseline.yoySeasonal' => 'This period last year: roughly flat ({delta}), suggesting seasonal patterns',
+	'summary.baseline.yoy' => 'This period last year: {direction} {delta}',
+	'summary.baseline.trailing' => 'Trailing 12-month avg: {direction} {delta}',
+	'summary.rangeContext' => 'Over {range}, {summary} vs. {comparison}.',
+
+	// Jobs
+	'jobs.rebuildDailyStats' => 'Rebuilding daily stats',
+	'jobs.backfillOrders' => 'Backfilling orders starting at offset {offset}',
+
+	// CSV export columns: Customers
+	'export.customers.col.numOrders' => '# Orders',
+	'export.customers.col.totalSpent' => 'Total Spent',
+	'export.customers.col.aov' => 'AOV',
+	'export.customers.col.lastPurchase' => 'Last Purchase',
+
+	// Summary narrative templates (TemplateResolver). Keys are constructed as
+	// `summary.template.<group>.<camelCasedSignature>`. Keep this list aligned
+	// with TemplateResolver::knownSignatures().
+	'summary.template.orders.upUpFlat' => 'Revenue is up {revenue_delta}, with order volume also climbing ({orders_delta}).',
+	'summary.template.orders.upUpDown' => 'Revenue is up {revenue_delta} on higher volume ({orders_delta} more orders), though AOV dipped {aov_delta}.',
+	'summary.template.orders.upUpUp' => 'Revenue is up {revenue_delta}, with both order volume ({orders_delta}) and AOV ({aov_delta}) climbing.',
+	'summary.template.orders.upUpSlightlyUp' => 'Revenue is up {revenue_delta}, with both order volume ({orders_delta}) and AOV ({aov_delta}) climbing.',
+	'summary.template.orders.upUpSlightlyDown' => 'Revenue is up {revenue_delta} on higher volume ({orders_delta} more orders), though AOV dipped slightly.',
+	'summary.template.orders.upFlatUp' => 'Revenue is up {revenue_delta}, driven by higher AOV ({aov_delta}).',
+	'summary.template.orders.upFlatSlightlyUp' => 'Revenue is up {revenue_delta}, nudged by a slight AOV increase.',
+	'summary.template.orders.upDownUp' => 'Revenue is up {revenue_delta} despite fewer orders, with AOV climbing {aov_delta}.',
+	'summary.template.orders.upSlightlyUpFlat' => 'Revenue is up {revenue_delta}, with a slight uptick in order volume.',
+	'summary.template.orders.upSlightlyUpSlightlyUp' => 'Revenue is up {revenue_delta}, with both order volume and AOV nudging upward.',
+	'summary.template.orders.upSlightlyDownUp' => 'Revenue is up {revenue_delta} as higher AOV ({aov_delta}) more than offset a slight dip in orders.',
+	'summary.template.orders.slightlyUpSlightlyUpFlat' => 'Revenue is up slightly ({revenue_delta}), with a modest increase in orders.',
+	'summary.template.orders.slightlyUpFlatSlightlyUp' => 'Revenue is up slightly ({revenue_delta}), with AOV inching higher.',
+	'summary.template.orders.slightlyUpSlightlyUpSlightlyUp' => 'Revenue is up slightly ({revenue_delta}), with both orders and AOV trending upward.',
+	'summary.template.orders.flatFlatFlat' => 'Revenue and order volume are holding steady.',
+	'summary.template.orders.flatDownUp' => 'Revenue is roughly flat ({revenue_delta}) on fewer orders, but AOV is up {aov_delta}.',
+	'summary.template.orders.flatUpDown' => 'Revenue is roughly flat ({revenue_delta}) despite more orders ({orders_delta}), as AOV dipped {aov_delta}.',
+	'summary.template.orders.flatSlightlyDownSlightlyUp' => 'Revenue is holding steady as a slight drop in orders was offset by higher AOV.',
+	'summary.template.orders.flatSlightlyUpSlightlyDown' => 'Revenue is holding steady as a slight increase in orders was offset by lower AOV.',
+	'summary.template.orders.slightlyDownDownUp' => 'Revenue dipped slightly ({revenue_delta}) as fewer orders were partially offset by higher AOV ({aov_delta}).',
+	'summary.template.orders.slightlyDownDownFlat' => 'Revenue is down slightly ({revenue_delta}), driven by a {orders_delta} drop in orders.',
+	'summary.template.orders.slightlyDownFlatSlightlyDown' => 'Revenue dipped slightly ({revenue_delta}), with AOV trending a bit lower.',
+	'summary.template.orders.slightlyDownSlightlyDownFlat' => 'Revenue is down slightly ({revenue_delta}), with a modest decline in orders.',
+	'summary.template.orders.slightlyDownSlightlyDownSlightlyDown' => 'Revenue dipped slightly ({revenue_delta}), with both orders and AOV trending a bit lower.',
+	'summary.template.orders.downDownFlat' => 'Revenue is down {revenue_delta}, driven by a {orders_delta} drop in orders.',
+	'summary.template.orders.downDownDown' => 'Revenue is down {revenue_delta}, with both order volume ({orders_delta}) and AOV ({aov_delta}) declining.',
+	'summary.template.orders.downDownUp' => 'Revenue is down {revenue_delta} on a {orders_delta} drop in orders, though AOV rose {aov_delta}.',
+	'summary.template.orders.downDownSlightlyUp' => 'Revenue is down {revenue_delta} on fewer orders ({orders_delta}), with AOV only slightly higher.',
+	'summary.template.orders.downDownSlightlyDown' => 'Revenue is down {revenue_delta} on fewer orders ({orders_delta}), with AOV also slipping.',
+	'summary.template.orders.downFlatDown' => 'Revenue is down {revenue_delta}, driven by lower AOV ({aov_delta}).',
+	'summary.template.orders.downUpDown' => 'Revenue is down {revenue_delta} despite more orders ({orders_delta}), as AOV dropped {aov_delta}.',
+	'summary.template.orders.downSlightlyDownDown' => 'Revenue is down {revenue_delta}, with both orders and AOV declining.',
+	'summary.template.orders.downSlightlyDownSlightlyDown' => 'Revenue is down {revenue_delta}, with both orders and AOV slipping.',
+	'summary.template.customers.upUpFlat' => 'Customer base is growing, with {new_customers_delta} more new customers.',
+	'summary.template.customers.upUpUp' => 'Customer base is growing ({customers_delta} more buyers), with {new_customers_delta} more new customers and a rising repeat rate ({repeat_rate_value}).',
+	'summary.template.customers.upUpDown' => 'More customers ordered ({customers_delta}), driven by {new_customers_delta} more new buyers, though repeat rate dipped to {repeat_rate_value}.',
+	'summary.template.customers.upUpSlightlyDown' => 'Customer base is growing ({customers_delta}), with {new_customers_delta} more new buyers. Repeat rate slipped slightly.',
+	'summary.template.customers.upUpSlightlyUp' => 'Customer base is growing ({customers_delta}), with {new_customers_delta} more new buyers and a slightly improving repeat rate.',
+	'summary.template.customers.upFlatUp' => '{customers_delta} more customers ordered, with an increasing share of repeat buyers ({repeat_rate_value}).',
+	'summary.template.customers.upDownUp' => '{customers_delta} more customers ordered despite fewer new buyers, as repeat rate climbed to {repeat_rate_value}.',
+	'summary.template.customers.upSlightlyUpFlat' => 'Customer count is up {customers_delta}, with a slight uptick in new buyer acquisition.',
+	'summary.template.customers.flatFlatFlat' => 'Customer activity is holding steady.',
+	'summary.template.customers.flatUpDown' => 'Customer count is stable with more new buyers, but repeat rate dropped to {repeat_rate_value}.',
+	'summary.template.customers.flatDownUp' => 'Customer count is stable despite fewer new buyers, as repeat rate climbed to {repeat_rate_value}.',
+	'summary.template.customers.slightlyDownSlightlyDownFlat' => 'Customer activity dipped slightly ({customers_delta}), with marginally fewer new buyers.',
+	'summary.template.customers.slightlyDownDownUp' => 'Fewer customers overall ({customers_delta}), but repeat rate improved to {repeat_rate_value}.',
+	'summary.template.customers.downDownFlat' => 'Customer activity declined, with {new_customers_delta} fewer new buyers.',
+	'summary.template.customers.downDownUp' => 'Fewer customers ordered ({customers_delta}), but those who did are increasingly repeat buyers (repeat rate up to {repeat_rate_value}).',
+	'summary.template.customers.downDownDown' => 'Customer activity declined across the board, with {customers_delta} fewer customers and {new_customers_delta} fewer new buyers.',
+	'summary.template.customers.downDownSlightlyDown' => 'Fewer customers ordered ({customers_delta}), with both new buyer acquisition and repeat rate declining.',
+	'summary.template.customers.downFlatDown' => 'Fewer customers ordered ({customers_delta}), with repeat rate dropping to {repeat_rate_value}.',
+	'summary.template.customers.downUpDown' => 'Fewer customers overall ({customers_delta}) despite more new buyers, as repeat rate dropped to {repeat_rate_value}.',
+	'summary.template.products.upUp' => 'Product revenue is up {product_revenue_delta}, with {unique_products_delta} more unique products sold.',
+	'summary.template.products.upFlat' => 'Product revenue is up {product_revenue_delta} from the same product mix.',
+	'summary.template.products.upDown' => 'Product revenue is up {product_revenue_delta} despite fewer unique products selling ({unique_products_delta}).',
+	'summary.template.products.upSlightlyUp' => 'Product revenue is up {product_revenue_delta}, with a slightly broader product mix.',
+	'summary.template.products.upSlightlyDown' => 'Product revenue is up {product_revenue_delta} from a slightly narrower product mix.',
+	'summary.template.products.flatFlat' => 'Product revenue and product mix are holding steady.',
+	'summary.template.products.flatUp' => 'Product revenue is flat, though {unique_products_delta} more unique products sold.',
+	'summary.template.products.flatDown' => 'Product revenue is flat despite fewer unique products selling ({unique_products_delta}).',
+	'summary.template.products.slightlyUpFlat' => 'Product revenue is up slightly ({product_revenue_delta}).',
+	'summary.template.products.slightlyDownFlat' => 'Product revenue dipped slightly ({product_revenue_delta}).',
+	'summary.template.products.downDown' => 'Product revenue is down {product_revenue_delta}, with {unique_products_delta} fewer unique products sold.',
+	'summary.template.products.downFlat' => 'Product revenue is down {product_revenue_delta} from roughly the same product mix.',
+	'summary.template.products.downUp' => 'Product revenue is down {product_revenue_delta} despite more unique products selling ({unique_products_delta}).',
+	'summary.template.products.downSlightlyDown' => 'Product revenue is down {product_revenue_delta}, with a slightly narrower product mix.',
+	'summary.template.products.slightlyDownDown' => 'Product revenue dipped slightly ({product_revenue_delta}), with fewer unique products sold.',
+	'summary.template.products.slightlyDownSlightlyDown' => 'Product revenue dipped slightly ({product_revenue_delta}), with a slightly narrower product mix.',
+	'summary.template.abandonment.downDown' => 'Cart abandonment improved, with the rate dropping {abandonment_rate_delta} and abandoned value down {abandoned_value_delta}.',
+	'summary.template.abandonment.downFlat' => 'Cart abandonment rate improved ({abandonment_rate_delta} lower), though abandoned value held steady.',
+	'summary.template.abandonment.downUp' => 'Abandonment rate improved ({abandonment_rate_delta} lower), but the value of abandoned carts rose {abandoned_value_delta}.',
+	'summary.template.abandonment.flatFlat' => 'Cart abandonment is holding steady at {abandonment_rate_value}.',
+	'summary.template.abandonment.flatUp' => 'Cart abandonment rate is steady at {abandonment_rate_value}, but abandoned value rose {abandoned_value_delta}.',
+	'summary.template.abandonment.flatDown' => 'Cart abandonment rate is steady at {abandonment_rate_value}, with abandoned value declining.',
+	'summary.template.abandonment.upUp' => 'Cart abandonment worsened, with the rate up {abandonment_rate_delta} and abandoned value rising {abandoned_value_delta}.',
+	'summary.template.abandonment.upFlat' => 'Cart abandonment rate rose {abandonment_rate_delta}, though abandoned value held steady.',
+	'summary.template.abandonment.upDown' => 'Cart abandonment rate rose {abandonment_rate_delta}, but the value of abandoned carts declined.',
+	'summary.template.abandonment.slightlyUpSlightlyUp' => 'Cart abandonment ticked up slightly (rate +{abandonment_rate_delta}).',
+	'summary.template.abandonment.slightlyDownSlightlyDown' => 'Cart abandonment improved slightly (rate -{abandonment_rate_delta}).',
+
+	// Summary fallback sentences when no signature matches
+	'summary.fallback.orders' => 'Revenue changed {revenue_delta} with {orders_count} orders at an average of {aov_value}.',
+	'summary.fallback.customers' => '{customers_count} customers ordered, {new_customers_count} of them new, with a {repeat_rate_value} repeat rate.',
+	'summary.fallback.products' => 'Product revenue changed {product_revenue_delta} with {unique_products_count} unique products sold.',
+	'summary.fallback.abandonment' => 'Cart abandonment rate is {abandonment_rate_value} with {abandoned_value_formatted} in abandoned carts.',
+
+	// Shared date picker include
+	'datePicker.allTimes' => 'All times in {tz}',
+	'datePicker.orderStatuses' => 'Order statuses',
+
+	// Cart login-required landing page
+	'cart.login.pageTitle' => 'Login Required',
+	'cart.login.heading' => 'Login Required',
+	'cart.login.button' => 'Log In to Continue',
+	'cart.login.badge' => 'Secure cart restoration',
+
+	// Legacy dashboard template
+	'dashboard.allProductTypes' => 'All product types',
+	'dashboard.noBestSellers' => 'No best sellers yet.',
+	'dashboard.col.variant' => 'Variant',
+	'dashboard.col.totalSold' => 'Total Sold',
+	'dashboard.col.title' => 'Title',
+	'dashboard.itemLabel' => 'item',
+	'dashboard.itemsLabel' => 'items',
+
+	// Loading phrase pool used by the shared ajax-table JS
+	'loading.phrase.archives' => 'Rummaging through the archives…',
+	'loading.phrase.elfBoxes' => 'Our warehouse elf is counting boxes…',
+	'loading.phrase.ledger' => 'Dusting off the ledger books…',
+	'loading.phrase.gnome' => 'The data gnome is doing the heavy lifting…',
+	'loading.phrase.spreadsheets' => 'Untangling the spreadsheets…',
+	'loading.phrase.elfReceipts' => 'Our diligent elf is sorting receipts…',
+	'loading.phrase.elfSpeed' => 'Crunching numbers at elf speed…',
+	'loading.phrase.vault' => 'Fetching your data from the vault…',
+	'loading.phrase.fairy' => 'The data fairy is waving her wand…',
+	'loading.phrase.packingSlips' => 'Sifting through packing slips…',
 ];

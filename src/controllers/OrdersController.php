@@ -108,7 +108,7 @@ class OrdersController extends BaseReportController
 			: new Collection();
 
 		return $this->renderTemplate('best-sellers/_sales', [
-			'title' => Craft::t('best-sellers', 'Orders'),
+			'title' => Craft::t('commerce', 'Orders'),
 			'selectedSubnavItem' => 'orders',
 			'from' => $scope->from,
 			'to' => $scope->to,
@@ -285,17 +285,17 @@ class OrdersController extends BaseReportController
 		];
 
 		return $this->asCsv($csvRows, [
-			Craft::t('best-sellers', 'Order #'),
-			Craft::t('best-sellers', 'Date Ordered'),
-			Craft::t('best-sellers', 'Status'),
-			Craft::t('best-sellers', 'Email'),
-			Craft::t('best-sellers', 'Item Subtotal'),
-			Craft::t('best-sellers', 'Tax'),
-			Craft::t('best-sellers', 'Discount'),
-			Craft::t('best-sellers', 'Shipping'),
-			Craft::t('best-sellers', 'Total Paid'),
-			Craft::t('best-sellers', 'Items Sold'),
-			Craft::t('best-sellers', 'Payment Status'),
+			Craft::t('best-sellers', 'sales.col.orderNumber'),
+			Craft::t('commerce', 'Date Ordered'),
+			Craft::t('app', 'Status'),
+			Craft::t('app', 'Email'),
+			Craft::t('commerce', 'Item Subtotal'),
+			Craft::t('commerce', 'Tax'),
+			Craft::t('commerce', 'Discount'),
+			Craft::t('commerce', 'Shipping'),
+			Craft::t('commerce', 'Total Paid'),
+			Craft::t('best-sellers', 'kpi.itemsSold'),
+			Craft::t('best-sellers', 'sales.filter.paymentStatus'),
 		], 'orders');
 	}
 

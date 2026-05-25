@@ -93,7 +93,7 @@ class BackfillController extends Controller
 			]));
 		}
 
-		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Backfill queued for {count} orders.', [
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.queued', [
 			'count' => $totalOrders,
 		]));
 		return $this->redirectToPostedUrl();
@@ -122,7 +122,7 @@ class BackfillController extends Controller
 		$row = NotTrashed::join($rangeQuery, 'orders')->one();
 
 		if (! $row || ! $row['minDate']) {
-			Craft::$app->session->setNotice(Craft::t('best-sellers', 'No completed orders found.'));
+			Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.noCompletedOrders'));
 			return $this->redirectToPostedUrl();
 		}
 
@@ -134,7 +134,7 @@ class BackfillController extends Controller
 			'endDate' => $endDate,
 		]));
 
-		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Daily stats rebuild queued.'));
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.dailyStatsRebuildQueued'));
 		return $this->redirectToPostedUrl();
 	}
 
@@ -150,7 +150,7 @@ class BackfillController extends Controller
 			->truncateTable(Table::VARIANT_SALES)
 			->execute();
 
-		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Variant sales cleared.'));
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.variantSalesCleared'));
 		return $this->redirectToPostedUrl();
 	}
 
@@ -166,7 +166,7 @@ class BackfillController extends Controller
 			->truncateTable(Table::DAILY_STATS)
 			->execute();
 
-		Craft::$app->session->setNotice(Craft::t('best-sellers', 'Daily stats cleared.'));
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.dailyStatsCleared'));
 		return $this->redirectToPostedUrl();
 	}
 

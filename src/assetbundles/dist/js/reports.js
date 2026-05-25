@@ -4,17 +4,17 @@
 (function () {
 	'use strict';
 
-	const loadingPhrases = [
-		'Rummaging through the archives...',
-		'Our warehouse elf is counting boxes...',
-		'Dusting off the ledger books...',
-		'The data gnome is doing the heavy lifting...',
-		'Untangling the spreadsheets...',
-		'Our diligent elf is sorting receipts...',
-		'Crunching numbers at elf speed...',
-		'Fetching your data from the vault...',
-		'The data fairy is waving her wand...',
-		'Sifting through packing slips...',
+	const loadingPhraseKeys = [
+		'loading.phrase.archives',
+		'loading.phrase.elfBoxes',
+		'loading.phrase.ledger',
+		'loading.phrase.gnome',
+		'loading.phrase.spreadsheets',
+		'loading.phrase.elfReceipts',
+		'loading.phrase.elfSpeed',
+		'loading.phrase.vault',
+		'loading.phrase.fairy',
+		'loading.phrase.packingSlips',
 	];
 
 	window.BestSellersReports = {
@@ -310,15 +310,15 @@
 					if (val) { urlFilters[key] = val; }
 				});
 				if (urlFilters.shippingMethod) {
-					urlFilterLabel = Craft.t('best-sellers', 'Shipping: {method}', { method: urlFilters.shippingMethod });
+					urlFilterLabel = Craft.t('best-sellers', 'sales.urlFilter.shipping', { method: urlFilters.shippingMethod });
 				} else if (urlFilters.discountStatus) {
 					urlFilterLabel = urlFilters.discountStatus === 'discounted'
-						? Craft.t('best-sellers', 'Discounted orders')
-						: Craft.t('best-sellers', 'Full-price orders');
+						? Craft.t('best-sellers', 'sales.urlFilter.discountedOrders')
+						: Craft.t('best-sellers', 'sales.urlFilter.fullPriceOrders');
 				} else if (urlFilters.discountId) {
-					urlFilterLabel = Craft.t('best-sellers', 'Discount ID: {id}', { id: urlFilters.discountId });
+					urlFilterLabel = Craft.t('best-sellers', 'sales.urlFilter.discountId', { id: urlFilters.discountId });
 				} else if (urlFilters.itemsPerOrder) {
-					urlFilterLabel = Craft.t('best-sellers', 'Items per order: {bucket}', { bucket: urlFilters.itemsPerOrder });
+					urlFilterLabel = Craft.t('best-sellers', 'sales.urlFilter.itemsPerOrder', { bucket: urlFilters.itemsPerOrder });
 				}
 			} catch (err) {
 				// URLSearchParams not supported or other error
@@ -368,8 +368,8 @@
 			}
 
 			function showLoading() {
-				const phrase = loadingPhrases[Math.floor(Math.random() * loadingPhrases.length)];
-				messageEl.textContent = phrase;
+				const phraseKey = loadingPhraseKeys[Math.floor(Math.random() * loadingPhraseKeys.length)];
+				messageEl.textContent = Craft.t('best-sellers', phraseKey);
 				spinnerEl.classList.remove('hidden');
 				loadingEl.classList.remove('hidden');
 				containerEl.classList.add('hidden');
@@ -432,7 +432,7 @@
 
 					const prevBtn = document.createElement('button');
 					prevBtn.className = 'btn';
-					prevBtn.textContent = Craft.t('best-sellers', 'Previous');
+					prevBtn.textContent = Craft.t('best-sellers', 'pagination.previous');
 					if (renderedPage > 1) {
 						prevBtn.addEventListener('click', function () { loadPage(renderedPage - 1); });
 					} else {
@@ -442,7 +442,7 @@
 
 					const nextBtn = document.createElement('button');
 					nextBtn.className = 'btn';
-					nextBtn.textContent = Craft.t('best-sellers', 'Next');
+					nextBtn.textContent = Craft.t('best-sellers', 'pagination.next');
 					if (renderedPage < totalPages) {
 						nextBtn.addEventListener('click', function () { loadPage(renderedPage + 1); });
 					} else {
@@ -456,12 +456,12 @@
 
 					const info = document.createElement('span');
 					info.className = 'light';
-					info.textContent = Craft.t('best-sellers', 'Showing {start}–{end} of {total} {label}', { start: rangeStart, end: rangeEnd, total: totalItems, label: itemLabel });
+					info.textContent = Craft.t('best-sellers', 'pagination.showingRange', { start: rangeStart, end: rangeEnd, total: totalItems, label: itemLabel });
 					paginationEl.appendChild(info);
 
 					const pageIndicator = document.createElement('span');
 					pageIndicator.className = 'light';
-					pageIndicator.textContent = Craft.t('best-sellers', 'Page {current} of {total}', { current: renderedPage, total: totalPages });
+					pageIndicator.textContent = Craft.t('best-sellers', 'pagination.pageOf', { current: renderedPage, total: totalPages });
 					paginationEl.appendChild(pageIndicator);
 				}
 
@@ -471,7 +471,7 @@
 					if (!exportTarget.querySelector('.bs-export-btn')) {
 						const exportBtn = document.createElement('a');
 						exportBtn.className = 'btn bs-export-btn';
-						exportBtn.textContent = Craft.t('best-sellers', 'Export CSV');
+						exportBtn.textContent = Craft.t('best-sellers', 'pagination.exportCsv');
 						if (!options.exportContainerEl) {
 							exportBtn.style.marginLeft = 'auto';
 						}
@@ -524,7 +524,7 @@
 				.then(function (data) { renderData(data); writeState(); })
 				.catch(function (error) {
 					spinnerEl.classList.add('hidden');
-					messageEl.textContent = Craft.t('best-sellers', 'Failed to load data: {error}', { error: error.message });
+					messageEl.textContent = Craft.t('best-sellers', 'errors.loadData', { error: error.message });
 					console.error('Best Sellers data load error:', error);
 				});
 			}
@@ -538,11 +538,11 @@
 						const banner = document.createElement('div');
 						banner.className = 'bs-filter-banner';
 						const labelSpan = document.createElement('span');
-						labelSpan.textContent = Craft.t('best-sellers', 'Filtered: {label}', { label: urlFilterLabel });
+						labelSpan.textContent = Craft.t('best-sellers', 'chip.filtered', { label: urlFilterLabel });
 						banner.appendChild(labelSpan);
 						const clearLink = document.createElement('a');
 						clearLink.href = window.location.pathname + '?from=' + (options.baseParams.from || '') + '&to=' + (options.baseParams.to || '') + '&preset=' + (options.baseParams.preset || '');
-						clearLink.textContent = Craft.t('best-sellers', 'Clear filter');
+						clearLink.textContent = Craft.t('best-sellers', 'chip.clearFilter');
 						clearLink.className = 'bs-filter-banner__clear';
 						banner.appendChild(clearLink);
 						containerEl.parentNode.insertBefore(banner, containerEl);

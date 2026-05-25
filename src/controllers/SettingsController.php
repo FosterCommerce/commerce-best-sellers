@@ -31,7 +31,7 @@ class SettingsController extends Controller
 		$plugin = Plugin::getInstance();
 
 		return $this->renderTemplate('best-sellers/_settings', [
-			'title' => Craft::t('best-sellers', 'Settings'),
+			'title' => Craft::t('app', 'Settings'),
 			'selectedSubnavItem' => 'settings',
 			'plugin' => $plugin,
 			'settings' => $plugin->getSettings(),
@@ -60,7 +60,7 @@ class SettingsController extends Controller
 		$settings->defaultOrderStatusHandles = $defaultOrderStatusHandles;
 
 		if (! $settings->validate()) {
-			Craft::$app->getSession()->setError(Craft::t('best-sellers', 'Couldn’t save settings.'));
+			Craft::$app->getSession()->setError(Craft::t('commerce', 'Couldn’t save settings.'));
 			Craft::$app->getUrlManager()->setRouteParams([
 				'settings' => $settings,
 			]);
@@ -69,7 +69,7 @@ class SettingsController extends Controller
 
 		Craft::$app->getPlugins()->savePluginSettings($plugin, $settings->toArray());
 
-		Craft::$app->getSession()->setNotice(Craft::t('best-sellers', 'Settings saved.'));
+		Craft::$app->getSession()->setNotice(Craft::t('commerce', 'Settings saved.'));
 
 		return $this->redirectToPostedUrl();
 	}

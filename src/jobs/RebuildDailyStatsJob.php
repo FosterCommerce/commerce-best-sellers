@@ -41,6 +41,6 @@ class RebuildDailyStatsJob extends BaseBatchedJob
 
 	protected function defaultDescription(): ?string
 	{
-		return Craft::t('best-sellers', 'Rebuilding daily stats');
+		return Craft::t('best-sellers', 'jobs.rebuildDailyStats');
 	}
 }

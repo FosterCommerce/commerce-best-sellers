@@ -61,7 +61,7 @@ class OverviewController extends BaseReportController
 		$prevAvgLtv = $prevTotalCustomers > 0 ? $prevTotalRevenueLtv / $prevTotalCustomers : 0;
 
 		$customerCards[] = [
-			'label' => Craft::t('best-sellers', 'Avg Customer LTV'),
+			'label' => Craft::t('best-sellers', 'kpi.avgCustomerLtv'),
 			'value' => $avgLtv,
 			'change' => $this->percentChange($avgLtv, $prevAvgLtv),
 			'format' => 'currency',
@@ -110,13 +110,13 @@ class OverviewController extends BaseReportController
 
 		$productCards = [
 			[
-				'label' => Craft::t('best-sellers', 'Unique Products Sold'),
+				'label' => Craft::t('best-sellers', 'kpi.uniqueProductsSold'),
 				'value' => $productSummary->uniqueProducts,
 				'change' => $this->percentChange($productSummary->uniqueProducts, $prevProductSummary->uniqueProducts),
 				'format' => 'number',
 			],
 			[
-				'label' => Craft::t('best-sellers', 'Product Revenue'),
+				'label' => Craft::t('best-sellers', 'kpi.productRevenue'),
 				'value' => $productSummary->totalProductRevenue,
 				'change' => $this->percentChange($productSummary->totalProductRevenue, $prevProductSummary->totalProductRevenue),
 				'format' => 'currency',
@@ -154,7 +154,7 @@ class OverviewController extends BaseReportController
 		$hasData = VariantSale::find()->exists();
 
 		return $this->renderTemplate('best-sellers/_overview', [
-			'title' => Craft::t('best-sellers', 'Dashboard'),
+			'title' => Craft::t('app', 'Dashboard'),
 			'selectedSubnavItem' => 'overview',
 			'hasData' => $hasData,
 			'from' => $scope->from,

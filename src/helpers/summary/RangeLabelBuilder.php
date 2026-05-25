@@ -19,19 +19,19 @@ abstract class RangeLabelBuilder
 		$fromDT = new DateTime($from);
 
 		return match ($preset) {
-			DateRange::PRESET_TODAY => Craft::t('best-sellers', 'today'),
-			DateRange::PRESET_PAST_7_DAYS => Craft::t('best-sellers', 'this past week'),
-			DateRange::PRESET_PAST_30_DAYS => Craft::t('best-sellers', 'the last 30 days'),
-			DateRange::PRESET_PAST_90_DAYS => Craft::t('best-sellers', 'the last 90 days'),
-			DateRange::PRESET_PAST_YEAR => Craft::t('best-sellers', 'the last year'),
-			DateRange::PRESET_THIS_WEEK => Craft::t('best-sellers', 'this week so far'),
-			DateRange::PRESET_THIS_MONTH => Craft::t('best-sellers', '{month} so far', [
+			DateRange::PRESET_TODAY => Craft::t('best-sellers', 'range.today'),
+			DateRange::PRESET_PAST_7_DAYS => Craft::t('best-sellers', 'range.thisPastWeek'),
+			DateRange::PRESET_PAST_30_DAYS => Craft::t('best-sellers', 'range.last30Days'),
+			DateRange::PRESET_PAST_90_DAYS => Craft::t('best-sellers', 'range.last90Days'),
+			DateRange::PRESET_PAST_YEAR => Craft::t('best-sellers', 'range.lastYear'),
+			DateRange::PRESET_THIS_WEEK => Craft::t('best-sellers', 'range.thisWeekSoFar'),
+			DateRange::PRESET_THIS_MONTH => Craft::t('best-sellers', 'range.monthSoFar', [
 				'month' => $fromDT->format('F'),
 			]),
-			DateRange::PRESET_THIS_YEAR => Craft::t('best-sellers', '{year} so far', [
+			DateRange::PRESET_THIS_YEAR => Craft::t('best-sellers', 'range.yearSoFar', [
 				'year' => $fromDT->format('Y'),
 			]),
-			DateRange::PRESET_ALL => Craft::t('best-sellers', 'all time'),
+			DateRange::PRESET_ALL => Craft::t('best-sellers', 'range.allTime'),
 			DateRange::PRESET_CUSTOM => self::formatCustomRange($fromDT, new DateTime($to)),
 			default => self::formatCustomRange($fromDT, new DateTime($to)),
 		};
@@ -45,22 +45,22 @@ abstract class RangeLabelBuilder
 		$fromDT = new DateTime($from);
 
 		return match ($preset) {
-			DateRange::PRESET_TODAY => Craft::t('best-sellers', 'yesterday'),
-			DateRange::PRESET_PAST_7_DAYS => Craft::t('best-sellers', 'the prior week'),
-			DateRange::PRESET_PAST_30_DAYS => Craft::t('best-sellers', 'the prior 30 days'),
-			DateRange::PRESET_PAST_90_DAYS => Craft::t('best-sellers', 'the prior 90 days'),
-			DateRange::PRESET_PAST_YEAR => Craft::t('best-sellers', 'the prior year'),
-			DateRange::PRESET_THIS_WEEK => Craft::t('best-sellers', 'the same point last week'),
-			DateRange::PRESET_THIS_MONTH => Craft::t('best-sellers', 'the same point in {month}', [
+			DateRange::PRESET_TODAY => Craft::t('best-sellers', 'comparison.yesterday'),
+			DateRange::PRESET_PAST_7_DAYS => Craft::t('best-sellers', 'comparison.priorWeek'),
+			DateRange::PRESET_PAST_30_DAYS => Craft::t('best-sellers', 'comparison.prior30Days'),
+			DateRange::PRESET_PAST_90_DAYS => Craft::t('best-sellers', 'comparison.prior90Days'),
+			DateRange::PRESET_PAST_YEAR => Craft::t('best-sellers', 'comparison.priorYear'),
+			DateRange::PRESET_THIS_WEEK => Craft::t('best-sellers', 'comparison.samePointLastWeek'),
+			DateRange::PRESET_THIS_MONTH => Craft::t('best-sellers', 'comparison.samePointInMonth', [
 				'month' => (clone $fromDT)->modify('-1 month')->format('F'),
 			]),
-			DateRange::PRESET_THIS_YEAR => Craft::t('best-sellers', 'the same point in {year}', [
+			DateRange::PRESET_THIS_YEAR => Craft::t('best-sellers', 'comparison.samePointInYear', [
 				'year' => (int) $fromDT->format('Y') - 1,
 			]),
-			DateRange::PRESET_CUSTOM => Craft::t('best-sellers', 'the prior {days} days', [
+			DateRange::PRESET_CUSTOM => Craft::t('best-sellers', 'comparison.priorDays', [
 				'days' => $days,
 			]),
-			default => Craft::t('best-sellers', 'the prior {days} days', [
+			default => Craft::t('best-sellers', 'comparison.priorDays', [
 				'days' => $days,
 			]),
 		};

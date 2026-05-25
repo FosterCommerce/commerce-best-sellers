@@ -1,31 +1,31 @@
 {# Cart Abandonment #}
 <div class="bs-chart-container">
 	<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;">
-		<h3 class="bs-chart-container__title" style="margin: 0;">{{ "Cart Abandonment"|t('best-sellers') }}</h3>
+		<h3 class="bs-chart-container__title" style="margin: 0;">{{ 'widgets.cartAbandonment.title'|t('best-sellers') }}</h3>
 		<label style="font-size: 0.8rem; color: #6c757d; display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
 			<input type="checkbox" id="include-anonymous-carts" style="-webkit-appearance: checkbox; appearance: checkbox; width: 14px; height: 14px;">
-			{{ "Include anonymous carts"|t('best-sellers') }}
+			{{ 'widgets.cartAbandonment.includeAnonymous'|t('best-sellers') }}
 		</label>
 	</div>
 
 	<div class="bs-segmented" style="margin-bottom: 1rem;">
-		<button type="button" class="bs-segmented__btn bs-segmented__btn--active" data-abandonment-tab="overview">{{ "Overview"|t('best-sellers') }}</button>
-		<button type="button" class="bs-segmented__btn" data-abandonment-tab="4-24h">{{ "4-24 hours"|t('best-sellers') }}</button>
-		<button type="button" class="bs-segmented__btn" data-abandonment-tab="1-7d">{{ "1-7 days"|t('best-sellers') }}</button>
-		<button type="button" class="bs-segmented__btn" data-abandonment-tab="7d+">{{ "7+ days"|t('best-sellers') }}</button>
+		<button type="button" class="bs-segmented__btn bs-segmented__btn--active" data-abandonment-tab="overview">{{ 'widgets.cartAbandonment.tab.overview'|t('best-sellers') }}</button>
+		<button type="button" class="bs-segmented__btn" data-abandonment-tab="4-24h">{{ 'widgets.cartAbandonment.tab.range4to24h'|t('best-sellers') }}</button>
+		<button type="button" class="bs-segmented__btn" data-abandonment-tab="1-7d">{{ 'widgets.cartAbandonment.tab.range1to7d'|t('best-sellers') }}</button>
+		<button type="button" class="bs-segmented__btn" data-abandonment-tab="7d+">{{ 'widgets.cartAbandonment.tab.range7dPlus'|t('best-sellers') }}</button>
 	</div>
 
 	<div id="cart-abandonment-content"></div>
 
 	<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #f0f0f0; font-size: 0.8rem; color: #999;">
-		<strong style="color: #6c757d;">{{ "Store cart settings"|t('best-sellers') }}:</strong>
-		{{ "Active cart duration:"|t('best-sellers') }} <strong>{{ activeCartDuration }}</strong>.
+		<strong style="color: #6c757d;">{{ 'widgets.cartAbandonment.storeSettings'|t('best-sellers') }}:</strong>
+		{{ 'widgets.cartAbandonment.activeDuration'|t('best-sellers') }} <strong>{{ activeCartDuration }}</strong>.
 		{% if purgeEnabled %}
-			{{ "Carts are purged after"|t('best-sellers') }} <strong>{{ purgeDuration }}</strong>.
+			{{ 'widgets.cartAbandonment.purgedAfter'|t('best-sellers') }} <strong>{{ purgeDuration }}</strong>.
 		{% else %}
-			{{ "Cart purging is disabled."|t('best-sellers') }}
+			{{ 'widgets.cartAbandonment.purgingDisabled'|t('best-sellers') }}
 		{% endif %}
 		<br>
-		<span style="color: #b0b0b0;">{{ "Recommended: Keep carts active for at least 30 days, purge after 90 days."|t('best-sellers') }}</span>
+		<span style="color: #b0b0b0;">{{ 'widgets.cartAbandonment.recommendation'|t('best-sellers') }}</span>
 	</div>
 </div>

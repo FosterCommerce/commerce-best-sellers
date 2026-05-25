@@ -1,32 +1,32 @@
 {# Credentialed vs Guest LTV Comparison #}
 <div class="bs-chart-container">
-	<h3 class="bs-chart-container__title">{{ "Credentialed vs Guest"|t('best-sellers') }}</h3>
+	<h3 class="bs-chart-container__title">{{ 'widgets.ltv.title'|t('best-sellers') }}</h3>
 	<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
 		<thead>
 			<tr>
 				<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;"></th>
-				<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #0073aa; font-size: 0.8rem;">{{ "Credentialed"|t('best-sellers') }}</th>
-				<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #95a5a6; font-size: 0.8rem;">{{ "Guest"|t('best-sellers') }}</th>
+				<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #0073aa; font-size: 0.8rem;">{{ 'customers.filter.credentialed'|t('best-sellers') }}</th>
+				<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #95a5a6; font-size: 0.8rem;">{{ 'customers.filter.guest'|t('best-sellers') }}</th>
 			</tr>
 		</thead>
 		<tbody>
 			<tr>
-				<td style="padding: 0.6rem 0.5rem;">{{ "Customers"|t('best-sellers') }}</td>
+				<td style="padding: 0.6rem 0.5rem;">{{ 'kpi.customers'|t('best-sellers') }}</td>
 				<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.count|number_format }}</td>
 				<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.count|number_format }}</td>
 			</tr>
 			<tr>
-				<td style="padding: 0.6rem 0.5rem;">{{ "Avg LTV"|t('best-sellers') }}</td>
+				<td style="padding: 0.6rem 0.5rem;">{{ 'widgets.ltv.row.avgLtv'|t('best-sellers') }}</td>
 				<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.avgLtv|commerceCurrency }}</td>
 				<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.avgLtv|commerceCurrency }}</td>
 			</tr>
 			<tr>
-				<td style="padding: 0.6rem 0.5rem;">{{ "Avg Orders"|t('best-sellers') }}</td>
+				<td style="padding: 0.6rem 0.5rem;">{{ 'widgets.ltv.row.avgOrders'|t('best-sellers') }}</td>
 				<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.avgOrders }}</td>
 				<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.avgOrders }}</td>
 			</tr>
 			<tr>
-				<td style="padding: 0.6rem 0.5rem;">{{ "Total Revenue"|t('best-sellers') }}</td>
+				<td style="padding: 0.6rem 0.5rem;">{{ 'Total Revenue'|t('commerce') }}</td>
 				<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.credentialed.totalRevenue|commerceCurrency }}</td>
 				<td style="padding: 0.6rem 0.5rem; text-align: right; font-weight: 600;">{{ ltvComparison.guest.totalRevenue|commerceCurrency }}</td>
 			</tr>

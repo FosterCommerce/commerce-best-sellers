@@ -202,7 +202,7 @@ class SummaryEngine extends Component
 
 		if ($totalOrders === 0 || $discountedOrders === 0) {
 			return new GroupSummary([
-				'sentences' => [Craft::t('best-sellers', 'No discounted orders in this period.')],
+				'sentences' => [Craft::t('best-sellers', 'summary.discounts.empty')],
 			]);
 		}
 
@@ -216,21 +216,21 @@ class SummaryEngine extends Component
 
 		// Main sentence: share + revenue + AOV comparison with concrete numbers
 		if ($fullPriceAov > 0 && $discountedAov > $fullPriceAov) {
-			$sentence = Craft::t('best-sellers', '{pct} of orders used a discount, accounting for {revenue} in revenue. Discounted orders have a {discountedAov} AOV vs. {fullPriceAov} for full-price, suggesting discounts are driving larger buyers.', [
+			$sentence = Craft::t('best-sellers', 'summary.discounts.aovAbove', [
 				'pct' => $formattedPct,
 				'revenue' => $formattedRevenue,
 				'discountedAov' => $formattedDiscountedAov,
 				'fullPriceAov' => $formattedFullPriceAov,
 			]);
 		} elseif ($fullPriceAov > 0 && $discountedAov < $fullPriceAov) {
-			$sentence = Craft::t('best-sellers', '{pct} of orders used a discount, accounting for {revenue} in revenue. Discounted orders have a {discountedAov} AOV vs. {fullPriceAov} for full-price.', [
+			$sentence = Craft::t('best-sellers', 'summary.discounts.aovBelow', [
 				'pct' => $formattedPct,
 				'revenue' => $formattedRevenue,
 				'discountedAov' => $formattedDiscountedAov,
 				'fullPriceAov' => $formattedFullPriceAov,
 			]);
 		} else {
-			$sentence = Craft::t('best-sellers', '{pct} of orders used a discount, accounting for {revenue} in revenue.', [
+			$sentence = Craft::t('best-sellers', 'summary.discounts.shareOnly', [
 				'pct' => $formattedPct,
 				'revenue' => $formattedRevenue,
 			]);
@@ -246,16 +246,16 @@ class SummaryEngine extends Component
 
 		if ($prevTotalOrders > 0 && $prevPctDiscounted > 0) {
 			$formattedPrevPct = $this->markedValue(number_format($prevPctDiscounted, 1) . '%');
-			$sentences[] = Craft::t('best-sellers', 'Discount share was {prevPct} last period', [
+			$sentences[] = Craft::t('best-sellers', 'summary.discounts.prevShare', [
 				'prevPct' => $formattedPrevPct,
 			]);
 		}
 
 		// Low/high volume callout
 		if ($pctDiscounted < 5) {
-			$sentences[] = Craft::t('best-sellers', 'A small share of overall volume');
+			$sentences[] = Craft::t('best-sellers', 'summary.discounts.smallShare');
 		} elseif ($pctDiscounted > 50) {
-			$sentences[] = Craft::t('best-sellers', 'More than half of orders are discounted');
+			$sentences[] = Craft::t('best-sellers', 'summary.discounts.majorityShare');
 		}
 
 		return new GroupSummary([
@@ -340,7 +340,7 @@ class SummaryEngine extends Component
 			if ($yoySignals['product_revenue'] !== $prevSignals['product_revenue']) {
 				$direction = SignalClassifier::directionWord($yoySignals['product_revenue']);
 				$coloredPct = $this->markedDelta($yoyDeltas['product_revenue']);
-				$sentences[] = Craft::t('best-sellers', 'This period last year: product revenue {direction} {delta}', [
+				$sentences[] = Craft::t('best-sellers', 'summary.products.yoy', [
 					'direction' => $direction,
 					'delta' => $coloredPct,
 				]);
@@ -432,7 +432,7 @@ class SummaryEngine extends Component
 			&& SignalClassifier::isNegative($yoySignal)
 			&& SignalClassifier::isNegative($trailingSignal)
 		) {
-			return ['{b}' . Craft::t('best-sellers', 'Decline is consistent across all comparison periods') . '{/b}'];
+			return ['{b}' . Craft::t('best-sellers', 'summary.baseline.declineConsistent') . '{/b}'];
 		}
 
 		// Seasonal detection: prev says up but YoY says flat/slightly_up
@@ -442,13 +442,13 @@ class SummaryEngine extends Component
 			&& in_array($yoySignal, [SignalClassifier::FLAT, SignalClassifier::SLIGHTLY_UP], true)
 		) {
 			$coloredPct = $this->markedDelta($yoyDelta);
-			$annotations[] = Craft::t('best-sellers', 'This period last year: roughly flat ({delta}), suggesting seasonal patterns', [
+			$annotations[] = Craft::t('best-sellers', 'summary.baseline.yoySeasonal', [
 				'delta' => $coloredPct,
 			]);
 		} elseif ($yoySignal !== null) {
 			$direction = SignalClassifier::directionWord($yoySignal);
 			$coloredPct = $this->markedDelta($yoyDelta);
-			$annotations[] = Craft::t('best-sellers', 'This period last year: {direction} {delta}', [
+			$annotations[] = Craft::t('best-sellers', 'summary.baseline.yoy', [
 				'direction' => $direction,
 				'delta' => $coloredPct,
 			]);
@@ -457,7 +457,7 @@ class SummaryEngine extends Component
 		if ($trailingSignal !== null) {
 			$direction = SignalClassifier::directionWord($trailingSignal);
 			$coloredPct = $this->markedDelta($trailingDelta);
-			$annotations[] = Craft::t('best-sellers', 'Trailing 12-month avg: {direction} {delta}', [
+			$annotations[] = Craft::t('best-sellers', 'summary.baseline.trailing', [
 				'direction' => $direction,
 				'delta' => $coloredPct,
 			]);
@@ -534,7 +534,7 @@ class SummaryEngine extends Component
 	{
 		$sentence = rtrim($sentence, '.');
 
-		return Craft::t('best-sellers', 'Over {range}, {summary} vs. {comparison}.', [
+		return Craft::t('best-sellers', 'summary.rangeContext', [
 			'range' => $rangeLabel,
 			'summary' => lcfirst($sentence),
 			'comparison' => $compLabel,

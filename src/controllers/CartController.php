@@ -40,7 +40,7 @@ class CartController extends Controller
 		$number = $request->getQueryParam('number', '');
 
 		if ($number === '') {
-			throw new BadRequestHttpException(Craft::t('best-sellers', 'Cart number is required.'));
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'cart.error.numberRequired'));
 		}
 
 		/** @var Commerce $commerce */
@@ -49,11 +49,11 @@ class CartController extends Controller
 		$order = $commerce->getOrders()->getOrderByNumber($number);
 
 		if (! $order) {
-			throw new NotFoundHttpException(Craft::t('best-sellers', 'Cart not found.'));
+			throw new NotFoundHttpException(Craft::t('best-sellers', 'cart.error.notFound'));
 		}
 
 		if ($order->isCompleted) {
-			throw new BadRequestHttpException(Craft::t('best-sellers', 'This order has already been completed.'));
+			throw new BadRequestHttpException(Craft::t('best-sellers', 'cart.error.completed'));
 		}
 
 		$currentUser = Craft::$app->getUser()->getIdentity();
@@ -79,8 +79,8 @@ class CartController extends Controller
 			]);
 
 			$message = $currentUser
-				? Craft::t('best-sellers', 'This cart belongs to another account. Please log in as the cart owner to continue.')
-				: Craft::t('best-sellers', 'This cart belongs to a user account. Please log in to continue.');
+				? Craft::t('best-sellers', 'cart.error.belongsToOther')
+				: Craft::t('best-sellers', 'cart.error.loginRequired');
 
 			// Render login-required page
 			$view = Craft::$app->getView();
@@ -104,7 +104,7 @@ class CartController extends Controller
 			$cartsService->setSessionCartNumber($orderNumber);
 		}
 
-		Craft::$app->getSession()->setNotice(Craft::t('best-sellers', 'Your cart has been restored.'));
+		Craft::$app->getSession()->setNotice(Craft::t('best-sellers', 'cart.restored'));
 
 		// Redirect to Commerce's configured load cart redirect URL
 		$loadCartRedirectUrl = $commerce->getSettings()->loadCartRedirectUrl ?? '';

@@ -1,6 +1,6 @@
 {% extends 'best-sellers/_layouts/reports' %}
 
-{% set title = "Transactions"|t('best-sellers') %}
+{% set title = 'Transactions'|t('commerce') %}
 {% set selectedSubnavItem = 'transactions' %}
 
 {% set storeCurrencyCode = craft.commerce.stores.primaryStore.currency.code ?? 'USD' %}
@@ -9,29 +9,29 @@
 	<div class="bs-section">
 		<div class="bs-filter-bar bs-filter-bar--spaced">
 			<div class="bs-multiselect" id="transaction-type-multiselect">
-				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Type'|t('best-sellers') }}">{{ "Type"|t('best-sellers') }}</button>
+				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Type'|t('app') }}">{{ 'Type'|t('app') }}</button>
 				<div class="bs-multiselect__dropdown">
-					<label><input type="checkbox" value="capture"{% if 'capture' in selectedTypes %} checked{% endif %}> {{ "Capture"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="purchase"{% if 'purchase' in selectedTypes %} checked{% endif %}> {{ "Purchase"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="refund"{% if 'refund' in selectedTypes %} checked{% endif %}> {{ "Refund"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="authorize"{% if 'authorize' in selectedTypes %} checked{% endif %}> {{ "Authorize"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="capture"{% if 'capture' in selectedTypes %} checked{% endif %}> {{ 'Capture'|t('commerce') }}</label>
+					<label><input type="checkbox" value="purchase"{% if 'purchase' in selectedTypes %} checked{% endif %}> {{ 'transactions.type.purchase'|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="refund"{% if 'refund' in selectedTypes %} checked{% endif %}> {{ 'Refund'|t('commerce') }}</label>
+					<label><input type="checkbox" value="authorize"{% if 'authorize' in selectedTypes %} checked{% endif %}> {{ 'transactions.type.authorize'|t('best-sellers') }}</label>
 				</div>
 			</div>
 
 			<div class="bs-multiselect" id="transaction-status-multiselect">
-				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Status'|t('best-sellers') }}">{{ "Status"|t('best-sellers') }}</button>
+				<button type="button" class="bs-multiselect__btn" data-label="{{ 'Status'|t('app') }}">{{ 'Status'|t('app') }}</button>
 				<div class="bs-multiselect__dropdown">
-					<label><input type="checkbox" value="success"{% if 'success' in selectedStatuses %} checked{% endif %}> {{ "Success"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="failed"{% if 'failed' in selectedStatuses %} checked{% endif %}> {{ "Failed"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="pending"{% if 'pending' in selectedStatuses %} checked{% endif %}> {{ "Pending"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="processing"{% if 'processing' in selectedStatuses %} checked{% endif %}> {{ "Processing"|t('best-sellers') }}</label>
-					<label><input type="checkbox" value="redirect"{% if 'redirect' in selectedStatuses %} checked{% endif %}> {{ "Redirect"|t('best-sellers') }}</label>
+					<label><input type="checkbox" value="success"{% if 'success' in selectedStatuses %} checked{% endif %}> {{ 'Success'|t('app') }}</label>
+					<label><input type="checkbox" value="failed"{% if 'failed' in selectedStatuses %} checked{% endif %}> {{ 'Failed'|t('app') }}</label>
+					<label><input type="checkbox" value="pending"{% if 'pending' in selectedStatuses %} checked{% endif %}> {{ 'Pending'|t('app') }}</label>
+					<label><input type="checkbox" value="processing"{% if 'processing' in selectedStatuses %} checked{% endif %}> {{ 'Processing'|t('app') }}</label>
+					<label><input type="checkbox" value="redirect"{% if 'redirect' in selectedStatuses %} checked{% endif %}> {{ 'transactions.status.redirect'|t('best-sellers') }}</label>
 				</div>
 			</div>
 
 			{% if gateways is defined and gateways|length > 0 %}
 				<div class="bs-multiselect" id="transaction-gateway-multiselect">
-					<button type="button" class="bs-multiselect__btn" data-label="{{ 'Gateway'|t('best-sellers') }}">{{ "Gateway"|t('best-sellers') }}</button>
+					<button type="button" class="bs-multiselect__btn" data-label="{{ 'Gateway'|t('commerce') }}">{{ 'Gateway'|t('commerce') }}</button>
 					<div class="bs-multiselect__dropdown">
 						{% for gateway in gateways %}
 							<label><input type="checkbox" value="{{ gateway.id }}"> {{ gateway.name }}</label>
@@ -41,17 +41,17 @@
 			{% endif %}
 
 			<div id="transaction-order-date-range" class="bs-order-date-range">
-				<span class="light bs-order-date-range__label">{{ "Order date"|t('best-sellers') }}</span>
+				<span class="light bs-order-date-range__label">{{ 'transactions.filter.orderDate'|t('best-sellers') }}</span>
 				<input type="hidden" id="transactions-order-from" value="{{ orderFrom }}">
 				<input type="hidden" id="transactions-order-to" value="{{ orderTo }}">
 				<div class="bs-order-date-range__controls">
 					<div data-order-date-range-picker></div>
-					<button type="button" class="btn" id="transactions-order-date-clear" title="{{ 'Clear order date filter'|t('best-sellers') }}"{% if not orderFrom and not orderTo %} hidden{% endif %}>×</button>
+					<button type="button" class="btn" id="transactions-order-date-clear" title="{{ 'transactions.filter.clearOrderDate'|t('best-sellers') }}"{% if not orderFrom and not orderTo %} hidden{% endif %}>×</button>
 				</div>
 			</div>
 
 			<div class="bs-filter-bar__item">
-				<input type="text" id="transactions-search" class="text fullwidth" placeholder="{{ 'Search by order #, email, reference…'|t('best-sellers') }}" autocomplete="off">
+				<input type="text" id="transactions-search" class="text fullwidth" placeholder="{{ 'transactions.filter.searchPlaceholder'|t('best-sellers') }}" autocomplete="off">
 			</div>
 
 			<span id="transactions-export"></span>
@@ -59,7 +59,7 @@
 
 		<div id="transactions-loading" class="bs-loading">
 			<div class="bs-loading__spinner"></div>
-			<p class="bs-loading__message">{{ "Reconciling the books..."|t('best-sellers') }}</p>
+			<p class="bs-loading__message">{{ 'transactions.loading'|t('best-sellers') }}</p>
 		</div>
 
 		<div id="transactions-container" class="hidden">
@@ -68,15 +68,15 @@
 				<table class="bs-data-table" id="transactions-table">
 					<thead>
 						<tr>
-							<th data-sort="dateCreated">{{ "Date"|t('best-sellers') }}</th>
-							<th data-sort="type">{{ "Type"|t('best-sellers') }}</th>
-							<th data-sort="status">{{ "Status"|t('best-sellers') }}</th>
-							<th data-sort="gateway">{{ "Gateway"|t('best-sellers') }}</th>
-							<th class="bs-data-table--right" data-sort="amount">{{ "Amount"|t('best-sellers') }}</th>
-							<th data-sort="orderReference">{{ "Order #"|t('best-sellers') }}</th>
-							<th data-sort="orderDateOrdered">{{ "Order Date"|t('best-sellers') }}</th>
-							<th>{{ "Email"|t('best-sellers') }}</th>
-							<th>{{ "Reference"|t('best-sellers') }}</th>
+							<th data-sort="dateCreated">{{ 'Date'|t('app') }}</th>
+							<th data-sort="type">{{ 'Type'|t('app') }}</th>
+							<th data-sort="status">{{ 'Status'|t('app') }}</th>
+							<th data-sort="gateway">{{ 'Gateway'|t('commerce') }}</th>
+							<th class="bs-data-table--right" data-sort="amount">{{ 'Amount'|t('commerce') }}</th>
+							<th data-sort="orderReference">{{ 'transactions.col.orderNumber'|t('best-sellers') }}</th>
+							<th data-sort="orderDateOrdered">{{ 'transactions.col.orderDate'|t('best-sellers') }}</th>
+							<th>{{ 'Email'|t('app') }}</th>
+							<th>{{ 'Reference'|t('commerce') }}</th>
 						</tr>
 					</thead>
 					<tbody id="transactions-tbody"></tbody>
@@ -86,15 +86,15 @@
 			<div id="transactions-pagination" class="bs-pagination"></div>
 
 			<details class="bs-data-notes">
-				<summary>{{ "About these numbers"|t('best-sellers') }}</summary>
+				<summary>{{ 'table.aboutTheseNumbers'|t('best-sellers') }}</summary>
 				<ul>
-					<li>{{ "The header date picker bounds the transaction’s {column}, not the order’s {orderColumn}. Refunds appear on the day the refund was processed, not when the original order was placed."|t('best-sellers', { column: '<code>dateCreated</code>', orderColumn: '<code>dateOrdered</code>' })|raw }}</li>
-					<li>{{ "The {orderDateLabel} filter is an additional intersection on the order’s {orderColumn}. Set both to answer questions like “refunds processed in May for orders placed in March.” Leave it empty to filter by transaction date alone."|t('best-sellers', { orderDateLabel: '<strong>' ~ 'Order date'|t('best-sellers') ~ '</strong>', orderColumn: '<code>dateOrdered</code>' })|raw }}</li>
-					<li>{{ "Refunds are shown as negative amounts. {netLabel} = {capturedLabel} − {refundedLabel} for the filtered rows."|t('best-sellers', { netLabel: '<strong>' ~ 'Net'|t('best-sellers') ~ '</strong>', capturedLabel: '<strong>' ~ 'Captured'|t('best-sellers') ~ '</strong>', refundedLabel: '<strong>' ~ 'Refunded'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-					<li>{{ "Only transactions recorded in the store currency ({code}) are included. Multi-currency transactions, if any, are excluded."|t('best-sellers', { code: storeCurrencyCode }) }}</li>
-					<li>{{ "{authorizeLabel} rows are not money movement on their own. Enabling the {authorizeLabel} type filter will include them in {capturedLabel}, which double-counts the matching {captureLabel}."|t('best-sellers', { authorizeLabel: '<strong>' ~ 'Authorize'|t('best-sellers') ~ '</strong>', capturedLabel: '<strong>' ~ 'Captured'|t('best-sellers') ~ '</strong>', captureLabel: '<strong>' ~ 'Capture'|t('best-sellers') ~ '</strong>' })|raw }}</li>
-					<li>{{ "Transactions for soft-deleted orders are excluded."|t('best-sellers') }}</li>
-					<li>{{ "Dates are bucketed in the site’s timezone ({tz})."|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</li>
+					<li>{{ 'transactions.notes.dateRange'|t('best-sellers', { column: '<code>dateCreated</code>', orderColumn: '<code>dateOrdered</code>' })|raw }}</li>
+					<li>{{ 'transactions.notes.orderDate'|t('best-sellers', { orderDateLabel: '<strong>' ~ 'transactions.filter.orderDate'|t('best-sellers') ~ '</strong>', orderColumn: '<code>dateOrdered</code>' })|raw }}</li>
+					<li>{{ 'transactions.notes.netCalc'|t('best-sellers', { netLabel: '<strong>' ~ 'transactions.col.net'|t('best-sellers') ~ '</strong>', capturedLabel: '<strong>' ~ 'transactions.col.captured'|t('best-sellers') ~ '</strong>', refundedLabel: '<strong>' ~ 'transactions.col.refunded'|t('best-sellers') ~ '</strong>' })|raw }}</li>
+					<li>{{ 'transactions.notes.singleCurrency'|t('best-sellers', { code: storeCurrencyCode }) }}</li>
+					<li>{{ 'transactions.notes.authorize'|t('best-sellers', { authorizeLabel: '<strong>' ~ 'transactions.type.authorize'|t('best-sellers') ~ '</strong>', capturedLabel: '<strong>' ~ 'transactions.col.captured'|t('best-sellers') ~ '</strong>', captureLabel: '<strong>' ~ 'Capture'|t('commerce') ~ '</strong>' })|raw }}</li>
+					<li>{{ 'transactions.notes.softDeleted'|t('best-sellers') }}</li>
+					<li>{{ 'sales.notes.timezone'|t('best-sellers', { tz: craft.app.getTimeZone() }) }}</li>
 				</ul>
 			</details>
 		</div>
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		defaultSort: 'dateCreated',
 		defaultSortDir: 'desc',
 		itemLabel: 'transactions',
-		emptyMessage: 'No transactions found matching your filters.',
+		emptyMessage: '{{ "transactions.empty"|t("best-sellers") }}',
 		buildRow: function (transaction) {
 			const row = document.createElement('tr');
 			const orderCell = transaction.cpEditUrl
@@ -189,11 +189,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		},
 		buildTotalsBar: function (totals) {
 			return BestSellersReports.buildTotalsBar(
-				'{{ "Filtered Results Total"|t("best-sellers") }}',
+				'{{ "table.filteredResultsTotal"|t("best-sellers") }}',
 				[
-					{ label: '{{ "Captured"|t("best-sellers") }}', value: totals.captured },
-					{ label: '{{ "Refunded"|t("best-sellers") }}', value: totals.refunded },
-					{ label: '{{ "Net"|t("best-sellers") }}', value: totals.net }
+					{ label: '{{ "transactions.col.captured"|t("best-sellers") }}', value: totals.captured },
+					{ label: '{{ "transactions.col.refunded"|t("best-sellers") }}', value: totals.refunded },
+					{ label: '{{ "transactions.col.net"|t("best-sellers") }}', value: totals.net }
 				]
 			);
 		},

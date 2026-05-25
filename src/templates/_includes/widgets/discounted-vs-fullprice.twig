@@ -1,7 +1,7 @@
 {# TODO: Extract all widgets' inline styles to CSS classes. #}
 {# Discounted vs Full-Price Orders #}
 <div class="bs-chart-container">
-	<h3 class="bs-chart-container__title">{{ "Discounted vs. Full-Price Orders"|t('best-sellers') }}</h3>
+	<h3 class="bs-chart-container__title">{{ 'widgets.discountedVsFullPrice.title'|t('best-sellers') }}</h3>
 	{% set totalOrders = discountedVsFullPrice.discounted.orders + discountedVsFullPrice.fullPrice.orders %}
 	{% if totalOrders > 0 %}
 		{% set discPct = (discountedVsFullPrice.discounted.orders / totalOrders * 100)|round(1) %}
@@ -9,12 +9,12 @@
 
 		<div style="display: flex; height: 28px; border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
 			{% if discPct > 0 %}
-				<div style="width: {{ discPct }}%; background: rgba(0, 115, 170, 0.6); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.75rem; font-weight: 600;" title="{{ 'Discounted'|t('best-sellers') }}: {{ discountedVsFullPrice.discounted.orders }}">
+				<div style="width: {{ discPct }}%; background: rgba(0, 115, 170, 0.6); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.75rem; font-weight: 600;" title="{{ 'sales.filter.discounted'|t('best-sellers') }}: {{ discountedVsFullPrice.discounted.orders }}">
 					{% if discPct > 10 %}{{ discPct }}%{% endif %}
 				</div>
 			{% endif %}
 			{% if fullPct > 0 %}
-				<div style="width: {{ fullPct }}%; background: rgba(0, 115, 170, 0.2); display: flex; align-items: center; justify-content: center; color: #333; font-size: 0.75rem; font-weight: 600;" title="{{ 'Full price'|t('best-sellers') }}: {{ discountedVsFullPrice.fullPrice.orders }}">
+				<div style="width: {{ fullPct }}%; background: rgba(0, 115, 170, 0.2); display: flex; align-items: center; justify-content: center; color: #333; font-size: 0.75rem; font-weight: 600;" title="{{ 'widgets.discountedVsFullPrice.fullPriceTitle'|t('best-sellers') }}: {{ discountedVsFullPrice.fullPrice.orders }}">
 					{% if fullPct > 10 %}{{ fullPct }}%{% endif %}
 				</div>
 			{% endif %}
@@ -24,14 +24,14 @@
 			<thead>
 				<tr>
 					<th style="text-align: left; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;"></th>
-					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Orders"|t('best-sellers') }}</th>
-					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "Revenue"|t('best-sellers') }}</th>
-					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ "AOV"|t('best-sellers') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Orders'|t('commerce') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'Revenue'|t('commerce') }}</th>
+					<th style="text-align: right; padding: 0.5rem; border-bottom: 2px solid #e0e0e0; color: #6c757d; font-size: 0.8rem;">{{ 'kpi.aov'|t('best-sellers') }}</th>
 				</tr>
 			</thead>
 			<tbody>
 				<tr>
-					<td style="padding: 0.6rem 0.5rem; font-weight: 600;">{{ "Discounted"|t('best-sellers') }}</td>
+					<td style="padding: 0.6rem 0.5rem; font-weight: 600;">{{ 'sales.filter.discounted'|t('best-sellers') }}</td>
 					<td style="padding: 0.6rem 0.5rem; text-align: right;">
 						<a href="{{ cpUrl('best-sellers/orders', {discountStatus: 'discounted'}) }}">{{ discountedVsFullPrice.discounted.orders|number_format }}</a>
 					</td>
@@ -39,7 +39,7 @@
 					<td style="padding: 0.6rem 0.5rem; text-align: right;">{{ discountedVsFullPrice.discounted.aov|commerceCurrency }}</td>
 				</tr>
 				<tr>
-					<td style="padding: 0.6rem 0.5rem; font-weight: 600;">{{ "Full Price"|t('best-sellers') }}</td>
+					<td style="padding: 0.6rem 0.5rem; font-weight: 600;">{{ 'sales.filter.fullPrice'|t('best-sellers') }}</td>
 					<td style="padding: 0.6rem 0.5rem; text-align: right;">
 						<a href="{{ cpUrl('best-sellers/orders', {discountStatus: 'fullPrice'}) }}">{{ discountedVsFullPrice.fullPrice.orders|number_format }}</a>
 					</td>
@@ -49,6 +49,6 @@
 			</tbody>
 		</table>
 	{% else %}
-		<p>{{ "No data available"|t('best-sellers') }}</p>
+		<p>{{ 'table.noData'|t('best-sellers') }}</p>
 	{% endif %}
 </div>

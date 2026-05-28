@@ -44,6 +44,14 @@ class ReportScope extends Model
 	 */
 	public array $orderStatusIds = [];
 
+	/**
+	 * Shipping location filter tokens. Each token is a path: country, country+adminArea,
+	 * or country+adminArea+locality. Empty means all locations.
+	 *
+	 * @var list<array{countryCode: string, administrativeArea?: string, locality?: string}>
+	 */
+	public array $shippingLocations = [];
+
 	public function init(): void
 	{
 		parent::init();
@@ -94,7 +102,56 @@ class ReportScope extends Model
 	}
 
 	/**
-	 * Create a new scope with different dates but the same status filter.
+	 * Whether a shipping location filter is active.
+	 */
+	public function hasShippingLocationsFilter(): bool
+	{
+		return $this->shippingLocations !== [];
+	}
+
+	/**
+	 * Build a SQL condition array for filtering by shipping location.
+	 *
+	 * The caller must ensure the addresses table is joined under $addressesAlias.
+	 * Returns null if no filter is active.
+	 *
+	 * @return array<mixed>|null
+	 */
+	public function shippingLocationsCondition(string $addressesAlias = 'addresses'): ?array
+	{
+		if (! $this->hasShippingLocationsFilter()) {
+			return null;
+		}
+
+		$prefix = $addressesAlias !== '' ? $addressesAlias . '.' : '';
+		$paths = ['or'];
+
+		foreach ($this->shippingLocations as $shippingLocation) {
+			$pathCondition = ['and'];
+			$pathCondition[] = [
+				"[[{$prefix}countryCode]]" => $shippingLocation['countryCode'],
+			];
+
+			if (isset($shippingLocation['administrativeArea']) && $shippingLocation['administrativeArea'] !== '') {
+				$pathCondition[] = [
+					"[[{$prefix}administrativeArea]]" => $shippingLocation['administrativeArea'],
+				];
+			}
+
+			if (isset($shippingLocation['locality']) && $shippingLocation['locality'] !== '') {
+				$pathCondition[] = [
+					"[[{$prefix}locality]]" => $shippingLocation['locality'],
+				];
+			}
+
+			$paths[] = $pathCondition;
+		}
+
+		return $paths;
+	}
+
+	/**
+	 * Create a new scope with different dates but the same filters.
 	 *
 	 * Used by the SummaryEngine for YoY and trailing average comparisons.
 	 */
@@ -110,6 +167,7 @@ class ReportScope extends Model
 		return new self([
 			'dateRange' => $dateRange,
 			'orderStatusIds' => $this->orderStatusIds,
+			'shippingLocations' => $this->shippingLocations,
 		]);
 	}
 

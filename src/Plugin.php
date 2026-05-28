@@ -33,6 +33,7 @@ use fostercommerce\bestsellers\services\CartAbandonment;
 use fostercommerce\bestsellers\services\CustomerStats;
 use fostercommerce\bestsellers\services\DailyStats;
 use fostercommerce\bestsellers\services\DateRange;
+use fostercommerce\bestsellers\services\LocationStats;
 use fostercommerce\bestsellers\services\OperationsStats;
 use fostercommerce\bestsellers\services\ProductStats;
 use fostercommerce\bestsellers\services\Sales;
@@ -52,6 +53,7 @@ use yii\base\Event;
  * @property-read ProductStats $productStats
  * @property-read CustomerStats $customerStats
  * @property-read OperationsStats $operationsStats
+ * @property-read LocationStats $locationStats
  * @property-read CartAbandonment $cartAbandonment
  * @property-read SummaryEngine $summaryEngine
  * @property-read BackfillLogs $backfillLogs
@@ -83,6 +85,7 @@ class Plugin extends BasePlugin
 				'productStats' => ProductStats::class,
 				'customerStats' => CustomerStats::class,
 				'operationsStats' => OperationsStats::class,
+				'locationStats' => LocationStats::class,
 				'cartAbandonment' => CartAbandonment::class,
 				'summaryEngine' => SummaryEngine::class,
 				'backfillLogs' => BackfillLogs::class,
@@ -178,6 +181,10 @@ class Plugin extends BasePlugin
 			'customers' => [
 				'label' => Craft::t('best-sellers', 'nav.customers'),
 				'url' => 'best-sellers/customers',
+			],
+			'locations' => [
+				'label' => Craft::t('best-sellers', 'nav.locations'),
+				'url' => 'best-sellers/locations',
 			],
 			'operations' => [
 				'label' => Craft::t('best-sellers', 'nav.operations'),
@@ -403,6 +410,7 @@ class Plugin extends BasePlugin
 				$registerUrlRulesEvent->rules['best-sellers/customers'] = 'best-sellers/customers';
 				$registerUrlRulesEvent->rules['best-sellers/customers/customers-data'] = 'best-sellers/customers/customers-data';
 				$registerUrlRulesEvent->rules['best-sellers/customers/export-csv'] = 'best-sellers/customers/export-csv';
+				$registerUrlRulesEvent->rules['best-sellers/locations'] = 'best-sellers/locations';
 				$registerUrlRulesEvent->rules['best-sellers/operations'] = 'best-sellers/operations';
 				$registerUrlRulesEvent->rules['best-sellers/operations/clear-logs'] = 'best-sellers/operations/clear-logs';
 				$registerUrlRulesEvent->rules['best-sellers/settings'] = 'best-sellers/settings/index';

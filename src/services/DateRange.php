@@ -5,11 +5,13 @@ namespace fostercommerce\bestsellers\services;
 use Craft;
 use craft\commerce\Plugin as Commerce;
 use craft\web\Request;
+use craft\web\Session;
 use DateTime;
 use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\Plugin;
 use yii\base\Component;
+use yii\web\Request as YiiWebRequest;
 
 class DateRange extends Component
 {
@@ -40,6 +42,8 @@ class DateRange extends Component
 	private const SESSION_KEY_PRESET = 'bestSellers.dateRange.preset';
 
 	private const SESSION_KEY_ORDER_STATUSES = 'bestSellers.scope.orderStatusIds';
+
+	private const SESSION_KEY_SHIPPING_LOCATIONS = 'bestSellers.scope.shippingLocations';
 
 	/**
 	 * Resolve the date range from query params (priority) or session.
@@ -165,11 +169,16 @@ class DateRange extends Component
 			$statusIds = $this->resolveStatusIds($defaultHandles);
 		}
 
+		$shippingLocations = $request instanceof YiiWebRequest
+			? $this->resolveShippingLocations($request, $session)
+			: [];
+
 		$dateRange->prev = $previous;
 
 		return new ReportScope([
 			'dateRange' => $dateRange,
 			'orderStatusIds' => $statusIds,
+			'shippingLocations' => $shippingLocations,
 		]);
 	}
 
@@ -191,6 +200,70 @@ class DateRange extends Component
 			'fromDT' => $previousFromDTObj->format('Y-m-d H:i:s'),
 			'toDT' => $previousToDTObj->format('Y-m-d H:i:s'),
 		]);
+	}
+
+	/**
+	 * Resolve shipping location filter tokens from query params (priority) or session.
+	 *
+	 * Query param format: shippingLocations[]=US, shippingLocations[]=US|TX,
+	 * shippingLocations[]=US|TX|Houston (pipe-separated path).
+	 *
+	 * @return list<array{countryCode: string, administrativeArea?: string, locality?: string}>
+	 */
+	private function resolveShippingLocations(YiiWebRequest $request, Session $session): array
+	{
+		$raw = null;
+		if ($request instanceof Request) {
+			$raw = $request->getQueryParam('shippingLocations');
+		}
+
+		if ($raw !== null) {
+			if (is_string($raw)) {
+				$raw = $raw !== '' ? [$raw] : [];
+			} elseif (! is_array($raw)) {
+				$raw = [];
+			}
+
+			$tokens = [];
+			foreach ($raw as $value) {
+				if (! is_string($value)) {
+					continue;
+				}
+
+				if ($value === '') {
+					continue;
+				}
+
+				$parts = array_map('trim', explode('|', $value));
+				$token = [
+					'countryCode' => strtoupper((string) ($parts[0] ?? '')),
+				];
+				if ($token['countryCode'] === '') {
+					continue;
+				}
+
+				if (isset($parts[1]) && $parts[1] !== '') {
+					$token['administrativeArea'] = $parts[1];
+				}
+
+				if (isset($parts[2]) && $parts[2] !== '') {
+					$token['locality'] = $parts[2];
+				}
+
+				$tokens[] = $token;
+			}
+
+			$session->set(self::SESSION_KEY_SHIPPING_LOCATIONS, $tokens);
+
+			return $tokens;
+		}
+
+		if ($session->has(self::SESSION_KEY_SHIPPING_LOCATIONS)) {
+			$sessionValue = $session->get(self::SESSION_KEY_SHIPPING_LOCATIONS, []);
+			return is_array($sessionValue) ? $sessionValue : [];
+		}
+
+		return [];
 	}
 
 	/**

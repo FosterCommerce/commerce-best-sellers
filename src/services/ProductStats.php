@@ -10,11 +10,14 @@ use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\models\ProductSummary;
 use fostercommerce\bestsellers\models\ReportScope;
+use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use yii\base\Component;
 use yii\db\Expression;
 
 class ProductStats extends Component
 {
+	use OrderQueryConditions;
+
 	/**
 	 * Get top products by revenue or units.
 	 *
@@ -520,5 +523,7 @@ class ProductStats extends Component
 			$condition = $scope->statusCondition('orders');
 			$query->andWhere($condition);
 		}
+
+		$this->applyShippingLocations($query, $scope);
 	}
 }

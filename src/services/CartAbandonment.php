@@ -9,11 +9,14 @@ use fostercommerce\bestsellers\helpers\NotTrashed;
 use fostercommerce\bestsellers\models\AbandonmentStats;
 use fostercommerce\bestsellers\models\AgeBucket;
 use fostercommerce\bestsellers\models\ReportScope;
+use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use yii\base\Component;
 use yii\db\Expression;
 
 class CartAbandonment extends Component
 {
+	use OrderQueryConditions;
+
 	/**
 	 * Time buckets for abandoned cart age.
 	 */
@@ -70,6 +73,9 @@ class CartAbandonment extends Component
 				'orders.[[totalPrice]]' => SORT_DESC,
 			])
 			->limit($limit);
+
+		// Shipping locations filter intentionally skipped: abandoned carts are
+		// incomplete orders that may not yet have a shipping address attached.
 
 		/** @var list<array{id: string, number: string, email: string|null, totalPrice: string, dateUpdated: string}> $rows */
 		$rows = NotTrashed::join($query, 'orders')->all();
@@ -128,6 +134,9 @@ class CartAbandonment extends Component
 				['<=', '[[orders.dateUpdated]]', $cutoff],
 			]);
 
+		// Shipping locations filter intentionally skipped: abandoned carts are
+		// incomplete orders that may not yet have a shipping address attached.
+
 		$abandonedCarts = NotTrashed::join($abandonedQuery, 'orders')->all();
 
 		// Completed orders in the same period (for rate calculation)
@@ -149,6 +158,8 @@ class CartAbandonment extends Component
 			])
 			->where($completedCondition);
 
+		$this->applyShippingLocations($totalCompletedQuery, $scope, 'orders');
+
 		$totalCompleted = (int) NotTrashed::join($totalCompletedQuery, 'orders')->scalar();
 
 		$completedValueQuery = (new Query())
@@ -157,6 +168,8 @@ class CartAbandonment extends Component
 				'orders' => CommerceTable::ORDERS,
 			])
 			->where($completedCondition);
+
+		$this->applyShippingLocations($completedValueQuery, $scope, 'orders');
 
 		$completedValue = (float) NotTrashed::join($completedValueQuery, 'orders')->scalar();
 

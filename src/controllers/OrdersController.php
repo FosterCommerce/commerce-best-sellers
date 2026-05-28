@@ -11,6 +11,7 @@ use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
 use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
+use craft\db\Table as CraftTable;
 use craft\helpers\MoneyHelper;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
@@ -529,6 +530,25 @@ class OrdersController extends BaseReportController
 			$query->andWhere([
 				$statusIdCol => $scope->orderStatusIds,
 			]);
+		}
+
+		// Global shipping locations filter — joins addresses on shippingAddressId
+		if ($scope->hasShippingLocationsFilter()) {
+			$shippingAddressIdCol = $query instanceof OrderQuery
+				? '[[commerce_orders.shippingAddressId]]'
+				: '[[shippingAddressId]]';
+
+			$query->innerJoin(
+				[
+					'shippingAddresses' => CraftTable::ADDRESSES,
+				],
+				$shippingAddressIdCol . ' = [[shippingAddresses.id]]'
+			);
+
+			$locationCondition = $scope->shippingLocationsCondition('shippingAddresses');
+			if ($locationCondition !== null) {
+				$query->andWhere($locationCondition);
+			}
 		}
 
 		if ($paidFilters !== []) {

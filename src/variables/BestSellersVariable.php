@@ -11,6 +11,7 @@ use craft\elements\User;
 use craft\helpers\DateTimeHelper;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\Plugin;
 
 class BestSellersVariable
 {
@@ -224,6 +225,16 @@ class BestSellersVariable
 		return Variant::find()
 			->id($purchasableIds)
 			->fixedOrder();
+	}
+
+	/**
+	 * Shipping location options for the global filter typeahead.
+	 *
+	 * @return list<array{value: string, label: string, level: string, countryCode: string, administrativeArea?: string, locality?: string}>
+	 */
+	public function shippingLocationOptions(): array
+	{
+		return Plugin::getInstance()->locationStats->getShippingLocationOptions();
 	}
 
 	/**

@@ -7,7 +7,7 @@
 
 	{# Preserve other query params through date changes #}
 	{% for key, value in craft.app.request.queryParams %}
-		{% if key not in ['from', 'to', 'preset', 'orderStatuses'] %}
+		{% if key not in ['from', 'to', 'preset', 'orderStatuses', 'shippingLocations'] %}
 			{% if value is iterable %}
 				{% for v in value %}
 					<input type="hidden" name="{{ key }}[]" value="{{ v }}">
@@ -23,6 +23,36 @@
 	<span class="light bs-timezone-indicator" title="{{ craft.app.getTimeZone() }}">{{ 'datePicker.allTimes'|t('best-sellers', { tz: 'now'|date('T') }) }}</span>
 
 	<div data-date-range-picker></div>
+
+	{% set shippingLocationOptions = craft.bestsellers.shippingLocationOptions() %}
+	{% set selectedShippingValues = [] %}
+	{% if scope is defined and scope and scope.shippingLocations %}
+		{% for token in scope.shippingLocations %}
+			{% set parts = [token.countryCode] %}
+			{% if token.administrativeArea is defined and token.administrativeArea %}
+				{% set parts = parts|merge([token.administrativeArea]) %}
+			{% endif %}
+			{% if token.locality is defined and token.locality %}
+				{% set parts = parts|merge([token.locality]) %}
+			{% endif %}
+			{% set selectedShippingValues = selectedShippingValues|merge([parts|join('|')]) %}
+		{% endfor %}
+	{% endif %}
+
+	{% if shippingLocationOptions|length > 0 %}
+		<button type="button" class="btn menubtn" id="bs-scope-location-btn" style="margin-left: 0.5rem;">
+			{{ 'datePicker.shippingLocations'|t('best-sellers') }}
+			{% if selectedShippingValues|length > 0 %}
+				<span class="bs-multiselect__badge">{{ selectedShippingValues|length }}</span>
+			{% endif %}
+		</button>
+		<div class="bs-scope-dropdown bs-scope-dropdown--locations" id="bs-scope-location-dropdown" data-options="{{ shippingLocationOptions|json_encode }}" data-selected="{{ selectedShippingValues|json_encode }}">
+			<div class="bs-scope-dropdown__search">
+				<input type="text" placeholder="{{ 'datePicker.shippingLocations.searchPlaceholder'|t('best-sellers') }}" data-bs-location-search>
+			</div>
+			<div class="bs-scope-dropdown__list" data-bs-location-list></div>
+		</div>
+	{% endif %}
 
 	{% set allOrderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
 	{% if allOrderStatuses|length > 0 %}
@@ -152,6 +182,150 @@
 			checkbox.addEventListener('change', function () {
 				statusDirty = true;
 			});
+		});
+	}
+
+	// Shipping locations scope filter
+	const locationBtn = document.getElementById('bs-scope-location-btn');
+	const locationDropdown = document.getElementById('bs-scope-location-dropdown');
+	if (locationBtn && locationDropdown) {
+		const optionsRaw = locationDropdown.dataset.options || '[]';
+		const selectedRaw = locationDropdown.dataset.selected || '[]';
+		let allOptions = [];
+		let selectedValues = new Set();
+		try {
+			allOptions = JSON.parse(optionsRaw);
+		} catch (err) {
+			allOptions = [];
+		}
+		try {
+			selectedValues = new Set(JSON.parse(selectedRaw));
+		} catch (err) {
+			selectedValues = new Set();
+		}
+
+		const listEl = locationDropdown.querySelector('[data-bs-location-list]');
+		const searchEl = locationDropdown.querySelector('[data-bs-location-search]');
+		let locationDirty = false;
+		let searchTerm = '';
+
+		document.body.appendChild(locationDropdown);
+
+		function renderList() {
+			const term = searchTerm.toLowerCase().trim();
+
+			// Always show currently-selected chips so user can deselect.
+			const selectedOptions = allOptions.filter(function (opt) { return selectedValues.has(opt.value); });
+
+			if (term === '') {
+				if (selectedOptions.length === 0) {
+					listEl.innerHTML = '<div class="bs-scope-dropdown__hint">Type to search</div>';
+					return;
+				}
+				renderOptions(selectedOptions);
+				return;
+			}
+
+			const levelRank = { country: 0, administrativeArea: 1, locality: 2 };
+			const matching = allOptions
+				.filter(function (opt) { return opt.label.toLowerCase().includes(term); })
+				.map(function (opt) {
+					const lower = opt.label.toLowerCase();
+					let score = 3;
+					if (lower === term) {
+						score = 0;
+					} else if (lower.startsWith(term)) {
+						score = 1;
+					} else if (lower.includes(' ' + term)) {
+						score = 2;
+					}
+					return { opt: opt, score: score };
+				})
+				.sort(function (a, b) {
+					if (a.score !== b.score) return a.score - b.score;
+					const aLevel = levelRank[a.opt.level] || 9;
+					const bLevel = levelRank[b.opt.level] || 9;
+					if (aLevel !== bLevel) return aLevel - bLevel;
+					return a.opt.label.localeCompare(b.opt.label);
+				})
+				.map(function (entry) { return entry.opt; });
+
+			const seen = new Set(selectedOptions.map(function (opt) { return opt.value; }));
+			const merged = selectedOptions.concat(matching.filter(function (opt) { return !seen.has(opt.value); }));
+			renderOptions(merged);
+		}
+
+		function renderOptions(list) {
+			const limit = 200;
+			const slice = list.slice(0, limit);
+			const html = slice.map(function (opt) {
+				const checked = selectedValues.has(opt.value) ? 'checked' : '';
+				return '<label><input type="checkbox" value="' + opt.value.replace(/"/g, '&quot;') + '" ' + checked + '>' + opt.label.replace(/</g, '&lt;') + '</label>';
+			}).join('');
+			const more = list.length > limit ? '<div class="bs-scope-dropdown__more">' + (list.length - limit) + ' more — refine search</div>' : '';
+			listEl.innerHTML = html + more;
+
+			listEl.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+				cb.addEventListener('change', function () {
+					if (cb.checked) {
+						selectedValues.add(cb.value);
+					} else {
+						selectedValues.delete(cb.value);
+					}
+					locationDirty = true;
+				});
+			});
+		}
+
+		renderList();
+
+		searchEl.addEventListener('input', function () {
+			searchTerm = searchEl.value;
+			renderList();
+		});
+
+		locationBtn.addEventListener('click', function (e) {
+			e.stopPropagation();
+			const rect = locationBtn.getBoundingClientRect();
+			locationDropdown.style.top = (rect.bottom + 4) + 'px';
+			locationDropdown.style.right = (window.innerWidth - rect.right) + 'px';
+			locationDropdown.classList.toggle('is-open');
+			if (locationDropdown.classList.contains('is-open')) {
+				searchEl.focus();
+			}
+		});
+
+		function closeLocationAndSubmit() {
+			if (!locationDropdown.classList.contains('is-open')) return;
+			locationDropdown.classList.remove('is-open');
+			if (locationDirty) {
+				const form = document.getElementById('bs-date-form');
+				form.querySelectorAll('input[name="shippingLocations[]"], input[name="shippingLocations"]').forEach(function (el) {
+					el.remove();
+				});
+				if (selectedValues.size > 0) {
+					selectedValues.forEach(function (val) {
+						const hidden = document.createElement('input');
+						hidden.type = 'hidden';
+						hidden.name = 'shippingLocations[]';
+						hidden.value = val;
+						form.appendChild(hidden);
+					});
+				} else {
+					const clear = document.createElement('input');
+					clear.type = 'hidden';
+					clear.name = 'shippingLocations';
+					clear.value = '';
+					form.appendChild(clear);
+				}
+				form.submit();
+			}
+		}
+
+		document.addEventListener('click', closeLocationAndSubmit);
+
+		locationDropdown.addEventListener('click', function (e) {
+			e.stopPropagation();
 		});
 	}
 })();

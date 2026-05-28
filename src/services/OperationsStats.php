@@ -36,6 +36,8 @@ class OperationsStats extends Component
 			])
 			->where($dateCondition);
 
+		$this->applyShippingLocations($orderStatsQuery, $scope, 'orders');
+
 		/** @var array{totalOrders: string, avgDiscount: string, withCoupon: string}|false $orderStats */
 		$orderStats = NotTrashed::join($orderStatsQuery, 'orders')->one();
 
@@ -54,6 +56,8 @@ class OperationsStats extends Component
 				'orders' => CommerceTable::ORDERS,
 			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where($dateCondition);
+
+		$this->applyShippingLocations($itemsQuery, $scope, 'orders');
 
 		$totalItemsSold = (int) NotTrashed::join($itemsQuery, 'orders')->scalar();
 
@@ -74,6 +78,8 @@ class OperationsStats extends Component
 				'cnt' => SORT_DESC,
 			])
 			->limit(1);
+
+		$this->applyShippingLocations($topShippingQuery, $scope, 'orders');
 
 		/** @var array{method: string, cnt: string}|false $topShipping */
 		$topShipping = NotTrashed::join($topShippingQuery, 'orders')->one();
@@ -109,6 +115,8 @@ class OperationsStats extends Component
 			], '[[lineItems.orderId]] = [[orders.id]]')
 			->where($dateCondition)
 			->groupBy('[[orders.id]]');
+
+		$this->applyShippingLocations($ordersQuery, $scope, 'orders');
 
 		$orders = NotTrashed::join($ordersQuery, 'orders')->column();
 
@@ -168,6 +176,8 @@ class OperationsStats extends Component
 				'count' => SORT_DESC,
 			]);
 
+		$this->applyShippingLocations($query, $scope, 'orders');
+
 		/** @var array<int, array{method: string, count: int, revenue: float}> $rows */
 		$rows = NotTrashed::join($query, 'orders')->all();
 
@@ -194,6 +204,8 @@ class OperationsStats extends Component
 				'orders' => CommerceTable::ORDERS,
 			])
 			->where($dateCondition);
+
+		$this->applyShippingLocations($query, $scope, 'orders');
 
 		/** @var array{discountedOrders: string, discountedRevenue: string, fullPriceOrders: string, fullPriceRevenue: string}|false $row */
 		$row = NotTrashed::join($query, 'orders')->one();
@@ -251,6 +263,8 @@ class OperationsStats extends Component
 				'uses' => SORT_DESC,
 			])
 			->limit($limit);
+
+		$this->applyShippingLocations($query, $scope, 'orders');
 
 		/** @var list<array{discountId: string|null, name: string, uses: string, totalDiscount: string}> $rows */
 		$rows = NotTrashed::join($query, 'orders')->all();

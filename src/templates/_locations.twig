@@ -1,0 +1,259 @@
+{% extends 'best-sellers/_layouts/reports' %}
+
+{% set title = 'nav.locations'|t('best-sellers') %}
+{% set selectedSubnavItem = 'locations' %}
+
+{% set addressesService = craft.app.addresses %}
+{% set worldUrl = cpUrl('best-sellers/locations') %}
+{% set countryUrl = (mode == 'country' or mode == 'region') and activeCountry ? cpUrl('best-sellers/locations', { country: activeCountry.countryCode }) : null %}
+{% set zoomOutUrl = mode == 'region' ? countryUrl : (mode == 'country' ? worldUrl : null) %}
+
+{% macro countryName(addressesService, countryCode) %}
+	{%- set country = addressesService.getCountryRepository().get(countryCode, craft.app.language) -%}
+	{{- country ? country.name : countryCode -}}
+{% endmacro %}
+
+{% from _self import countryName %}
+
+{% block reportContent %}
+	<div class="bs-section">
+		<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px;">
+			<h2 class="bs-section__title" style="margin: 0;">
+				{% if mode == 'region' and activeAdminArea %}
+					{{ 'locations.map.titleRegion'|t('best-sellers', { region: activeAdminArea.name, country: activeCountry.name }) }}
+				{% elseif mode == 'country' and activeCountry %}
+					{{ 'locations.map.titleCountry'|t('best-sellers', { country: activeCountry.name }) }}
+				{% else %}
+					{{ 'locations.map.title'|t('best-sellers') }}
+				{% endif %}
+			</h2>
+
+			{% if mode != 'world' %}
+				<nav style="font-size: 12px; color: #606d7b; display: flex; align-items: center; gap: 6px;">
+					<a href="{{ worldUrl }}">{{ 'locations.breadcrumb.world'|t('best-sellers') }}</a>
+					{% if activeCountry %}
+						<span>/</span>
+						{% if mode == 'region' %}
+							<a href="{{ countryUrl }}">{{ activeCountry.name }}</a>
+						{% else %}
+							<span>{{ activeCountry.name }}</span>
+						{% endif %}
+					{% endif %}
+					{% if mode == 'region' and activeAdminArea %}
+						<span>/</span>
+						<span>{{ activeAdminArea.name }}</span>
+					{% endif %}
+				</nav>
+			{% endif %}
+		</div>
+
+		{% if mapData|length == 0 and not hasMap %}
+			<p class="bs-empty">{{ 'locations.map.noMap'|t('best-sellers') }}</p>
+		{% elseif mapData|length == 0 %}
+			<p class="bs-empty">{{ 'locations.empty'|t('best-sellers') }}</p>
+		{% else %}
+			<div class="bs-locations-map"
+				data-locations-map
+				data-mode="{{ mode }}"
+				data-match-key="{{ mapMatchKey }}"
+				data-topo-url="{{ mapTopoUrl }}"
+				data-base-topo-url="{{ baseTopoUrl }}"
+				data-currency="{{ currency }}"
+				data-drill-base-url="{{ cpUrl('best-sellers/locations') }}"
+				data-active-country="{{ activeCountry.countryCode ?? '' }}"
+				data-active-country-numeric="{{ activeCountry.numericCode ?? '' }}"
+				data-active-region="{{ activeAdminArea.code ?? '' }}"
+				data-active-region-name="{{ activeAdminArea.name ?? '' }}"
+				data-rows="{{ mapData|json_encode }}"
+				style="display: flex; gap: 24px; align-items: flex-start;">
+				<div style="position: relative; flex: 0 0 calc(33% - 16px);">
+					<div data-globe style="width: 100%; aspect-ratio: 1 / 1; border: 1px solid #dfe5ec; border-radius: 4px; overflow: hidden;"></div>
+					{% if zoomOutUrl %}
+						<a href="{{ zoomOutUrl }}"
+							class="btn small"
+							style="position: absolute; top: 12px; left: 12px; z-index: 2;">
+							{{ 'locations.zoomOut'|t('best-sellers') }}
+						</a>
+					{% endif %}
+				</div>
+				<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 24px;">
+					{% if mode == 'world' %}
+						{% if countries|length > 0 %}
+							<div>
+								<h3 style="margin: 0 0 8px; font-size: 14px; font-weight: 600;">{{ 'locations.countries.title'|t('best-sellers') }}</h3>
+								<table class="data fullwidth bs-paginated" data-bs-paginate="10">
+									<thead>
+										<tr>
+											<th>{{ 'locations.col.country'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.orders'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.revenue'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.customers'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.aov'|t('best-sellers') }}</th>
+										</tr>
+									</thead>
+									<tbody>
+										{% for row in countries %}
+											{% set href = cpUrl('best-sellers/locations', { country: row.countryCode }) %}
+											{% set ordersHref = cpUrl('best-sellers/orders', { shippingLocations: [row.countryCode] }) %}
+											<tr>
+												<td><a href="{{ href }}">{{ row.name }}</a></td>
+												<td class="rightalign"><a href="{{ ordersHref }}">{{ row.orders|number }}</a></td>
+												<td class="rightalign">{{ row.revenue|commerceCurrency }}</td>
+												<td class="rightalign">{{ row.customers|number }}</td>
+												<td class="rightalign">{{ row.aov|commerceCurrency }}</td>
+											</tr>
+										{% endfor %}
+									</tbody>
+								</table>
+							</div>
+						{% endif %}
+
+						{% if topLocalities|length > 0 %}
+							<div>
+								<h3 style="margin: 0 0 8px; font-size: 14px; font-weight: 600;">{{ 'locations.topCities.title'|t('best-sellers') }}</h3>
+								<table class="data fullwidth bs-paginated" data-bs-paginate="10">
+									<thead>
+										<tr>
+											<th>{{ 'locations.col.city'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.orders'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.revenue'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.customers'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.aov'|t('best-sellers') }}</th>
+										</tr>
+									</thead>
+									<tbody>
+										{% for row in topLocalities %}
+											{% set ordersParts = [row.countryCode, row.administrativeArea, row.locality] %}
+											{% set ordersToken = ordersParts|filter(v => v)|join('|') %}
+											{% set ordersHref = cpUrl('best-sellers/orders', { shippingLocations: [ordersToken] }) %}
+											{% set context = [row.adminAreaName, row.countryName]|filter(v => v)|join(', ') %}
+											<tr>
+												<td>
+													{{ row.locality }}
+													{% if context %}<span class="light"> · {{ context }}</span>{% endif %}
+												</td>
+												<td class="rightalign"><a href="{{ ordersHref }}">{{ row.orders|number }}</a></td>
+												<td class="rightalign">{{ row.revenue|commerceCurrency }}</td>
+												<td class="rightalign">{{ row.customers|number }}</td>
+												<td class="rightalign">{{ row.aov|commerceCurrency }}</td>
+											</tr>
+										{% endfor %}
+									</tbody>
+								</table>
+							</div>
+						{% endif %}
+
+					{% elseif mode == 'country' %}
+						<div>
+							<h3 style="margin: 0 0 8px; font-size: 14px; font-weight: 600;">{{ 'locations.adminAreas.title'|t('best-sellers', { country: activeCountry.name }) }}</h3>
+							{% if adminAreas|length == 0 %}
+								<p class="bs-empty">{{ 'locations.empty'|t('best-sellers') }}</p>
+							{% else %}
+								<table class="data fullwidth bs-paginated" data-bs-paginate="10">
+									<thead>
+										<tr>
+											<th>{{ 'locations.col.adminArea'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.orders'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.revenue'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.customers'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.aov'|t('best-sellers') }}</th>
+										</tr>
+									</thead>
+									<tbody>
+										{% for row in adminAreas %}
+											<tr>
+												{% set href = cpUrl('best-sellers/locations', { country: activeCountry.countryCode, region: row.code }) %}
+												{% set ordersHref = cpUrl('best-sellers/orders', { shippingLocations: [activeCountry.countryCode ~ '|' ~ row.code] }) %}
+												<td><a href="{{ href }}">{{ row.name }}</a></td>
+												<td class="rightalign"><a href="{{ ordersHref }}">{{ row.orders|number }}</a></td>
+												<td class="rightalign">{{ row.revenue|commerceCurrency }}</td>
+												<td class="rightalign">{{ row.customers|number }}</td>
+												<td class="rightalign">{{ row.aov|commerceCurrency }}</td>
+											</tr>
+										{% endfor %}
+									</tbody>
+								</table>
+							{% endif %}
+						</div>
+
+						{% if topProducts|length > 0 %}
+							{{ _self.topProductsTable(topProducts, topProductElements) }}
+						{% endif %}
+					{% elseif mode == 'region' %}
+						<div>
+							<h3 style="margin: 0 0 8px; font-size: 14px; font-weight: 600;">{{ 'locations.localities.title'|t('best-sellers', { region: activeAdminArea.name }) }}</h3>
+							{% if localities|length == 0 %}
+								<p class="bs-empty">{{ 'locations.empty'|t('best-sellers') }}</p>
+							{% else %}
+								<table class="data fullwidth bs-paginated" data-bs-paginate="10">
+									<thead>
+										<tr>
+											<th>{{ 'locations.col.locality'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.orders'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.revenue'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.customers'|t('best-sellers') }}</th>
+											<th class="rightalign">{{ 'locations.col.aov'|t('best-sellers') }}</th>
+										</tr>
+									</thead>
+									<tbody>
+										{% for row in localities %}
+											{% if row.locality %}
+												{% set ordersHref = cpUrl('best-sellers/orders', { shippingLocations: [activeCountry.countryCode ~ '|' ~ activeAdminArea.code ~ '|' ~ row.locality] }) %}
+											{% else %}
+												{% set ordersHref = null %}
+											{% endif %}
+											<tr>
+												<td>{{ row.locality ?: '—' }}</td>
+												<td class="rightalign">{% if ordersHref %}<a href="{{ ordersHref }}">{{ row.orders|number }}</a>{% else %}{{ row.orders|number }}{% endif %}</td>
+												<td class="rightalign">{{ row.revenue|commerceCurrency }}</td>
+												<td class="rightalign">{{ row.customers|number }}</td>
+												<td class="rightalign">{{ row.aov|commerceCurrency }}</td>
+											</tr>
+										{% endfor %}
+									</tbody>
+								</table>
+							{% endif %}
+						</div>
+
+						{% if topProducts|length > 0 %}
+							{{ _self.topProductsTable(topProducts, topProductElements) }}
+						{% endif %}
+					{% endif %}
+				</div>
+			</div>
+		{% endif %}
+	</div>
+{% endblock %}
+
+{% macro topProductsTable(topProducts, topProductElements) %}
+	<div>
+		<h3 style="margin: 0 0 8px; font-size: 14px; font-weight: 600;">{{ 'locations.topProducts.title'|t('best-sellers') }}</h3>
+		<table class="data fullwidth bs-paginated" data-bs-paginate="10">
+			<thead>
+				<tr>
+					<th>{{ 'locations.col.product'|t('best-sellers') }}</th>
+					<th class="rightalign">{{ 'locations.col.unitsSold'|t('best-sellers') }}</th>
+					<th class="rightalign">{{ 'locations.col.revenue'|t('best-sellers') }}</th>
+					<th class="rightalign">{{ 'locations.col.avgPrice'|t('best-sellers') }}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for product in topProducts %}
+					{% set element = topProductElements[product.productId] ?? null %}
+					<tr>
+						<td>
+							{% if element %}
+								<a href="{{ element.cpEditUrl }}">{{ product.productTitle }}</a>
+							{% else %}
+								{{ product.productTitle }}
+							{% endif %}
+						</td>
+						<td class="rightalign">{{ product.unitsSold|number }}</td>
+						<td class="rightalign">{{ product.revenue|commerceCurrency }}</td>
+						<td class="rightalign">{{ product.avgPrice|commerceCurrency }}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+		</table>
+	</div>
+{% endmacro %}

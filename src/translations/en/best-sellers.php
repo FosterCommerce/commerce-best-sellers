@@ -5,6 +5,32 @@ return [
 	'nav.bestSellers' => 'Best Sellers',
 	'nav.operations' => 'Operations',
 	'nav.customers' => 'Customers',
+	'nav.locations' => 'Locations',
+
+	// Locations report
+	'locations.map.title' => 'Shipping locations',
+	'locations.map.titleCountry' => 'Shipping locations: {country}',
+	'locations.map.titleRegion' => 'Shipping locations: {region}, {country}',
+	'locations.map.noMap' => 'No regional map available for this country yet. See the breakdown below.',
+	'locations.breadcrumb.world' => 'World',
+	'locations.zoomOut' => 'Zoom out',
+	'locations.adminAreas.title' => '{country}',
+	'locations.localities.title' => '{region}',
+	'locations.col.adminArea' => 'State / Province',
+	'locations.col.locality' => 'City',
+	'locations.countries.title' => 'Top countries',
+	'locations.topProducts.title' => 'Top products',
+	'locations.topCities.title' => 'Top cities',
+	'locations.col.city' => 'City',
+	'locations.empty' => 'No shipping data for the selected range.',
+	'locations.col.country' => 'Country',
+	'locations.col.orders' => 'Orders',
+	'locations.col.revenue' => 'Revenue',
+	'locations.col.customers' => 'Customers',
+	'locations.col.aov' => 'AOV',
+	'locations.col.product' => 'Product',
+	'locations.col.unitsSold' => 'Units',
+	'locations.col.avgPrice' => 'Avg price',
 
 	// Permissions
 	'permissions.viewReports' => 'View reports',
@@ -472,6 +498,8 @@ return [
 	// Shared date picker include
 	'datePicker.allTimes' => 'All times in {tz}',
 	'datePicker.orderStatuses' => 'Order statuses',
+	'datePicker.shippingLocations' => 'Shipping locations',
+	'datePicker.shippingLocations.searchPlaceholder' => 'Search country, state, or city',
 
 	// Cart login-required landing page
 	'cart.login.pageTitle' => 'Login Required',

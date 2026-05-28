@@ -39,6 +39,8 @@ class CustomerStats extends Component
 				]])
 			->andWhere(['!=', '[[orders.email]]', '']);
 
+		$this->applyShippingLocations($totalQuery, $scope, 'orders');
+
 		$total = (int) NotTrashed::join($totalQuery, 'orders')->scalar();
 
 		// Emails who ordered in this period
@@ -53,6 +55,8 @@ class CustomerStats extends Component
 					'[[orders.email]]' => null,
 				]])
 			->andWhere(['!=', '[[orders.email]]', '']);
+
+		$this->applyShippingLocations($customerEmailsQuery, $scope, 'orders');
 
 		$customerEmails = NotTrashed::join($customerEmailsQuery, 'orders')->column();
 
@@ -120,6 +124,8 @@ class CustomerStats extends Component
 				]])
 			->andWhere(['!=', '[[orders.email]]', '']);
 
+		$this->applyShippingLocations($customerEmailsQuery, $scope, 'orders');
+
 		$customerEmails = NotTrashed::join($customerEmailsQuery, 'orders')->column();
 
 		if ($customerEmails === []) {
@@ -179,6 +185,8 @@ class CustomerStats extends Component
 					'[[orders.email]]' => null,
 				]])
 			->andWhere(['!=', '[[orders.email]]', '']);
+
+		$this->applyShippingLocations($ordersQuery, $scope, 'orders');
 
 		$orders = NotTrashed::join($ordersQuery, 'orders')->all();
 
@@ -258,6 +266,8 @@ class CustomerStats extends Component
 			])
 			->limit($limit);
 
+		$this->applyShippingLocations($query, $scope, 'orders');
+
 		$rows = NotTrashed::join($query, 'orders')->all();
 
 		return array_map(function ($row): CustomerRow {
@@ -311,6 +321,8 @@ class CustomerStats extends Component
 			])
 			->limit($limit);
 
+		$this->applyShippingLocations($query, $scope, 'orders');
+
 		/** @var array<int, array{country: string, state: string, count: string}> $rows */
 		$rows = NotTrashed::join($query, 'orders')->all();
 
@@ -354,6 +366,8 @@ class CustomerStats extends Component
 			])
 			->groupBy('[[orders.email]]');
 
+		$this->applyShippingLocations($credentialedQuery, $scope, 'orders');
+
 		$credentialedRows = NotTrashed::join($credentialedQuery, 'orders')->all();
 
 		// Guest: no customerId OR inactive user
@@ -385,6 +399,8 @@ class CustomerStats extends Component
 				],
 			])
 			->groupBy('[[orders.email]]');
+
+		$this->applyShippingLocations($guestQuery, $scope, 'orders');
 
 		$guestRows = NotTrashed::join($guestQuery, 'orders')->all();
 

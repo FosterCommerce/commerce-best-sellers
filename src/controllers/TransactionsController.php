@@ -16,6 +16,7 @@ use craft\web\Request;
 use DateTime;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\models\DateRangeResult;
+use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use Money\Money;
 use yii\db\Expression;
 use yii\web\Response;
@@ -40,6 +41,8 @@ use yii\web\Response;
  */
 class TransactionsController extends BaseReportController
 {
+	use OrderQueryConditions;
+
 	private const PER_PAGE = 100;
 
 	/**
@@ -398,6 +401,8 @@ class TransactionsController extends BaseReportController
 				'[[o.orderStatusId]]' => $scope->orderStatusIds,
 			]);
 		}
+
+		$this->applyShippingLocations($query, $scope, 'o');
 
 		$selectedTypes = $this->resolveTypeSelection();
 		if ($selectedTypes !== []) {

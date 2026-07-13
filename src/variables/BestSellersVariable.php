@@ -57,7 +57,7 @@ class BestSellersVariable
 		$this->applyDateFilter($query, $startDate, $endDate);
 
 		/** @var string|int|null|false $sum */
-		$sum = $query->sum('lineItemTotal');
+		$sum = $query->sum('[[lineItemTotal]]');
 
 		return (float) ($sum ?? 0);
 	}
@@ -128,7 +128,7 @@ class BestSellersVariable
 		$this->applyDateFilter($query, $startDate, $endDate);
 
 		/** @var string|int|null|false $sum */
-		$sum = $query->sum('lineItemTotal');
+		$sum = $query->sum('[[lineItemTotal]]');
 
 		return (float) ($sum ?? 0);
 	}

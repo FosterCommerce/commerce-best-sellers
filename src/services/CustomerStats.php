@@ -237,7 +237,7 @@ class CustomerStats extends Component
 			->select([
 				'email' => '[[orders.email]]',
 				'customerId' => '[[orders.customerId]]',
-				'userActive' => 'MAX([[users.active]])',
+				'userActive' => 'MAX(CASE WHEN [[users.active]] THEN 1 ELSE 0 END)',
 				'orderCount' => 'COUNT(*)',
 				'totalSpent' => 'COALESCE(SUM([[orders.totalPrice]]), 0)',
 				'lastOrder' => 'MAX([[orders.dateOrdered]])',

@@ -181,7 +181,9 @@ class OrdersController extends BaseReportController
 			throw new BadRequestHttpException(Craft::t('best-sellers', 'orders.bulk.error.noMatchingOrders'));
 		}
 
-		return Craft::$app->getResponse();
+		/** @var \craft\web\Response $response */
+		$response = Craft::$app->getResponse();
+		return $response;
 	}
 
 	/**

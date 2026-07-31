@@ -1,232 +1,77 @@
-![Screenshot](resources/images/header.png)
+# Best Sellers
 
-# Best Sellers for Craft Commerce
+Sales **reporting** for Craft Commerce.
 
-Sales analytics and reporting built for Craft Commerce. Track revenue, orders, products, customers, discounts, and carts, all from your control panel.
+## Overview
 
-Best Sellers gives you a clear picture of what's selling, who's buying, and how your store is performing over any date range.
+- Shows what sold, by product or by variant, with units and item sales net of coupons, and can drill from a product into the orders that contain it.
+- Lets you build best-seller listings and buy-again pages in Twig, from units sold and a customer's purchase history.
+- Reports revenue, orders, average order value, and repeat rate over any date range, against the period before it, the same period last year, and a 12-month average.
+- Lists every completed order with filters for status, payment, shipping method, and discount, and downloads invoices or packing slips for a batch of them in one go.
+- Reconciles money movement against your payment gateways: captured, refunded, and net, per transaction.
+- Reports who bought, how often, and how much, and maps where their orders shipped, down to the city.
+- Finds abandoned carts and gives you a link that puts a customer back into theirs.
+
+Every report exports to CSV with the current filters applied.
 
 ## Requirements
 
-Best Sellers requires Craft CMS 5.0.0, Craft Commerce 5.0.0 and PHP 8.2.
+- Craft CMS `^5.0.0`
+- Craft Commerce `^5.0.0`
+- PHP `>=8.2`
 
-## Setup
+## Install
 
-### Installation
+```sh
+composer require fostercommerce/commerce-best-sellers
+./craft plugin/install best-sellers
+```
 
-To install the plugin, search for “Best Sellers” in the Craft Plugin Store follow these instructions.
+Then backfill your existing orders, which a fresh install does not have:
 
-Or install via your terminal.
-
-1. Open your terminal and go to your Craft project:
-
-        cd /path/to/project
-
-2. Then tell Composer to require the plugin, and Craft to install it:
-
-        composer require fostercommerce/commerce-best-sellers && php craft install/plugin bestsellers
-
-### Prep data
-
-After installing, backfill your existing order data into Best Sellers database tables. These will create queue jobs. Run `best-sellers/backfill` first.
-
-```bash
+```sh
 ./craft best-sellers/backfill
 ./craft best-sellers/backfill/daily-stats
 ```
 
-This processes your completed orders and builds the aggregated stats. New orders are tracked automatically going forward.
-
-You can also run the backfill from the control panel under **Utilities > Best Sellers**.
-
-## Features
-
-### Dashboard
-
-The dashboard provides a full overview of store performance for any date range, organized into focused sections with narrative summaries that explain what the numbers mean.
-
-**Overview**
-- Revenue, Orders, AOV, and Repeat Rate KPI cards
-- Revenue/Orders/AOV toggle chart with previous period comparison
-- Narrative summary comparing against previous period, same period last year, and trailing 12-month average
-
-**Discounts & Order Composition**
-- Total Discounts, Items Sold, and Avg Items/Order KPI cards
-- Discounted vs. Full-Price Orders breakdown (order count, revenue, AOV)
-- Most Used Discounts ranked table with order counts linking to filtered orders
-- Items Per Order histogram with clickable bars linking to filtered orders
-- Shipping Methods ranked table with order counts linking to filtered orders
-
-**Customers & Retention**
-- Customers, New Customers, and Avg Customer LTV KPI cards
-- Top Customers by Revenue ranked table
-- Credentialed vs Guest comparison (customer count, LTV, avg orders, total revenue)
-- New vs Returning Customers trend chart
-
-**Product Performance**
-- Unique Products Sold and Product Revenue KPI cards
-- Best Sellers top 10 ranked table with links to product edit pages
-
-**Carts**
-- Cart abandonment rate, abandoned value, and age breakdown (4-24h, 1-7d, 7+d)
-- Highest-Value Abandoned Carts table with customer email, value, age, and cart restore links
-- Anonymous cart toggle for filtering
-
-**Global Controls**
-- Date range picker with presets (Today, This Week, This Month, This Year, Past 7/30/90 Days, Past Year, All Time, custom)
-- Order Status filter that persists across all report pages via session
-- Past date ranges exclude today (complete days only)
-- Partial period comparisons are prorated for fair comparison
-
-### Orders
-
-Browse and search every completed order with filtering.
-
-- Filters: Order Status, Payment Status, Shipping Method, Discount (discounted/full-price and specific discounts by ID), Items Per Order bucket
-- Sortable columns: order number, date, status, item subtotal, tax, discount, shipping, total paid, items sold, payment status
-- Page totals for all currency columns
-- Dashboard widgets link to pre-filtered views
-- CSV export with all applied filters
-
-### Products
-
-See which products or variants are generating the most revenue, with breakdowns by product type.
-
-- Toggle between viewing products or variants
-- Filter by product type
-- Search by title, SKU, or product type
-- Drill down to every order containing a specific product
-- Sortable by units sold, order count, item sales (net of line-level discounts), or average price
-- CSV export with all applied filters
-
-### Customers
-
-Understand who your customers are, how much they spend, and how often they come back.
-
-- Filter by customer type (credentialed or guest)
-- Search by email
-- Sortable by email, status, order count, total spent, AOV, or last purchase date
-- Links to customer profiles in the control panel
-- CSV export with all applied filters
-
-### Operations
-
-Operational overview to help you understand store configuration, email notifications, and coupon usage across all time.
-
-- Commerce Settings quick links (General Settings, Store Settings)
-- Order Status Emails table showing which emails fire on each status transition, with enabled/disabled indicators and recipient types
-- All Configured Emails table with name, subject, recipient, template path, and enabled status
-- Coupon Usage (All Time) ranked table with usage counts and total discount per code
-
-### Cart Restore
-
-Built-in cart restoration for abandoned cart recovery.
-
-- Shareable restore URL
-- Restores the cart to the visitor's session and redirects to Commerce's `loadCartRedirectUrl`
-- Credentialed customer carts require the account owner to be logged in
-- Logged-in users cannot claim another user's cart
-- Logged-out users can restore inactive/guest carts
-- Styled login-required page when authentication is needed
-- Cart purge expiry info shown in the dashboard based on Commerce's `purgeInactiveCartsDuration`
+See [`docs/installation.md`](./docs/installation.md) for the full guide.
 
 ## Templating
 
-Best Sellers provides Twig variables for displaying sales data on your front end.
+Twig methods for units sold and item sales per product or variant, for a customer's previous purchases, and for building a "buy again" page. Craft's product and variant element queries also gain a `bestSellers()` method that attaches sales figures to the elements they return, so you can rank a product listing by what sold.
 
-### Units Sold & Item Sales
+See [`docs/dev-guide/templating.md`](./docs/dev-guide/templating.md).
 
-```twig
-{# Units sold for a variant #}
-{{ craft.bestsellers.variantTotalSales(variant.id) }}
-{{ craft.bestsellers.variantTotalSales(variant.id, '30 days ago') }}
-{{ craft.bestsellers.variantTotalSales(variant.id, '2024-01-01', '2024-12-31') }}
+## Reports
 
-{# Item sales (net of line-level discounts) for a variant. #}
-{# Matches the CP Products report. #}
-{{ craft.bestsellers.variantTotalItemSalesNet(variant.id)|commerceCurrency }}
+Seven pages under a **Best Sellers** section in the control panel: a dashboard, orders, transactions, products, customers, locations, and an operations page covering store configuration. A date range, an order status filter, and a shipping location filter sit above all of them and follow you from page to page.
 
-{# Units sold for a product (all variants combined) #}
-{{ craft.bestsellers.productTotalSales(product.id) }}
+See the [user guide](./docs/index.md).
 
-{# Item sales (net) for a product #}
-{{ craft.bestsellers.productTotalItemSalesNet(product.id)|commerceCurrency }}
-```
+## Cart restore
 
-`*TotalRevenue()` methods are still available (gross, SUM of `lineItemTotal` only) but are deprecated since 1.6.0. See [docs/usage.md](docs/usage.md) for the full difference.
+A front-end route that restores an abandoned cart to a customer's session and sends them to your cart page. Carts belonging to registered customers can only be restored by the account holder.
 
-### Previous Purchases
+See [`docs/user-guide/cart-restore.md`](./docs/user-guide/cart-restore.md).
 
-```twig
-{# Check if the current user previously purchased a specific product #}
-{% set previousOrder = craft.bestsellers.previousPurchaseByUser(variant.id, currentUser) %}
-{% if previousOrder %}
-    You purchased this on {{ previousOrder.dateOrdered|date('M j, Y') }}
-    <a href="{{ previousOrder.cpEditUrl }}">Order #{{ previousOrder.reference }}</a>
-{% endif %}
+## Console commands
 
-{# Get all variants previously purchased by a user #}
-{% set purchasedVariants = craft.bestsellers.previouslyPurchasedProducts(currentUser) %}
-{% if purchasedVariants %}
-    <h3>Your Previously Purchased Products</h3>
-    {% for variant in purchasedVariants.all() %}
-        {{ variant.title }}
-    {% endfor %}
-{% endif %}
-```
+Commands for backfilling orders, rebuilding the daily stats table, and clearing either of them, all also available from **Utilities -> Best Sellers**.
 
-### Best Sellers Queries
+See [`docs/reference/console-commands.md`](./docs/reference/console-commands.md).
 
-Best Sellers extends Craft's element queries so you can fetch products or variants sorted by sales:
+## Permissions
 
-```twig
-{# Top 10 best-selling products in the last 30 days #}
-{% set bestSellers = craft.commerce.products
-    .bestSellers('30 days ago')
-    .limit(10)
-    .all() %}
-```
+- `best-sellers:viewReports`: see the Best Sellers section and every report in it.
+- `best-sellers:backfill`: run backfills and rebuilds from the control panel.
+- `best-sellers:manageSettings`: see and save the plugin's settings.
 
-```php
-use craft\commerce\elements\Product;
+See [`docs/reference/permissions.md`](./docs/reference/permissions.md).
 
-$bestSellers = Product::find()
-    ->bestSellers('2024-01-01', '2024-12-31')
-    ->limit(10)
-    ->all();
+## License
 
-foreach ($bestSellers as $product) {
-    echo $product->title . ': ' . $product->totalQtySold;
-}
-```
-
-For additional examples, see the [Developer Documentation](docs/usage.md).
-
-## Console Commands
-
-| Command | Description |
-|---------|-------------|
-| `./craft best-sellers/backfill` | Queue existing completed orders for processing (batches of 25) |
-| `./craft best-sellers/backfill --start-date=2025-01-01 --end-date=2025-12-31` | Backfill orders within a specific date range |
-| `./craft best-sellers/backfill/daily-stats` | Rebuild the daily stats table from order data |
-| `./craft best-sellers/backfill/daily-stats --date=2026-03-15` | Rebuild daily stats for a single date |
-| `./craft best-sellers/backfill/refresh-orders` | Clear variant sales and reprocess all orders |
-| `./craft best-sellers/backfill/refresh-daily-stats` | Clear daily stats and rebuild from order data |
-| `./craft best-sellers/backfill/clear-orders` | Clear the variant sales table |
-| `./craft best-sellers/backfill/clear-daily-stats` | Clear the daily stats table |
-| `./craft best-sellers/backfill/clear-logs` | Clear all backfill log entries |
-
-Both commands are also available from the **Utilities > Best Sellers** page in the control panel.
-
-## Roadmap
-
-- Goal settings (revenue/order targets with progress tracking)
-- Inventory reports (stock levels, low stock alerts, sell-through rates)
-- Saved reports (save filter configurations for quick access)
-- Extensible reports (API for plugins/modules to add custom report sections, KPI cards, and widgets)
-- Subscription analytics (recurring revenue, churn, MRR for Commerce subscriptions)
-- Third-party purchasable support (Digital Products, Donations, and other plugin purchasable types)
+Proprietary.
 
 ## Credits
 
-Brought to you by [Foster Commerce](https://fostercommerce.com)
+Brought to you by [Foster Commerce](https://fostercommerce.com).

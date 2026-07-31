@@ -38,7 +38,7 @@ abstract class Query
 			->select([
 				$id,
 				'totalQtySold' => 'COALESCE(SUM(qty), 0)',
-				'totalRevenue' => 'COALESCE(SUM(lineItemTotal), 0)',
+				'totalRevenue' => 'COALESCE(SUM([[lineItemTotal]]), 0)',
 				'totalItemSalesNet' => 'COALESCE(SUM([[lineItemTotal]] + [[lineDiscount]]), 0)',
 			])
 			->from(Table::VARIANT_SALES)

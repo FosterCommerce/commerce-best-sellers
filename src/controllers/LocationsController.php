@@ -7,6 +7,8 @@ use craft\commerce\elements\Product;
 use craft\commerce\Plugin as Commerce;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\LocationsAsset;
+use fostercommerce\bestsellers\models\ProductRow;
+use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\Plugin;
 use yii\web\Response;
 
@@ -56,17 +58,6 @@ class LocationsController extends BaseReportController
 			}
 		}
 
-		$productStats = Plugin::getInstance()->productStats;
-		$topProducts = $productStats->getTopProducts($scope, 'revenue', 100);
-		$topProductElements = [];
-		$topProductIds = array_unique(array_map(static fn ($row): int => $row->productId, $topProducts));
-		if ($topProductIds !== []) {
-			$productElements = Product::find()->id($topProductIds)->status(null)->all();
-			foreach ($productElements as $productElement) {
-				$topProductElements[$productElement->id] = $productElement;
-			}
-		}
-
 		$topLocalities = $locationStats->getTopLocalitiesGlobal($scope, 100);
 
 		/** @var Commerce $commerce */
@@ -91,6 +82,13 @@ class LocationsController extends BaseReportController
 					}
 				}
 			}
+
+			$topProducts = $this->getLocationTopProducts($scope, $activeCountryRow['countryCode'], $activeAdminArea['code'] ?? null);
+			$topProductElements = Product::find()
+				->id(array_map(static fn (ProductRow $productRow): int => $productRow->productId, $topProducts))
+				->status(null)
+				->indexBy('id')
+				->all();
 
 			if ($activeAdminArea !== null) {
 				$localities = $locationStats->getLocalityBreakdown(
@@ -161,6 +159,62 @@ class LocationsController extends BaseReportController
 			'hasMap' => true,
 			'currency' => $currency,
 		]);
+	}
+
+	/**
+	 * @return list<ProductRow>
+	 */
+	private function getLocationTopProducts(ReportScope $scope, string $countryCode, ?string $administrativeArea): array
+	{
+		$viewedLocation = [
+			'countryCode' => $countryCode,
+		];
+		if ($administrativeArea !== null) {
+			$viewedLocation['administrativeArea'] = $administrativeArea;
+		}
+
+		$locationScope = clone $scope;
+		$locationScope->shippingLocations = $scope->hasShippingLocationsFilter()
+			? $this->intersectShippingLocations($scope->shippingLocations, $viewedLocation)
+			: [$viewedLocation];
+
+		// Skip the query when the filter excludes the viewed location, since an empty filter matches every location
+		if ($locationScope->shippingLocations === []) {
+			return [];
+		}
+
+		return Plugin::getInstance()->productStats->getTopProducts($locationScope, 'revenue', 100);
+	}
+
+	/**
+	 * Keep the filter paths inside the viewed location, narrowed to its administrative area.
+	 *
+	 * @param list<array{countryCode: string, administrativeArea?: string, locality?: string}> $shippingLocations
+	 * @param array{countryCode: string, administrativeArea?: string} $viewedLocation
+	 * @return list<array{countryCode: string, administrativeArea?: string, locality?: string}>
+	 */
+	private function intersectShippingLocations(array $shippingLocations, array $viewedLocation): array
+	{
+		$viewedAdministrativeArea = $viewedLocation['administrativeArea'] ?? '';
+		$intersectedLocations = [];
+		foreach ($shippingLocations as $shippingLocation) {
+			$filterAdministrativeArea = $shippingLocation['administrativeArea'] ?? '';
+			if ($shippingLocation['countryCode'] !== $viewedLocation['countryCode']) {
+				continue;
+			}
+
+			if ($filterAdministrativeArea !== '' && $viewedAdministrativeArea !== '' && $filterAdministrativeArea !== $viewedAdministrativeArea) {
+				continue;
+			}
+
+			if ($filterAdministrativeArea === '' && $viewedAdministrativeArea !== '') {
+				$shippingLocation['administrativeArea'] = $viewedAdministrativeArea;
+			}
+
+			$intersectedLocations[] = $shippingLocation;
+		}
+
+		return $intersectedLocations;
 	}
 
 	private function getRegionTopoUrl(string $countryCode): ?string

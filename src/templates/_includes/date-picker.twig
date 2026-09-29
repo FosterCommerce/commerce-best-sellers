@@ -9,8 +9,15 @@
 	{% for key, value in craft.app.request.queryParams %}
 		{% if key not in ['from', 'to', 'preset', 'orderStatuses', 'shippingLocations'] %}
 			{% if value is iterable %}
-				{% for v in value %}
-					<input type="hidden" name="{{ key }}[]" value="{{ v }}">
+				{% for subKey, subValue in value %}
+					{# Field filters nest their values under the field layout element UID #}
+					{% if subValue is iterable %}
+						{% for v in subValue %}
+							<input type="hidden" name="{{ key }}[{{ subKey }}][]" value="{{ v }}">
+						{% endfor %}
+					{% else %}
+						<input type="hidden" name="{{ key }}[]" value="{{ subValue }}">
+					{% endif %}
 				{% endfor %}
 			{% else %}
 				<input type="hidden" name="{{ key }}" value="{{ value }}">

@@ -5,6 +5,7 @@ namespace fostercommerce\bestsellers\helpers;
 use craft\base\Element;
 use craft\db\Query as DbQuery;
 use craft\elements\db\ElementQuery;
+use craft\helpers\DateTimeHelper;
 use craft\helpers\Db;
 use DateTime;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
@@ -12,6 +13,18 @@ use fostercommerce\bestsellers\db\Table;
 
 abstract class Query
 {
+	/**
+	 * Parse one end of a date range in the site timezone. A bare `YYYY-MM-DD` end date covers the whole day.
+	 */
+	public static function toDateBound(string|DateTime $date, bool $isEnd): ?DateTime
+	{
+		if ($isEnd && is_string($date) && preg_match('/^\d{4}-\d{1,2}-\d{1,2}$/', $date) === 1) {
+			$date .= ' 23:59:59';
+		}
+
+		return DateTimeHelper::toDateTime($date, true) ?: null;
+	}
+
 	/**
 	 * Build a condition for orders placed within a site-timezone date range, or before now when either date is missing.
 	 *
@@ -73,12 +86,13 @@ abstract class Query
 
 		// Attach CTE only to subQuery (handles filtering/sorting).
 		// The outer query selects totalQtySold from the subquery results.
+		// Zero rather than null for unsold elements, since PostgreSQL sorts nulls first in descending order
 		$query
 			->subQuery
 			?->addSelect([
-				'variant_sales_cte.totalQtySold',
-				'variant_sales_cte.totalRevenue',
-				'variant_sales_cte.totalItemSalesNet',
+				'totalQtySold' => 'COALESCE([[variant_sales_cte.totalQtySold]], 0)',
+				'totalRevenue' => 'COALESCE([[variant_sales_cte.totalRevenue]], 0)',
+				'totalItemSalesNet' => 'COALESCE([[variant_sales_cte.totalItemSalesNet]], 0)',
 			])
 			->withQuery($withQuery, 'variant_sales_cte')
 			->leftJoin(

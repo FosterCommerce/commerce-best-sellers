@@ -1,71 +1,89 @@
 # Templating
 
-Reading sales data from Twig and PHP. Audience: developers building front-end templates on a store running Best Sellers.
+Reading sales data from Twig and PHP, for best-seller listings and buy-again pages.
 
 The units and item sales methods read the plugin's own tables, so they only cover orders it has recorded. On a fresh install, run the backfill first. See [data and backfill](../user-guide/data-and-backfill.md). The previous-purchase methods query Commerce directly and need no backfill.
 
-## craft.bestsellers
+## Dates
 
-Date arguments take a `YYYY-MM-DD` string or anything `strtotime` understands, such as `"2 weeks ago"`. Both are optional: neither means all time, a start alone means from then until now.
+Every method that takes dates accepts a `YYYY-MM-DD` string or any string PHP's `strtotime` accepts, such as `'30 days ago'`. Dates are read in the site's timezone:
 
-| Method | Returns |
-| --- | --- |
-| `productTotalSales(id, from, to)` | `int`. Units sold. |
-| `variantTotalSales(id, from, to)` | `int`. Units sold. |
-| `productTotalItemSalesNet(id, from, to)` | `float`. Item sales net of coupon and manual discounts. |
-| `variantTotalItemSalesNet(id, from, to)` | `float`. Same, per variant. |
-| `productTotalRevenue(id, from, to)` | `float`. Gross, discounts not subtracted. Deprecated since 1.6.0. |
-| `variantTotalRevenue(id, from, to)` | `float`. Same, per variant. Deprecated since 1.6.0. |
-| `previousPurchaseByUser(purchasableId, user)` | The user's most recent completed `Order` containing it, or `null`. |
-| `previouslyPurchasedProducts(user)` | A `VariantQuery` of everything they have bought, most recent first, or `null`. |
+- A `YYYY-MM-DD` start date begins at midnight, and a `YYYY-MM-DD` end date includes that whole day. The control panel reports read dates the same way.
+- Other strings are exact moments. `'30 days ago'` starts at the current time of day, 30 days back.
+
+From PHP, `bestSellers()` also takes a `DateTime`. Both dates are optional. Neither means all time, and a start date alone runs until now.
+
+## Best-seller listings
+
+Call `bestSellers(from, to)` on a product or variant query to attach sales figures to each element it returns:
 
 ```twig
-{{ craft.bestsellers.variantTotalSales(variant.id, '30 days ago') }}
-{{ craft.bestsellers.productTotalItemSalesNet(product.id)|commerceCurrency }}
-
-{% set previousOrder = craft.bestsellers.previousPurchaseByUser(variant.id, currentUser) %}
-{% if previousOrder %}
-    You bought this on {{ previousOrder.dateOrdered|date('M j, Y') }}
-{% endif %}
-```
-
-The `ItemSalesNet` methods use the same formula as the Item Sales (Net) column on the control panel's [Products](../user-guide/products.md) report: quantity times sale price, minus the coupon and manual discounts on those lines, with no tax or shipping. Switching off the deprecated `Revenue` methods will change the number on any store that uses coupons.
-
-**The formula matches; the totals will not.** Every method here filters recorded sales by date alone. The Products report additionally drops orders with a full balance owed (authorized but never captured, fully refunded, or failed payment) and applies the order status filter. A fully refunded order counts in Twig and not in the control panel. Expect the front end to read higher.
-
-`previouslyPurchasedProducts()` returns a query rather than results, so it takes `.limit()` and `{% paginate %}` for a "buy again" page.
-
-## Element queries
-
-`bestSellers(from, to)` on `ProductQuery` and `VariantQuery` joins each element to its recorded sales and attaches three properties to the elements returned:
-
-| Property | Value |
-| --- | --- |
-| `totalQtySold` | Units sold in the window. |
-| `totalItemSalesNet` | Item sales net of line-level discounts. |
-| `totalRevenue` | Item sales before those discounts. Deprecated since 1.6.0. |
-
-Dates take the same strings as above, and `null` for an open end.
-
-**It attaches the data; it does not sort.** Add your own `orderBy`:
-
-```twig
-{% set bestSellers = craft.commerce.products
+{% set bestSellers = craft.products()
     .bestSellers('30 days ago')
     .orderBy('totalQtySold DESC')
     .limit(10)
     .all() %}
 
-{% for product in bestSellers if product.totalQtySold %}
+{% for product in bestSellers|filter(product => product.totalQtySold) %}
     {{ product.title }}: {{ product.totalQtySold }} sold,
     {{ product.totalItemSalesNet|commerceCurrency }}
 {% endfor %}
 ```
 
-The join keeps elements with no sales in the window, and their three properties come back `null` rather than zero, which is what the `if` above filters on.
+| Property | Value |
+| --- | --- |
+| `totalQtySold` | Units sold in the date range. |
+| `totalItemSalesNet` | Item sales net of Discount adjustments. |
+| `totalRevenue` | Item sales before those discounts. Deprecated since 1.3.0. |
 
-The same call works on `Product::find()` and `Variant::find()` from PHP, as does `new BestSellersVariable()` for the methods in the table above.
+`bestSellers()` does not sort, so add your own `orderBy`. Elements with no sales in the range stay in the results, with all three properties at zero. The `filter` in the example drops them.
+
+`craft.variants()` takes the same call. From PHP, use `Product::find()` or `Variant::find()`. See Craft's [element queries](https://craftcms.com/docs/5.x/development/element-queries.html).
+
+## Totals for one product or variant
+
+`craft.bestsellers` returns a single total:
+
+```twig
+{{ craft.bestsellers.variantTotalSales(variant.id, '30 days ago') }}
+{{ craft.bestsellers.productTotalItemSalesNet(product.id)|commerceCurrency }}
+```
+
+| Method | Returns |
+| --- | --- |
+| `productTotalSales(id, from, to)` | `int`. Units sold. |
+| `variantTotalSales(id, from, to)` | `int`. Units sold. |
+| `productTotalItemSalesNet(id, from, to)` | `float`. Item sales net of Discount adjustments. |
+| `variantTotalItemSalesNet(id, from, to)` | `float`. Same, per variant. |
+| `productTotalRevenue(id, from, to)` | `float`. Gross, discounts not subtracted. Deprecated since 1.3.0. |
+| `variantTotalRevenue(id, from, to)` | `float`. Same, per variant. Deprecated since 1.3.0. |
+
+From PHP, create a `fostercommerce\bestsellers\variables\BestSellersVariable` and call the same methods.
+
+The `ItemSalesNet` methods use the formula of the Item Sales (Net) column on the [Products](../user-guide/products.md) report: quantity times sale price, minus the Discount adjustments on those lines, with no tax or shipping. On a store that uses coupons, they return less than the deprecated `Revenue` methods.
+
+**The formula matches the Products report; the totals do not.** These methods filter recorded sales by date alone. The Products report also drops orders with a full balance owed (authorized but never captured, fully refunded, or failed payment) and applies the order status filter. A fully refunded order counts in Twig and not in the control panel, so front-end totals can be higher than the control panel's.
+
+## Buy-again pages
+
+Both previous-purchase methods need a logged-in user, so wrap them in `{% if currentUser %}`:
+
+```twig
+{% if currentUser %}
+    {% set previousOrder = craft.bestsellers.previousPurchaseByUser(variant.id, currentUser) %}
+    {% if previousOrder %}
+        You bought this on {{ previousOrder.dateOrdered|date('M j, Y') }}
+    {% endif %}
+{% endif %}
+```
+
+| Method | Returns |
+| --- | --- |
+| `previousPurchaseByUser(purchasableId, user)` | The user's most recent completed `Order` containing it, or `null`. |
+| `previouslyPurchasedProducts(user)` | A `VariantQuery` of every variant the user has bought, most recent first, or `null`. |
+
+`previouslyPurchasedProducts()` returns a query rather than results, so it takes `.limit()` and `{% paginate %}`.
 
 ## Bundles
 
-Where the webdna Commerce Bundles plugin is installed, a bundle sale is recorded against its constituent variants. A bundle's own ID returns no sales from any of these methods; its children return the units and their allocated share of the revenue. See [products](../user-guide/products.md#bundles).
+Where the webdna Commerce Bundles plugin is installed, a bundle sale is recorded against its child variants. A bundle's own ID returns no sales from any of these methods. Its children return their units and their share of the revenue. See [products](../user-guide/products.md#bundles).

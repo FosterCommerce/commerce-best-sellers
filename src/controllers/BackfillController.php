@@ -123,8 +123,12 @@ class BackfillController extends Controller
 			return $this->redirectToPostedUrl();
 		}
 
-		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
-		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
+		/** @var DateTime $earliestOrderDate */
+		$earliestOrderDate = DateTimeHelper::toDateTime($row['minDate']);
+		/** @var DateTime $latestOrderDate */
+		$latestOrderDate = DateTimeHelper::toDateTime($row['maxDate']);
+		$startDate = $earliestOrderDate->format('Y-m-d');
+		$endDate = $latestOrderDate->format('Y-m-d');
 
 		QueueHelper::push(new RebuildDailyStatsJob([
 			'startDate' => $startDate,

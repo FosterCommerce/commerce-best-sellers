@@ -15,7 +15,7 @@ class SalesBehavior extends Behavior
 	 * Gross item sales (sum of lineItemTotal). Does NOT subtract line-level
 	 * Discount adjustments.
 	 *
-	 * @deprecated since 1.6.0. Prefer $totalItemSalesNet, which matches the
+	 * @deprecated since 1.3.0. Prefer $totalItemSalesNet, which matches the
 	 * "Item Sales (Net)" column in the CP Products report.
 	 */
 	public ?float $totalRevenue = null;
@@ -25,7 +25,7 @@ class SalesBehavior extends Behavior
 	 * (SUM(lineItemTotal + lineDiscount)). Matches the "Item Sales (Net)"
 	 * column in the CP Products report.
 	 *
-	 * @since 1.6.0
+	 * @since 1.3.0
 	 */
 	public ?float $totalItemSalesNet = null;
 }

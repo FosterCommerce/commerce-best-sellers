@@ -8,9 +8,10 @@ use craft\commerce\elements\Order;
 use craft\commerce\elements\Variant;
 use craft\db\Query;
 use craft\elements\User;
-use craft\helpers\DateTimeHelper;
+use craft\helpers\Db;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\Query as QueryHelper;
 use fostercommerce\bestsellers\Plugin;
 
 class BestSellersVariable
@@ -42,7 +43,7 @@ class BestSellersVariable
 	 * Returns the gross revenue (sum of lineItemTotal) for a given variant ID.
 	 * Does NOT subtract line-level Discount adjustments.
 	 *
-	 * @deprecated since 1.6.0. The CP Products report shows item sales net of
+	 * @deprecated since 1.3.0. The CP Products report shows item sales net of
 	 * line-level Discount adjustments. For matching numbers, use
 	 * variantTotalItemSalesNet(). This method is preserved for backward
 	 * compatibility and continues to return the gross figure.
@@ -68,7 +69,7 @@ class BestSellersVariable
 	 * (SUM(lineItemTotal + lineDiscount)) for a given variant ID. Matches the
 	 * "Item Sales (Net)" column in the CP Products report.
 	 *
-	 * @since 1.6.0
+	 * @since 1.3.0
 	 */
 	public function variantTotalItemSalesNet(int $variantId, ?string $startDate = null, ?string $endDate = null): float
 	{
@@ -113,7 +114,7 @@ class BestSellersVariable
 	 * Returns the gross revenue (sum of lineItemTotal) for a given product ID.
 	 * Does NOT subtract line-level Discount adjustments.
 	 *
-	 * @deprecated since 1.6.0. The CP Products report shows item sales net of
+	 * @deprecated since 1.3.0. The CP Products report shows item sales net of
 	 * line-level Discount adjustments. For matching numbers, use
 	 * productTotalItemSalesNet(). This method is preserved for backward
 	 * compatibility and continues to return the gross figure.
@@ -139,7 +140,7 @@ class BestSellersVariable
 	 * (SUM(lineItemTotal + lineDiscount)) for a given product ID. Matches the
 	 * "Item Sales (Net)" column in the CP Products report.
 	 *
-	 * @since 1.6.0
+	 * @since 1.3.0
 	 */
 	public function productTotalItemSalesNet(int $productId, ?string $startDate = null, ?string $endDate = null): float
 	{
@@ -242,18 +243,14 @@ class BestSellersVariable
 	 */
 	private function applyDateFilter(Query $query, ?string $startDate, ?string $endDate): void
 	{
-		if ($startDate !== null) {
-			$startDt = DateTimeHelper::toDateTime($startDate);
-			if ($startDt instanceof DateTime) {
-				$query->andWhere(['>=', 'dateOrdered', $startDt->format('Y-m-d H:i:s')]);
-			}
+		$startDateTime = $startDate === null ? null : QueryHelper::toDateBound($startDate, false);
+		if ($startDateTime instanceof DateTime) {
+			$query->andWhere(['>=', 'dateOrdered', Db::prepareDateForDb($startDateTime)]);
 		}
 
-		if ($endDate !== null) {
-			$endDt = DateTimeHelper::toDateTime($endDate);
-			if ($endDt instanceof DateTime) {
-				$query->andWhere(['<=', 'dateOrdered', $endDt->format('Y-m-d H:i:s')]);
-			}
+		$endDateTime = $endDate === null ? null : QueryHelper::toDateBound($endDate, true);
+		if ($endDateTime instanceof DateTime) {
+			$query->andWhere(['<=', 'dateOrdered', Db::prepareDateForDb($endDateTime)]);
 		}
 	}
 }

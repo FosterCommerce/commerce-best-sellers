@@ -118,7 +118,8 @@ class OrdersController extends BaseReportController
 		/** @var Commerce $commerce */
 		$commerce = Commerce::getInstance();
 		$primaryStore = $commerce->getStores()->getPrimaryStore();
-		$enabledPdfs = $primaryStore !== null
+		// Load PDFs only for users who can run the bulk download action
+		$enabledPdfs = $primaryStore !== null && Craft::$app->getUser()->checkPermission('commerce-manageOrders')
 			? $commerce->getPdfs()->getAllEnabledPdfs($primaryStore->id)
 			: new Collection();
 

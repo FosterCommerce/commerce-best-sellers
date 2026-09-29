@@ -14,12 +14,21 @@
 					<h3 class="bs-section__title" style="margin: 0;">
 						{{ 'operations.logs.title'|t('best-sellers', {count: backfillLogs|length}) }}
 					</h3>
-					<form method="POST" style="margin: 0;">
-						{{ actionInput('best-sellers/operations/clear-logs') }}
-						{{ csrfInput() }}
-						{{ redirectInput(cpUrl('best-sellers/operations')) }}
-						<button type="submit" class="btn small">{{ 'operations.logs.clearAll'|t('best-sellers') }}</button>
-					</form>
+					{% if currentUser.can('best-sellers:backfill') %}
+						<form method="POST" style="margin: 0;">
+							{{ csrfInput() }}
+							{{ redirectInput(cpUrl('best-sellers/operations')) }}
+							{{ tag('button', {
+								type: 'button',
+								class: ['btn', 'small', 'formsubmit'],
+								text: 'operations.logs.clearAll'|t('best-sellers'),
+								data: {
+									action: 'best-sellers/operations/clear-logs',
+									confirm: 'operations.logs.confirmClearAll'|t('best-sellers'),
+								},
+							}) }}
+						</form>
+					{% endif %}
 				</div>
 				<div class="bs-chart-container" style="border-color: #e74c3c;">
 					<table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">

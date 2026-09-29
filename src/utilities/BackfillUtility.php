@@ -26,13 +26,13 @@ class BackfillUtility extends Utility
 		return dirname(__DIR__) . '/icon-mask.svg';
 	}
 
-	public static function requiresPermission(): ?string
-	{
-		return Plugin::PERMISSION_BACKFILL;
-	}
-
 	public static function contentHtml(): string
 	{
+		// Skip the forms, since BackfillController rejects all their actions without this permission
+		if (! Craft::$app->getUser()->checkPermission(Plugin::PERMISSION_BACKFILL)) {
+			return Html::tag('p', Html::encode(Craft::t('best-sellers', 'backfill.noPermission')));
+		}
+
 		Craft::$app->view->registerAssetBundle(BackfillAsset::class);
 
 		return Craft::$app->view->renderTemplate('best-sellers/_utilities/backfill', [

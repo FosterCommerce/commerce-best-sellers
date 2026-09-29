@@ -1,28 +1,32 @@
 # Best Sellers documentation
 
-Sales reporting for Craft Commerce: revenue, orders, transactions, products, customers, shipping locations, and abandoned carts, over any date range.
+Essential **sales insights** and top-performing product data for Craft Commerce stores.
 
 ## Where to go
 
-**First time here?** Start with [Getting started](./getting-started.md), which takes you from `composer require` to a populated dashboard.
+**Getting started:** [a walkthrough](./getting-started.md) from `composer require` to a populated dashboard, and [installation](./installation.md) with every setting.
 
-**Building a front end?** See [Templating](./dev-guide/templating.md) for the `craft.bestsellers` Twig methods, the `bestSellers()` element query behavior, and a customer's previous purchases.
+**User guide:**
 
-**Running reports day-to-day?** See the [user guide](./user-guide/):
-
-- [Filters and report pages](./user-guide/filters-and-report-pages.md), the controls above every report and the behaviour every table shares
-- [Dashboard](./user-guide/dashboard.md), what each KPI card measures
+- [Dashboard](./user-guide/dashboard.md), KPI cards, written summaries, and abandoned carts for a date range
+- [Orders](./user-guide/orders.md), every completed order, with order field columns, Date Shipped, and bulk PDF download
+- [Transactions](./user-guide/transactions.md), captured, refunded, and net amounts per gateway
 - [Products](./user-guide/products.md), what sold, and how the figures are calculated
+- [Customers](./user-guide/customers.md), who bought, how often, and how much
+- [Locations](./user-guide/locations.md), where orders shipped, by country, state, and city
+- [Operations](./user-guide/operations.md), store configuration, emails, coupon usage, and backfill logs
+- [Filters and report pages](./user-guide/filters-and-report-pages.md), the date, status, location, and custom field filters, and the shared table features
 - [Unit costs and profit](./user-guide/unit-costs-and-profit.md), recording what items cost and reporting gross profit and margin
-- [Data and backfill](./user-guide/data-and-backfill.md), how sales data is recorded and rebuilt
+- [Cart restore](./user-guide/cart-restore.md), sending a customer a link back to an abandoned cart
+- [Data and backfill](./user-guide/data-and-backfill.md), how the plugin records and rebuilds its sales data and daily stats
 - [Troubleshooting](./user-guide/troubleshooting.md), when a number looks wrong
 
-The Orders, Transactions, Customers, Locations, Operations, and Cart restore pages sit alongside them.
+**Dev guide:**
 
-**Looking something up?**
+- [Templating](./dev-guide/templating.md), best-seller listings, sales totals, and buy-again pages in Twig
+
+**Reference:**
 
 - [Console commands](./reference/console-commands.md), every command and its options
 - [Schema](./reference/schema.md), the three tables the plugin installs
 - [Permissions](./reference/permissions.md), what each permission grants
-
-**Setup details:** [Installation](./installation.md)

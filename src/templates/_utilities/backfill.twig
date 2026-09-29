@@ -20,14 +20,28 @@
 </form>
 <div class="bs-backfill-actions">
 	<form method="POST">
-		{{ actionInput('best-sellers/backfill/refresh-orders') }}
 		{{ csrfInput() }}
-		<button type="submit" class="btn">{{ 'backfill.clearAndReprocess'|t('best-sellers') }}</button>
+		{{ tag('button', {
+			type: 'button',
+			class: ['btn', 'formsubmit'],
+			text: 'backfill.clearAndReprocess'|t('best-sellers'),
+			data: {
+				action: 'best-sellers/backfill/refresh-orders',
+				confirm: 'backfill.confirm.clearAndReprocess'|t('best-sellers'),
+			},
+		}) }}
 	</form>
 	<form method="POST">
-		{{ actionInput('best-sellers/backfill/clear-orders') }}
 		{{ csrfInput() }}
-		<button type="submit" class="btn">{{ 'backfill.clearOrderData'|t('best-sellers') }}</button>
+		{{ tag('button', {
+			type: 'button',
+			class: ['btn', 'formsubmit'],
+			text: 'backfill.clearSalesData'|t('best-sellers'),
+			data: {
+				action: 'best-sellers/backfill/clear-orders',
+				confirm: 'backfill.confirm.clearSalesData'|t('best-sellers'),
+			},
+		}) }}
 	</form>
 </div>
 
@@ -73,13 +87,27 @@
 </form>
 <div class="bs-backfill-actions">
 	<form method="POST">
-		{{ actionInput('best-sellers/backfill/refresh-daily-stats') }}
 		{{ csrfInput() }}
-		<button type="submit" class="btn">{{ 'backfill.clearAndRebuild'|t('best-sellers') }}</button>
+		{{ tag('button', {
+			type: 'button',
+			class: ['btn', 'formsubmit'],
+			text: 'backfill.clearAndRebuild'|t('best-sellers'),
+			data: {
+				action: 'best-sellers/backfill/refresh-daily-stats',
+				confirm: 'backfill.confirm.clearAndRebuild'|t('best-sellers'),
+			},
+		}) }}
 	</form>
 	<form method="POST">
-		{{ actionInput('best-sellers/backfill/clear-daily-stats') }}
 		{{ csrfInput() }}
-		<button type="submit" class="btn">{{ 'backfill.clearDailyStats'|t('best-sellers') }}</button>
+		{{ tag('button', {
+			type: 'button',
+			class: ['btn', 'formsubmit'],
+			text: 'backfill.clearDailyStats'|t('best-sellers'),
+			data: {
+				action: 'best-sellers/backfill/clear-daily-stats',
+				confirm: 'backfill.confirm.clearDailyStats'|t('best-sellers'),
+			},
+		}) }}
 	</form>
 </div>

@@ -1,8 +1,8 @@
 # Transactions
 
-**Best Sellers -> Transactions.** Gateway transactions in the date range, with captured, refunded, and net totals. Audience: anyone reconciling the store against a payment gateway.
+**Best Sellers -> Transactions.** Gateway transactions in the date range, with captured, refunded, and net totals.
 
-Where the [Orders](./orders.md) report answers "what was sold", this page answers "what money moved, and when". Pagination, totals, and CSV export behave as described in [filters and report pages](./filters-and-report-pages.md).
+Pagination, totals, and CSV export behave as described in [filters and report pages](./filters-and-report-pages.md).
 
 ## Columns
 
@@ -18,28 +18,28 @@ Where the [Orders](./orders.md) report answers "what was sold", this page answer
 | Email | The order email. |
 | Reference | The gateway's own reference for the transaction. |
 
-**Captured**, **Refunded**, and **Net** totals sit above the table. Net is Captured minus Refunded.
+**Captured**, **Refunded**, and **Net** totals appear above the table. Net is Captured minus Refunded.
 
 ## The two date filters
 
-The header date picker bounds the *transaction* date. A refund appears on the day it was processed, not the day the original order was placed.
+The date range filters on the *transaction* date. A refund appears on the day it was processed, not the day the original order was placed.
 
-The **Order date** filter on the page is a second, independent range on the order's date. Setting both answers questions like "refunds processed in May, for orders placed in March". Leave it empty to filter on transaction date alone.
+The **Order date** filter on the page is a second, independent range on the order's date. Set both to find, for example, refunds processed in May for orders placed in March.
 
 ## Type and status filters
 
-A fresh browser tab starts with **Type** on Purchase, Capture, and Refund, and **Status** on Success: the rows where money moved. Your changes are kept for the tab.
+A fresh browser tab starts with **Type** on Purchase, Capture, and Refund, and **Status** on Success. Your changes are kept for the tab.
 
-Enabling **Authorize** changes what the totals mean. An authorization is not money movement on its own, and its matching capture is already counted, so those payments are counted twice in Captured.
+With **Authorize** ticked, Captured counts a payment twice: once for its authorization and once for its capture.
 
 ## Other filters
 
-The global order status and shipping location filters apply here through the order each transaction belongs to.
+The global order status and shipping locations filters apply here through the order each transaction belongs to.
 
 **Search** matches the transaction reference, the transaction code, the order reference, or the order email. **Gateway** filters to one or more gateways.
 
 ## Limits
 
-Only transactions in the store's primary currency are included. On a multi-currency store the others are absent from both the table and the totals.
+Only transactions in the store's primary currency are included. On a multi-currency store, transactions in other currencies are absent from both the table and the totals.
 
 Transactions belonging to soft-deleted orders are excluded.

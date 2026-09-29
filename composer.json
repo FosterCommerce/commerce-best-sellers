@@ -1,12 +1,13 @@
 {
   "name": "fostercommerce/commerce-best-sellers",
   "type": "craft-plugin",
+  "description": "Essential sales insights and top-performing product data for Craft Commerce stores.",
   "license": "proprietary",
   "support": {
     "email": "support@fostercommerce.com",
     "issues": "https://github.com/fostercommerce/commerce-best-sellers/issues?state=open",
     "source": "https://github.com/fostercommerce/commerce-best-sellers",
-    "docs": "https://github.com/fostercommerce/commerce-best-sellers",
+    "docs": "https://www.fostercommerce.com/craft-cms-plugins/best-sellers",
     "rss": "https://github.com/fostercommerce/commerce-best-sellers/releases.atom"
   },
   "require": {
@@ -31,7 +32,7 @@
     "handle": "best-sellers",
     "name": "Best Sellers",
     "developer": "Foster Commerce",
-    "documentationUrl": "https://github.com/fostercommerce/commerce-best-sellers"
+    "documentationUrl": "https://www.fostercommerce.com/craft-cms-plugins/best-sellers"
   },
   "config": {
     "sort-packages": true,

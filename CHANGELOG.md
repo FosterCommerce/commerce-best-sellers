@@ -1,27 +1,50 @@
 # Release Notes for Best Sellers
 
-## Unreleased
+## 1.4.0 - Unreleased
+
+> [!NOTE]
+> Updating queues a rebuild of the sales data for every completed order, to record each line's catalog price. Keep a queue worker running until the rebuild finishes.
 
 ### Added
+- Added a Transactions report.
+- Added a Locations report.
+- Added a shipping locations filter to the reports.
+- Added bulk PDF download to the Orders report.
 - Added a “Unit cost field” setting for each product type, for recording each line item's unit cost.
 - Added a “Profit” view to the Products report, with Cost, Gross Profit, and Gross Margin columns.
 - Added Gross Profit and Gross Margin cards to the dashboard.
 - Added Products report filters on variant fields, chosen per product type.
 - Added the ability to fill in unit costs on existing orders, and the `best-sellers/backfill/fill-unit-costs` command.
-- Added the `unitCost` column to `best_sellers_variant_sales`.
+- Added the `catalogPrice` and `unitCost` columns to `best_sellers_variant_sales`.
 - Added order field columns and filters to the Orders report, chosen in an “Orders report fields” setting.
 - Added a Date Shipped column to the Orders report, from a “Shipped status” setting.
 
 ### Changed
+- The Products report's Avg Price column now averages each unit's catalog price, before promotions.
+- The Orders report's payment status filter now starts on Paid, Partial, and Overpaid.
+- The date picker now shows the site's timezone.
+- `bestSellers()` now sets `totalQtySold`, `totalItemSalesNet`, and `totalRevenue` to zero rather than `null` for elements with no sales in the range.
 - Plugin settings are now split into “General” and “Product Types” tabs.
 - The Product Type filter is now first on the Products report.
 - The Orders report's Items Sold column now sorts.
 - Improved the performance of the Orders report's CSV export for large date ranges.
+- The Best Sellers utility's clear actions, and “Clear All” on the Operations page, now ask for confirmation.
+- The Best Sellers utility's “Clear Order Data” button is now “Clear sales data”.
+- Clearing the backfill logs on the Operations page now requires the “Backfill order data” permission (`best-sellers:backfill`).
 
 ### Fixed
+- Fixed errors that occurred on PostgreSQL when viewing the Customers report or calling `bestSellers()`, `productTotalRevenue()`, or `variantTotalRevenue()`.
 - Fixed a bug where a backfill date range skipped orders placed on its end date.
-- Fixed a bug where backfill date ranges compared dates in UTC instead of the site's timezone.
-- Fixed a bug where the Products report read “1 in 1 orders”.
+- Fixed a bug where a backfill date range could skip or include orders placed near midnight.
+- Fixed a bug where the Products report showed “1 in 1 orders”.
+- Fixed a bug where `craft.bestsellers` date ranges and the `bestSellers()` query method compared dates in UTC instead of the site's timezone.
+- Fixed a bug where a `YYYY-MM-DD` end date passed to `craft.bestsellers` methods or `bestSellers()` left out orders placed on that date.
+- Fixed a bug where `bestSellers()` ignored `DateTime` arguments.
+- Fixed a bug where sorting `bestSellers()` results by sales on PostgreSQL listed elements with no sales first.
+- Fixed a bug where abandoned cart “Share” links used a control panel URL instead of the cart's site.
+- Fixed a bug where abandoned cart ages, and the four-hour abandonment cutoff, were off by the site's UTC offset.
+- Fixed a bug where rebuilding daily stats could skip the store's first or last day of orders.
+- Fixed a bug where the Best Sellers utility showed its actions to users without the backfill permission.
 
 ## 1.3.0 - 2026-05-20
 

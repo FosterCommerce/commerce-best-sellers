@@ -6,6 +6,7 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
 use craft\db\Query;
+use craft\helpers\DateTimeHelper;
 use craft\helpers\Queue as QueueHelper;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
@@ -263,8 +264,12 @@ class BackfillController extends Controller
 			return ExitCode::OK;
 		}
 
-		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
-		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
+		/** @var DateTime $earliestOrderDate */
+		$earliestOrderDate = DateTimeHelper::toDateTime($row['minDate']);
+		/** @var DateTime $latestOrderDate */
+		$latestOrderDate = DateTimeHelper::toDateTime($row['maxDate']);
+		$startDate = $earliestOrderDate->format('Y-m-d');
+		$endDate = $latestOrderDate->format('Y-m-d');
 
 		QueueHelper::push(new RebuildDailyStatsJob([
 			'startDate' => $startDate,

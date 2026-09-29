@@ -1,12 +1,12 @@
 # Schema
 
-The plugin installs three tables. Source of truth is `src/migrations/Install.php`.
+The plugin installs three tables. The columns are defined in `src/migrations/Install.php`.
 
-None of them is project config. Uninstalling drops all three; Commerce's own data is untouched.
+The tables are not part of project config. Uninstalling drops all three; Commerce's own data is untouched.
 
 ## best_sellers_variant_sales
 
-One row per variant per completed order. A bundle line item produces one row per constituent variant rather than one for the bundle. Written when an order is saved, and by the backfill and the unit cost fill.
+One row per variant per completed order. A bundle line item produces one row per child variant rather than one for the bundle. Written when an order is saved, and by the backfill and the unit cost fill.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -20,28 +20,28 @@ One row per variant per completed order. A bundle line item produces one row per
 | `qty` | integer | Units on the line. For a bundle child, the child quantity times the bundle line quantity. |
 | `lineItemPrice` | decimal(14,4) | Per-unit price paid. For a bundle child, its allocated share divided by quantity. |
 | `lineItemTotal` | decimal(14,4) | The line subtotal: quantity times sale price. Sale-price promotions are priced in. Summed as Item Subtotal in the reports. |
-| `catalogPrice` | decimal(14,4) | The list price before promotions, frozen at the time of sale. Averaged as Avg Price in the reports. |
+| `catalogPrice` | decimal(14,4) | The catalog price before promotions, frozen at the time of sale. Averaged as Avg Price in the reports. |
 | `unitCost` | decimal(14,4) | The variant's unit cost recorded on the line item, per unit. Null when the line has no recorded cost. See [unit costs and profit](../user-guide/unit-costs-and-profit.md). |
-| `discount` | decimal(14,4) | The promotional (sale-price) amount on the line, stored positive. Default: `0`. |
+| `discount` | decimal(14,4) | The sale-price promotion amount on the line, stored positive. Default: `0`. |
 | `lineDiscount` | decimal(14,4) | Discount adjustments attributed to the line: coupons, manual discounts, and order-level discounts Commerce attached here. Negative, so `lineItemTotal + lineDiscount` is Item Sales (Net). Default: `0`. |
 | `sourceBundleId` | integer | The bundle this row was expanded from, or null. Drives the bundle marker on product rows. Indexed. |
 | `sourceBundleTitle` | string | The bundle's title at the time of sale. |
 | `orderId` | integer | Foreign key to `commerce_orders.id`, `ON DELETE CASCADE`. Indexed. |
 | `dateOrdered` | datetime | The order's date. Every report's date filter runs against this column. Indexed. |
-| `dateCreated` | datetime | When the row was written, which is not when the order was placed on a backfilled row. |
+| `dateCreated` | datetime | When the row was written. On a backfilled row, this is when the backfill ran, not when the order was placed. |
 
 Composite indexes on `(productId, dateCreated)` and `(variantId, dateCreated)`.
 
-`productId` and `variantId` carry no foreign key by design: rows have to survive a purchasable being deleted so historical revenue is retained, and a row rebuilt from an order's snapshot can hold an ID that no longer exists.
+A row rebuilt from an order's snapshot can hold a `productId` or `variantId` that no longer exists.
 
 ## best_sellers_daily_stats
 
-One row per calendar day, in the Craft app timezone. Rebuilt as an idempotent upsert when an order is saved, and by the daily stats commands. Covers every completed order, with no order status or shipping location filter applied.
+One row per calendar day, in the site's timezone. Rewritten for the order's day when an order is saved, and by the daily stats commands. Covers every completed order, with no order status or shipping locations filter applied.
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | integer | Primary key. |
-| `date` | date | Unique index. The calendar day in the app timezone. |
+| `date` | date | Unique index. The calendar day in the site's timezone. |
 | `totalOrders` | integer | Completed orders that day. Default: `0`. |
 | `totalRevenue` | decimal(14,4) | Sum of order `totalPrice`. Default: `0`. |
 | `totalDiscount` | decimal(14,4) | Sum of order `totalDiscount`. Negative in Commerce; the dashboard shows it positive. Default: `0`. |

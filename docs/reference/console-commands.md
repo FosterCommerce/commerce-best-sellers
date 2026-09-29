@@ -1,15 +1,16 @@
 # Console commands
 
-All of these are also available at **Utilities -> Best Sellers**, except the log clear, which is on the [Operations](../user-guide/operations.md) page. None is permission-gated.
+All of these are also available at **Utilities -> Best Sellers**, except `clear-logs`, which is on the [Operations](../user-guide/operations.md) page. The console commands do not check permissions.
 
 | Command | What it does |
 | --- | --- |
 | `best-sellers/backfill` | Queues every completed order for processing, in batches of 25. Already-recorded orders are skipped, so re-running does not double-count. |
-| `best-sellers/backfill/refresh-orders` | Deletes recorded variant sales, then queues the orders again. |
-| `best-sellers/backfill/clear-orders` | Truncates the variant sales table and queues nothing. |
-| `best-sellers/backfill/fill-unit-costs` | Queues completed orders to add unit costs to lines that have none, from each variant's current cost. See [data and backfill](../user-guide/data-and-backfill.md#fill-unit-costs). |
+| `best-sellers/backfill/refresh-orders` | Deletes the recorded sales data, then queues the orders again. |
+| `best-sellers/backfill/clear-orders` | Clears the sales data without queueing a rebuild. |
+| `best-sellers/backfill/fill-unit-costs` | Queues completed orders to add unit costs to lines with no unit cost, from each variant's current cost. See [data and backfill](../user-guide/data-and-backfill.md#fill-unit-costs). |
 | `best-sellers/backfill/daily-stats` | Rebuilds daily stats from Commerce's orders, over the range detected from your earliest and latest completed order. |
 | `best-sellers/backfill/refresh-daily-stats` | Clears daily stats before rebuilding. |
+| `best-sellers/backfill/clear-daily-stats` | Clears the daily stats without queueing a rebuild. |
 | `best-sellers/backfill/clear-logs` | Deletes every backfill log entry. |
 
 ## Options
@@ -28,7 +29,7 @@ All of these are also available at **Utilities -> Best Sellers**, except the log
 
 ## Queue
 
-`backfill`, `refresh-orders`, `fill-unit-costs`, and the two daily stats rebuilds without `--date` push queue jobs, so nothing changes in the reports until a worker runs them. The `clear-` commands and the `--date` rebuilds run in the console process.
+`backfill`, `refresh-orders`, `fill-unit-costs`, and the two daily stats rebuilds without `--date` push queue jobs. The reports do not change until a queue worker runs those jobs. The `clear-` commands and the `--date` rebuilds run in the console process.
 
 ```sh
 ./craft queue/listen

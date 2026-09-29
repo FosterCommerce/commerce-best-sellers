@@ -3,16 +3,21 @@
 namespace fostercommerce\bestsellers\services;
 
 use Craft;
+use craft\base\FieldInterface;
 use craft\commerce\base\PurchasableInterface;
+use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Product;
 use craft\commerce\elements\Variant;
 use craft\commerce\enums\LineItemType;
 use craft\commerce\models\LineItem;
 use craft\helpers\Db;
+use craft\helpers\Json;
+use craft\helpers\MoneyHelper;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\LineItemHelper;
+use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
 use Money\Currencies\ISOCurrencies;
 use Money\Currency as MoneyCurrency;
@@ -28,6 +33,8 @@ class Sales extends Component
 	 * prices change after the order completes.
 	 */
 	public const OPTIONS_KEY_BUNDLE_CHILD_PRICES = 'bestSellersBundleChildPrices';
+
+	private const SNAPSHOT_KEY_UNIT_COSTS = 'bestSellersUnitCosts';
 
 	private const BUNDLE_CLASS = 'webdna\\commerce\\bundles\\elements\\Bundle';
 
@@ -90,6 +97,7 @@ class Sales extends Component
 					// Commerce freezes LineItem::price at line-item creation,
 					// so no separate snapshot is needed for non-bundle rows.
 					'catalogPrice' => $lineItem->price,
+					'unitCost' => $this->getSnapshotUnitCost($lineItem, $purchasable->id),
 					'discount' => abs((float) $lineItem->promotionalAmount),
 					// LineItem::getDiscount() sums Discount-type adjustments on this
 					// line (negative). Stored as-is so SUM(lineItemTotal + lineDiscount)
@@ -120,6 +128,7 @@ class Sales extends Component
 						'lineItemPrice',
 						'lineItemTotal',
 						'catalogPrice',
+						'unitCost',
 						'discount',
 						'lineDiscount',
 						'sourceBundleId',
@@ -132,6 +141,102 @@ class Sales extends Component
 				)
 				->execute();
 		}
+	}
+
+	/**
+	 * Record each variant's unit cost in the line item snapshot, so later cost field edits leave past orders unchanged.
+	 *
+	 * @param list<Variant> $variants
+	 */
+	public function captureUnitCosts(LineItem $lineItem, array $variants): void
+	{
+		/** @var Plugin $plugin */
+		$plugin = Plugin::getInstance();
+		if (! $plugin->variantFields->hasUnitCostField()) {
+			return;
+		}
+
+		/** @var Order $order */
+		$order = $lineItem->getOrder();
+
+		$unitCosts = [];
+		foreach ($variants as $variant) {
+			$unitCosts[$variant->id] = $this->getVariantUnitCost($variant, $order->currency);
+		}
+
+		$lineItem->setSnapshot([
+			...$lineItem->getSnapshot(),
+			self::SNAPSHOT_KEY_UNIT_COSTS => $unitCosts,
+		]);
+	}
+
+	/**
+	 * Fill line items without a recorded unit cost from each variant's current cost, then rebuild the order's rows.
+	 *
+	 * @param list<int> $productTypeIds
+	 */
+	public function fillMissingUnitCosts(Order $order, array $productTypeIds): void
+	{
+		/** @var list<array{LineItem, array<string, mixed>}> $filledSnapshots */
+		$filledSnapshots = [];
+		foreach ($order->getLineItems() as $lineItem) {
+			$snapshot = $lineItem->getSnapshot();
+			/** @var array<int, string|null> $unitCosts */
+			$unitCosts = $snapshot[self::SNAPSHOT_KEY_UNIT_COSTS] ?? [];
+
+			$purchasable = LineItemHelper::getPurchasable($lineItem);
+			if (! $purchasable instanceof PurchasableInterface) {
+				$this->logDeletedPurchasableWithoutCost($order, $lineItem, $unitCosts, $productTypeIds);
+				continue;
+			}
+
+			$this->logDeletedBundleChildrenWithoutCost($order, $lineItem, $purchasable, $unitCosts);
+
+			$hasFilledLineCost = false;
+			foreach ($this->getCostedVariants($purchasable) as $variant) {
+				if (($unitCosts[$variant->id] ?? null) !== null) {
+					continue;
+				}
+
+				if (! in_array($variant->getProduct()?->typeId, $productTypeIds, true)) {
+					continue;
+				}
+
+				$unitCosts[$variant->id] = $this->getVariantUnitCost($variant, $order->currency);
+				if ($unitCosts[$variant->id] === null) {
+					Craft::error("Unit cost fill left order #{$order->id} line item #{$lineItem->id} (variant #{$variant->id}) without a cost: the variant has no unit cost in the order's currency ({$order->currency}).", 'best-sellers');
+					continue;
+				}
+
+				$hasFilledLineCost = true;
+			}
+
+			if (! $hasFilledLineCost) {
+				continue;
+			}
+
+			$snapshot[self::SNAPSHOT_KEY_UNIT_COSTS] = $unitCosts;
+			$filledSnapshots[] = [$lineItem, $snapshot];
+		}
+
+		if ($filledSnapshots === []) {
+			return;
+		}
+
+		// Commit the costs only with rebuilt rows, since a re-run skips lines that already have a cost
+		Craft::$app->getDb()->transaction(function () use ($order, $filledSnapshots): void {
+			foreach ($filledSnapshots as [$lineItem, $snapshot]) {
+				// Write the column directly so the completed order is not resaved or recalculated
+				Db::update(CommerceTable::LINEITEMS, [
+					'snapshot' => Json::encode($snapshot),
+				], [
+					'id' => $lineItem->id,
+				], [], false);
+				$lineItem->setSnapshot($snapshot);
+			}
+
+			$this->logOrderSales($order, true);
+		});
 	}
 
 	/**
@@ -381,6 +486,7 @@ class Sales extends Component
 					'lineItemPrice' => $formatter->format($rowPrice),
 					'lineItemTotal' => $formatter->format($rowTotal),
 					'catalogPrice' => $formatter->format($this->floatToMoney($entry['catalogPrice'], $currency, $subunit)),
+					'unitCost' => $this->getSnapshotUnitCost($lineItem, $entry['variantId']),
 					'discount' => $formatter->format($promoByIndex[$index] ?? $zero),
 					'lineDiscount' => $formatter->format($adjustmentByIndex[$index] ?? $zero),
 					'sourceBundleId' => $bundle->id,
@@ -413,6 +519,7 @@ class Sales extends Component
 				// against the order subtotal exactly when unknowns absorb the
 				// full remainder.
 				'catalogPrice' => $rowPriceFormatted,
+				'unitCost' => $this->getSnapshotUnitCost($lineItem, $entry['variantId']),
 				'discount' => $formatter->format($promoByIndex[$index] ?? $zero),
 				'lineDiscount' => $formatter->format($adjustmentByIndex[$index] ?? $zero),
 				'sourceBundleId' => $bundle->id,
@@ -471,6 +578,7 @@ class Sales extends Component
 			'lineItemPrice' => $lineItem->price,
 			'lineItemTotal' => $lineItem->subtotal,
 			'catalogPrice' => $lineItem->price,
+			'unitCost' => $this->getSnapshotUnitCost($lineItem, $variantId),
 			'discount' => abs((float) $lineItem->promotionalAmount),
 			'lineDiscount' => $lineItem->getDiscount(),
 			'sourceBundleId' => null,
@@ -479,5 +587,119 @@ class Sales extends Component
 			'dateOrdered' => Db::prepareDateForDb($order->dateOrdered),
 			'dateCreated' => Db::prepareDateForDb(new DateTime()),
 		]];
+	}
+
+	private function getSnapshotUnitCost(LineItem $lineItem, ?int $variantId): ?string
+	{
+		if ($variantId === null) {
+			return null;
+		}
+
+		/** @var array<int, string|null> $unitCosts */
+		$unitCosts = $lineItem->getSnapshot()[self::SNAPSHOT_KEY_UNIT_COSTS] ?? [];
+
+		return $unitCosts[$variantId] ?? null;
+	}
+
+	/**
+	 * Get the variant's unit cost as a decimal string, or null without a cost in the order's currency.
+	 */
+	private function getVariantUnitCost(Variant $variant, ?string $orderCurrencyCode): ?string
+	{
+		$product = $variant->getProduct();
+		if (! $product instanceof Product) {
+			return null;
+		}
+
+		/** @var Plugin $plugin */
+		$plugin = Plugin::getInstance();
+		$unitCostField = $plugin->variantFields->getUnitCostField($product->getType());
+		if (! $unitCostField instanceof FieldInterface) {
+			return null;
+		}
+
+		$unitCost = $variant->getFieldValue((string) $unitCostField->handle);
+		if (! $unitCost instanceof Money || $unitCost->getCurrency()->getCode() !== $orderCurrencyCode) {
+			return null;
+		}
+
+		return (string) MoneyHelper::toDecimal($unitCost);
+	}
+
+	/**
+	 * @return list<Variant>
+	 */
+	private function getCostedVariants(PurchasableInterface $purchasable): array
+	{
+		if ($purchasable instanceof Variant) {
+			return [$purchasable];
+		}
+
+		if (! is_a($purchasable::class, self::BUNDLE_CLASS, true) || ! method_exists($purchasable, 'getPurchasables')) {
+			return [];
+		}
+
+		$childVariants = [];
+		foreach ($purchasable->getPurchasables() as $childPurchasable) {
+			if ($childPurchasable instanceof Variant) {
+				$childVariants[] = $childPurchasable;
+			}
+		}
+
+		return $childVariants;
+	}
+
+	/**
+	 * @param array<int, string|null> $unitCosts
+	 * @param list<int> $productTypeIds
+	 */
+	private function logDeletedPurchasableWithoutCost(Order $order, LineItem $lineItem, array $unitCosts, array $productTypeIds): void
+	{
+		// Custom line items never have a purchasable, so they never need a cost
+		if ($lineItem->type !== LineItemType::Purchasable) {
+			return;
+		}
+
+		$snapshot = $lineItem->getSnapshot();
+
+		// Only variant snapshots hold the product, so a snapshot without one is a bundle's
+		if (! isset($snapshot['product'])) {
+			if (in_array(null, $unitCosts, true) || $unitCosts === []) {
+				Craft::error("Unit cost fill left order #{$order->id} line item #{$lineItem->id} without a cost: its bundle no longer exists.", 'best-sellers');
+			}
+
+			return;
+		}
+
+		// The purchasable ID is cleared when the variant is deleted, so read it from the snapshot
+		$variantId = is_numeric($snapshot['id'] ?? null) ? (int) $snapshot['id'] : 0;
+		if (($unitCosts[$variantId] ?? null) !== null) {
+			return;
+		}
+
+		/** @var array{typeId?: int|string} $productSnapshot */
+		$productSnapshot = $snapshot['product'];
+		if (! in_array((int) ($productSnapshot['typeId'] ?? 0), $productTypeIds, true)) {
+			return;
+		}
+
+		Craft::error("Unit cost fill left order #{$order->id} line item #{$lineItem->id} without a cost: its variant #{$variantId} no longer exists.", 'best-sellers');
+	}
+
+	/**
+	 * @param array<int, string|null> $unitCosts
+	 */
+	private function logDeletedBundleChildrenWithoutCost(Order $order, LineItem $lineItem, PurchasableInterface $purchasable, array $unitCosts): void
+	{
+		if (! is_a($purchasable::class, self::BUNDLE_CLASS, true) || ! method_exists($purchasable, 'getPurchasableIds')) {
+			return;
+		}
+
+		$liveChildIds = array_map(static fn (Variant $variant): int => (int) $variant->id, $this->getCostedVariants($purchasable));
+		foreach (array_map('intval', $purchasable->getPurchasableIds()) as $childId) {
+			if (! in_array($childId, $liveChildIds, true) && ($unitCosts[$childId] ?? null) === null) {
+				Craft::error("Unit cost fill left order #{$order->id} line item #{$lineItem->id} without a cost for variant #{$childId}: the bundle's variant no longer exists.", 'best-sellers');
+			}
+		}
 	}
 }

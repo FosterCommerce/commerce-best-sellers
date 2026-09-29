@@ -4,6 +4,9 @@ namespace fostercommerce\bestsellers\utilities;
 
 use Craft;
 use craft\base\Utility;
+use craft\commerce\models\ProductType;
+use craft\helpers\Html;
+use fostercommerce\bestsellers\assetbundles\BackfillAsset;
 use fostercommerce\bestsellers\Plugin;
 
 class BackfillUtility extends Utility
@@ -23,13 +26,21 @@ class BackfillUtility extends Utility
 		return dirname(__DIR__) . '/icon-mask.svg';
 	}
 
-	public static function requiresPermission(): ?string
-	{
-		return Plugin::PERMISSION_BACKFILL;
-	}
-
 	public static function contentHtml(): string
 	{
-		return Craft::$app->view->renderTemplate('best-sellers/_utilities/backfill');
+		// Skip the forms, since BackfillController rejects all their actions without this permission
+		if (! Craft::$app->getUser()->checkPermission(Plugin::PERMISSION_BACKFILL)) {
+			return Html::tag('p', Html::encode(Craft::t('best-sellers', 'backfill.noPermission')));
+		}
+
+		Craft::$app->view->registerAssetBundle(BackfillAsset::class);
+
+		return Craft::$app->view->renderTemplate('best-sellers/_utilities/backfill', [
+			'showUnitCostFill' => Plugin::getInstance()->variantFields->hasUnitCostField(),
+			'unitCostProductTypeOptions' => array_map(static fn (ProductType $productType): array => [
+				'label' => Html::encode((string) $productType->name),
+				'value' => $productType->id,
+			], Plugin::getInstance()->variantFields->getUnitCostProductTypes()),
+		]);
 	}
 }

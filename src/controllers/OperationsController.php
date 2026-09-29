@@ -76,6 +76,7 @@ class OperationsController extends BaseReportController
 	public function actionClearLogs(): Response
 	{
 		$this->requirePostRequest();
+		$this->requirePermission(Plugin::PERMISSION_BACKFILL);
 		Plugin::getInstance()->backfillLogs->deleteAll();
 		Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.logsCleared'));
 

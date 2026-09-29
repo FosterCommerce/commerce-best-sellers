@@ -5,6 +5,7 @@ namespace fostercommerce\bestsellers\controllers;
 use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
+use craft\commerce\models\ProductType;
 use craft\db\Query;
 use craft\helpers\DateTimeHelper;
 use craft\helpers\Queue as QueueHelper;
@@ -14,7 +15,9 @@ use DateTime;
 use Exception;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\NotTrashed;
+use fostercommerce\bestsellers\helpers\Query as QueryHelper;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
+use fostercommerce\bestsellers\jobs\FillUnitCostsJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
 use yii\base\Action;
@@ -54,46 +57,40 @@ class BackfillController extends Controller
 	public function actionIndex(): Response
 	{
 		$this->requirePostRequest();
-		/** @var Request $request */
-		$request = Craft::$app->getRequest();
 
-		// Craft date fields post arrays; convert to Y-m-d strings.
-		/** @var array<string, string>|string|null $rawStart */
-		$rawStart = $request->getBodyParam('startDate');
-		/** @var array<string, string>|string|null $rawEnd */
-		$rawEnd = $request->getBodyParam('endDate');
-		$startDateTime = DateTimeHelper::toDateTime($rawStart);
-		$endDateTime = DateTimeHelper::toDateTime($rawEnd);
-		$startDate = $startDateTime ? $startDateTime->format('Y-m-d') : null;
-		$endDate = $endDateTime ? $endDateTime->format('Y-m-d') : null;
-
-		// Build query filtering by isCompleted and date range.
-		// Already-processed orders are short-circuited inside Sales::logOrderSales,
-		// so the offset/limit pagination is stable across job runs.
-		$query = Order::find()
-			->isCompleted(true);
-
-		// If both dates are provided, filter orders between them.
-		if ($startDate && $endDate) {
-			$query->andWhere(['between', 'dateOrdered', $startDate, $endDate]);
-		} else {
-			// Otherwise, default to orders ordered before now.
-			$query->andWhere(['<', 'dateOrdered', (new DateTime())->format('Y-m-d H:i:s')]);
-		}
-
-		$totalOrders = $query->count();
-
-		// Queue jobs in batches, passing the date range.
-		for ($offset = 0; $offset < $totalOrders; $offset += self::BATCH_SIZE) {
-			Craft::$app->queue->push(new BackfillOrdersJob([
-				'offset' => $offset,
-				'limit' => self::BATCH_SIZE,
-				'startDate' => $startDate,
-				'endDate' => $endDate,
-			]));
-		}
+		$totalOrders = $this->queueOrderJobs(BackfillOrdersJob::class);
 
 		Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.queued', [
+			'count' => $totalOrders,
+		]));
+		return $this->redirectToPostedUrl();
+	}
+
+	/**
+	 * @throws MethodNotAllowedHttpException
+	 * @throws BadRequestHttpException
+	 */
+	public function actionFillUnitCosts(): Response
+	{
+		$this->requirePostRequest();
+
+		$unitCostProductTypes = Plugin::getInstance()->variantFields->getUnitCostProductTypes();
+		if ($unitCostProductTypes === []) {
+			Craft::$app->session->setError(Craft::t('best-sellers', 'backfill.error.noUnitCostField'));
+			return $this->redirectToPostedUrl();
+		}
+
+		$productTypeIds = $this->resolveUnitCostProductTypeIds($unitCostProductTypes);
+		if ($productTypeIds === []) {
+			Craft::$app->session->setError(Craft::t('best-sellers', 'backfill.error.noProductTypes'));
+			return $this->redirectToPostedUrl();
+		}
+
+		$totalOrders = $this->queueOrderJobs(FillUnitCostsJob::class, [
+			'productTypeIds' => $productTypeIds,
+		]);
+
+		Craft::$app->session->setNotice(Craft::t('best-sellers', 'backfill.notice.fillUnitCostsQueued', [
 			'count' => $totalOrders,
 		]));
 		return $this->redirectToPostedUrl();
@@ -126,8 +123,12 @@ class BackfillController extends Controller
 			return $this->redirectToPostedUrl();
 		}
 
-		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
-		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
+		/** @var DateTime $earliestOrderDate */
+		$earliestOrderDate = DateTimeHelper::toDateTime($row['minDate']);
+		/** @var DateTime $latestOrderDate */
+		$latestOrderDate = DateTimeHelper::toDateTime($row['maxDate']);
+		$startDate = $earliestOrderDate->format('Y-m-d');
+		$endDate = $latestOrderDate->format('Y-m-d');
 
 		QueueHelper::push(new RebuildDailyStatsJob([
 			'startDate' => $startDate,
@@ -200,5 +201,74 @@ class BackfillController extends Controller
 			->execute();
 
 		return $this->actionRebuildDailyStats();
+	}
+
+	/**
+	 * Queue one job per batch of completed orders in the posted date range.
+	 *
+	 * @param class-string<BackfillOrdersJob> $jobClass
+	 * @param array<string, mixed> $jobConfig
+	 */
+	private function queueOrderJobs(string $jobClass, array $jobConfig = []): int
+	{
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+
+		// Craft date fields post arrays; convert to Y-m-d strings.
+		/** @var array<string, string>|string|null $rawStart */
+		$rawStart = $request->getBodyParam('startDate');
+		/** @var array<string, string>|string|null $rawEnd */
+		$rawEnd = $request->getBodyParam('endDate');
+		$startDateTime = DateTimeHelper::toDateTime($rawStart);
+		$endDateTime = DateTimeHelper::toDateTime($rawEnd);
+		$startDate = $startDateTime ? $startDateTime->format('Y-m-d') : null;
+		$endDate = $endDateTime ? $endDateTime->format('Y-m-d') : null;
+
+		// Build query filtering by isCompleted and date range.
+		// Keep this query to completion and date so its offset/limit batches match the job's id-ordered query
+		$query = Order::find()
+			->isCompleted(true);
+
+		$query->andWhere(QueryHelper::dateOrderedCondition($startDate, $endDate));
+
+		$totalOrders = (int) $query->count();
+
+		// Queue jobs in batches, passing the date range.
+		for ($offset = 0; $offset < $totalOrders; $offset += self::BATCH_SIZE) {
+			Craft::$app->queue->push(new $jobClass([
+				'offset' => $offset,
+				'limit' => self::BATCH_SIZE,
+				'startDate' => $startDate,
+				'endDate' => $endDate,
+				...$jobConfig,
+			]));
+		}
+
+		return $totalOrders;
+	}
+
+	/**
+	 * Get the posted product types that have a unit cost field, treating "All" as every one of them.
+	 *
+	 * @param list<ProductType> $unitCostProductTypes
+	 * @return list<int>
+	 */
+	private function resolveUnitCostProductTypeIds(array $unitCostProductTypes): array
+	{
+		$allowedProductTypeIds = array_map(
+			static fn (ProductType $productType): int => (int) $productType->id,
+			$unitCostProductTypes,
+		);
+
+		$rawProductTypeIds = $this->request->getBodyParam('productTypes', []);
+		if ($rawProductTypeIds === '*') {
+			return $allowedProductTypeIds;
+		}
+
+		if (! is_array($rawProductTypeIds)) {
+			return [];
+		}
+
+		return array_values(array_intersect($allowedProductTypeIds, array_map('intval', $rawProductTypeIds)));
 	}
 }

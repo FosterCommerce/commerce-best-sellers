@@ -16,17 +16,28 @@
 	{% set sparklineId = params.sparklineId ?? null %}
 	{% set format = params.format ?? 'text' %}
 	{% set description = params.description ?? null %}
+	{% set changeFormat = params.changeFormat ?? 'percent' %}
+	{% set url = params.url ?? null %}
 
 	<div class="bs-kpi-card">
 		<div class="bs-kpi-card__header">
-			<p class="bs-kpi-card__label">{{ label }}</p>
-			{% if change is not null %}
-				{% if change > 0 %}
-					<span class="bs-kpi-card__change bs-kpi-card__change--up">&#9650; {{ change|abs|number_format(2) }}%</span>
-				{% elseif change < 0 %}
-					<span class="bs-kpi-card__change bs-kpi-card__change--down">&#9660; {{ change|abs|number_format(2) }}%</span>
+			<p class="bs-kpi-card__label">
+				{% if url %}
+					<a href="{{ url }}">{{ label }}</a>
 				{% else %}
-					<span class="bs-kpi-card__change bs-kpi-card__change--neutral">0%</span>
+					{{ label }}
+				{% endif %}
+			</p>
+			{% if change is not null %}
+				{% set changeText = changeFormat == 'points'
+					? 'kpi.changePoints'|t('best-sellers', { value: change|abs|number_format(1) })
+					: change|abs|number_format(2) ~ '%' %}
+				{% if change > 0 %}
+					<span class="bs-kpi-card__change bs-kpi-card__change--up">&#9650; {{ changeText }}</span>
+				{% elseif change < 0 %}
+					<span class="bs-kpi-card__change bs-kpi-card__change--down">&#9660; {{ changeText }}</span>
+				{% else %}
+					<span class="bs-kpi-card__change bs-kpi-card__change--neutral">{{ changeFormat == 'points' ? 'kpi.noChangePoints'|t('best-sellers') : '0%' }}</span>
 				{% endif %}
 			{% endif %}
 		</div>

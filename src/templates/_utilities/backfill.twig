@@ -18,37 +18,96 @@
 	}) }}
 	<button type="submit" class="btn submit">{{ 'backfill.start'|t('best-sellers') }}</button>
 </form>
-<div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
-	<form method="POST" style="margin: 0;">
-		{{ actionInput('best-sellers/backfill/refresh-orders') }}
+<div class="bs-backfill-actions">
+	<form method="POST">
 		{{ csrfInput() }}
-		<button type="submit" class="btn">{{ 'backfill.clearAndReprocess'|t('best-sellers') }}</button>
+		{{ tag('button', {
+			type: 'button',
+			class: ['btn', 'formsubmit'],
+			text: 'backfill.clearAndReprocess'|t('best-sellers'),
+			data: {
+				action: 'best-sellers/backfill/refresh-orders',
+				confirm: 'backfill.confirm.clearAndReprocess'|t('best-sellers'),
+			},
+		}) }}
 	</form>
-	<form method="POST" style="margin: 0;">
-		{{ actionInput('best-sellers/backfill/clear-orders') }}
+	<form method="POST">
 		{{ csrfInput() }}
-		<button type="submit" class="btn">{{ 'backfill.clearOrderData'|t('best-sellers') }}</button>
+		{{ tag('button', {
+			type: 'button',
+			class: ['btn', 'formsubmit'],
+			text: 'backfill.clearSalesData'|t('best-sellers'),
+			data: {
+				action: 'best-sellers/backfill/clear-orders',
+				confirm: 'backfill.confirm.clearSalesData'|t('best-sellers'),
+			},
+		}) }}
 	</form>
 </div>
 
-<hr style="margin: 2rem 0;">
+{% if showUnitCostFill %}
+	<hr class="bs-backfill-divider">
+
+	<h2>{{ 'backfill.fillUnitCostsTitle'|t('best-sellers') }}</h2>
+	<p>{{ 'backfill.fillUnitCostsIntro'|t('best-sellers') }}</p>
+	<p class="light">{{ 'backfill.fillUnitCostsDateRangeHint'|t('best-sellers') }}</p>
+	<form method="POST">
+		{{ actionInput('best-sellers/backfill/fill-unit-costs') }}
+		{{ csrfInput() }}
+		{{ forms.checkboxSelectField({
+			label: 'Product Types'|t('commerce'),
+			id: 'fillUnitCostsProductTypes',
+			name: 'productTypes',
+			options: unitCostProductTypeOptions,
+			showAllOption: true,
+			values: '*',
+		}) }}
+		{{ forms.dateField({
+			label: 'backfill.startDate'|t('best-sellers'),
+			id: 'fillUnitCostsStartDate',
+			name: 'startDate',
+		}) }}
+		{{ forms.dateField({
+			label: 'backfill.endDate'|t('best-sellers'),
+			id: 'fillUnitCostsEndDate',
+			name: 'endDate',
+		}) }}
+		<button type="submit" class="btn submit">{{ 'backfill.fillUnitCosts'|t('best-sellers') }}</button>
+	</form>
+{% endif %}
+
+<hr class="bs-backfill-divider">
 
 <h2>{{ 'backfill.rebuildTitle'|t('best-sellers') }}</h2>
 <p>{{ 'backfill.rebuildIntro'|t('best-sellers') }}</p>
-<form method="POST" style="margin: 0;">
+<form method="POST" class="bs-backfill-form">
 	{{ actionInput('best-sellers/backfill/rebuild-daily-stats') }}
 	{{ csrfInput() }}
 	<button type="submit" class="btn submit">{{ 'backfill.rebuild'|t('best-sellers') }}</button>
 </form>
-<div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
-	<form method="POST" style="margin: 0;">
-		{{ actionInput('best-sellers/backfill/refresh-daily-stats') }}
+<div class="bs-backfill-actions">
+	<form method="POST">
 		{{ csrfInput() }}
-		<button type="submit" class="btn">{{ 'backfill.clearAndRebuild'|t('best-sellers') }}</button>
+		{{ tag('button', {
+			type: 'button',
+			class: ['btn', 'formsubmit'],
+			text: 'backfill.clearAndRebuild'|t('best-sellers'),
+			data: {
+				action: 'best-sellers/backfill/refresh-daily-stats',
+				confirm: 'backfill.confirm.clearAndRebuild'|t('best-sellers'),
+			},
+		}) }}
 	</form>
-	<form method="POST" style="margin: 0;">
-		{{ actionInput('best-sellers/backfill/clear-daily-stats') }}
+	<form method="POST">
 		{{ csrfInput() }}
-		<button type="submit" class="btn">{{ 'backfill.clearDailyStats'|t('best-sellers') }}</button>
+		{{ tag('button', {
+			type: 'button',
+			class: ['btn', 'formsubmit'],
+			text: 'backfill.clearDailyStats'|t('best-sellers'),
+			data: {
+				action: 'best-sellers/backfill/clear-daily-stats',
+				confirm: 'backfill.confirm.clearDailyStats'|t('best-sellers'),
+			},
+		}) }}
 	</form>
 </div>

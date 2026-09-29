@@ -9,13 +9,6 @@
 {% block reportContent %}
 	{# Filters #}
 	<div class="bs-filter-bar bs-filter-bar--spaced">
-		<div class="bs-filter-bar__item bs-filter-bar__item--shrink">
-			<input type="hidden" id="products-or-variants" value="{{ productsOrVariants }}">
-			<div class="bs-segmented bs-pov-toggle" role="group" aria-label="{{ 'products.filter.showProductsOrVariants'|t('best-sellers') }}">
-				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'products' ? ' bs-segmented__btn--active' : '' }}" data-value="products" aria-pressed="{{ productsOrVariants == 'products' ? 'true' : 'false' }}">{{ 'Products'|t('commerce') }}</button>
-				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'variants' ? ' bs-segmented__btn--active' : '' }}" data-value="variants" aria-pressed="{{ productsOrVariants == 'variants' ? 'true' : 'false' }}">{{ 'Variants'|t('commerce') }}</button>
-			</div>
-		</div>
 		{% set allProductTypes = craft.commerce.productTypes.allProductTypes %}
 		{% if allProductTypes|length > 1 %}
 			<div class="bs-multiselect" id="product-type-multiselect">
@@ -27,6 +20,36 @@
 				</div>
 			</div>
 		{% endif %}
+		<div class="bs-filter-bar__item bs-filter-bar__item--shrink">
+			<input type="hidden" id="products-or-variants" value="{{ productsOrVariants }}">
+			<div class="bs-segmented bs-pov-toggle" role="group" aria-label="{{ 'products.filter.showProductsOrVariants'|t('best-sellers') }}">
+				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'products' ? ' bs-segmented__btn--active' : '' }}" data-value="products" aria-pressed="{{ productsOrVariants == 'products' ? 'true' : 'false' }}">{{ 'Products'|t('commerce') }}</button>
+				<button type="button" class="bs-segmented__btn{{ productsOrVariants == 'variants' ? ' bs-segmented__btn--active' : '' }}" data-value="variants" aria-pressed="{{ productsOrVariants == 'variants' ? 'true' : 'false' }}">{{ 'Variants'|t('commerce') }}</button>
+			</div>
+		</div>
+		{% if showProfitToggle %}
+			<div class="bs-filter-bar__item bs-filter-bar__item--shrink">
+				<input type="hidden" id="report-mode" value="{{ reportMode }}">
+				<div class="bs-segmented bs-report-mode-toggle" role="group" aria-label="{{ 'products.filter.showSalesOrProfit'|t('best-sellers') }}">
+					<button type="button" class="bs-segmented__btn{{ reportMode == 'sales' ? ' bs-segmented__btn--active' : '' }}" data-value="sales" aria-pressed="{{ reportMode == 'sales' ? 'true' : 'false' }}">{{ 'products.filter.allSales'|t('best-sellers') }}</button>
+					<button type="button" class="bs-segmented__btn{{ reportMode == 'profit' ? ' bs-segmented__btn--active' : '' }}" data-value="profit" aria-pressed="{{ reportMode == 'profit' ? 'true' : 'false' }}">{{ 'products.filter.profit'|t('best-sellers') }}</button>
+				</div>
+			</div>
+		{% endif %}
+		{% for fieldFilterGroup in fieldFilterGroups %}
+			{% set isActiveGroup = fieldFilterGroup.productTypeHandle == activeProductTypeHandle %}
+			{% for fieldFilter in fieldFilterGroup.filters %}
+				<div class="bs-multiselect bs-field-filter{{ isActiveGroup ? '' : ' hidden' }}" data-product-type="{{ fieldFilterGroup.productTypeHandle }}" data-instance="{{ fieldFilter.instanceUid }}">
+					<button type="button" class="bs-multiselect__btn" data-label="{{ fieldFilter.label }}">{{ fieldFilter.label }}</button>
+					<div class="bs-multiselect__dropdown">
+						{% set selectedValues = isActiveGroup ? (selectedFilterValues[fieldFilter.instanceUid] ?? []) : [] %}
+						{% for optionValue, optionLabel in fieldFilter.options %}
+							<label><input type="checkbox" value="{{ optionValue }}"{% if optionValue ~ '' in selectedValues %} checked{% endif %}> {{ optionLabel }}</label>
+						{% endfor %}
+					</div>
+				</div>
+			{% endfor %}
+		{% endfor %}
 		<div class="bs-filter-bar__item">
 			<input type="text" id="product-search" class="text fullwidth" placeholder="{{ 'products.filter.searchPlaceholder'|t('best-sellers') }}" autocomplete="off">
 		</div>
@@ -53,6 +76,12 @@
 						<th class="bs-data-table--right" data-sort="itemSubtotal">{{ 'Item Subtotal'|t('commerce') }}</th>
 						<th class="bs-data-table--right" data-sort="revenue">{{ 'products.col.itemSalesNet'|t('best-sellers') }}</th>
 						<th class="bs-data-table--right" data-sort="avgPrice">{{ 'products.col.avgPrice'|t('best-sellers') }}</th>
+						{% if showProfitToggle %}
+							{% set profitColumnClass = 'bs-data-table--right bs-profit-col' ~ (reportMode == 'profit' ? '' : ' hidden') %}
+							<th class="{{ profitColumnClass }}" data-sort="cost">{{ 'products.col.cost'|t('best-sellers') }}</th>
+							<th class="{{ profitColumnClass }}" data-sort="grossProfit">{{ 'products.col.grossProfit'|t('best-sellers') }}</th>
+							<th class="{{ profitColumnClass }}" data-sort="grossMargin">{{ 'products.col.grossMargin'|t('best-sellers') }}</th>
+						{% endif %}
 						<th style="width: 32px; text-align: center;"><span data-icon="world" aria-label="{{ 'products.col.linkAria'|t('best-sellers') }}"></span></th>
 					</tr>
 				</thead>
@@ -72,6 +101,9 @@
 				<li>{{ 'products.notes.fullBalanceOwed'|t('best-sellers') }}</li>
 				<li>{{ 'products.notes.bundles'|t('best-sellers') }}</li>
 				<li>{{ 'products.notes.resync'|t('best-sellers') }}</li>
+				{% if showProfitToggle %}
+					<li>{{ 'products.notes.cost'|t('best-sellers') }}</li>
+				{% endif %}
 				<li>{{ 'products.notes.avgPrice'|t('best-sellers', { label: '<strong>' ~ 'products.col.avgPrice'|t('best-sellers') ~ '</strong>', revLabel: '<strong>' ~ 'products.col.itemSalesNet'|t('best-sellers') ~ '</strong>' })|raw }}</li>
 			</ul>
 		</details>
@@ -84,6 +116,27 @@ document.addEventListener('DOMContentLoaded', function () {
 	const povInput = document.getElementById('products-or-variants');
 	const povButtons = document.querySelectorAll('.bs-pov-toggle .bs-segmented__btn');
 	const productTypeContainer = document.getElementById('product-type-multiselect');
+	const onlyProductTypeHandle = {{ onlyProductTypeHandle|json_encode|raw }};
+	// A productType parameter in the URL replaces the saved product type and field filters
+	const hasUrlProductType = new URLSearchParams(window.location.search).has('productType');
+	const reportModeInput = document.getElementById('report-mode');
+	const reportModeButtons = document.querySelectorAll('.bs-report-mode-toggle .bs-segmented__btn');
+
+	function isProfitView() {
+		return reportModeInput !== null && reportModeInput.value === 'profit';
+	}
+
+	function setReportMode(value) {
+		reportModeInput.value = value;
+		reportModeButtons.forEach(function (button) {
+			const isActive = button.dataset.value === value;
+			button.classList.toggle('bs-segmented__btn--active', isActive);
+			button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+		});
+		document.querySelectorAll('.bs-profit-col').forEach(function (header) {
+			header.classList.toggle('hidden', value !== 'profit');
+		});
+	}
 	let searchTimer = null;
 
 	function setPovValue(value) {
@@ -97,8 +150,40 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	const productTypeMulti = productTypeContainer ? BestSellersReports.createMultiSelect({
 		container: productTypeContainer,
-		onChange: function () { table.reload(); }
+		onChange: function () {
+			updateFieldFilterVisibility();
+			table.reload();
+		}
 	}) : null;
+
+	const fieldFilters = Array.from(document.querySelectorAll('.bs-field-filter')).map(function (container) {
+		return {
+			container: container,
+			multi: BestSellersReports.createMultiSelect({
+				container: container,
+				onChange: function () { table.reload(); }
+			})
+		};
+	});
+
+	function getActiveProductType() {
+		if (onlyProductTypeHandle) { return onlyProductTypeHandle; }
+		const selectedProductTypes = productTypeMulti ? productTypeMulti.getSelected() : [];
+		return selectedProductTypes.length === 1 ? selectedProductTypes[0] : null;
+	}
+
+	// Clear filters for product types outside the selection, since each filter belongs to one type
+	function updateFieldFilterVisibility() {
+		const activeProductType = getActiveProductType();
+		fieldFilters.forEach(function (fieldFilter) {
+			const isActive = fieldFilter.container.dataset.productType === activeProductType;
+			fieldFilter.container.classList.toggle('hidden', !isActive);
+			if (!isActive) {
+				fieldFilter.container.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) { checkbox.checked = false; });
+				fieldFilter.multi.refresh();
+			}
+		});
+	}
 
 	const table = BestSellersReports.createAjaxTable({
 		loadingEl: document.getElementById('products-loading'),
@@ -133,6 +218,11 @@ document.addEventListener('DOMContentLoaded', function () {
 			const unpaidMarker = item.hasUnpaidOrder
 				? '<span class="bs-unpaid-marker" title="{{ "products.unpaidMarker"|t('best-sellers') }}" aria-label="{{ "products.unpaidMarker"|t('best-sellers') }}">⚠</span> '
 				: '';
+			const costCells = isProfitView()
+				? '<td class="bs-data-table--right">' + item.cost + '</td>' +
+					'<td class="bs-data-table--right">' + item.grossProfit + '</td>' +
+					'<td class="bs-data-table--right">' + item.grossMargin + '</td>'
+				: '';
 			row.innerHTML =
 				'<td>' + titleCell + '</td>' +
 				'<td>' + item.sku + '</td>' +
@@ -141,26 +231,37 @@ document.addEventListener('DOMContentLoaded', function () {
 				'<td class="bs-data-table--right">' + item.itemSubtotal + '</td>' +
 				'<td class="bs-data-table--right">' + item.revenue + '</td>' +
 				'<td class="bs-data-table--right">' + item.avgPrice + '</td>' +
+				costCells +
 				'<td style="text-align:center">' + linkCell + '</td>';
 			return row;
 		},
 		buildTotalsBar: function (totals) {
-			return BestSellersReports.buildTotalsBar(
-				'{{ "table.filteredResultsTotal"|t("best-sellers") }}',
-				[
-					{ label: '{{ "products.col.unitsSold"|t("best-sellers") }}', value: totals.unitsSold },
-					{ label: '{{ "Item Subtotal"|t("commerce") }}', value: totals.itemSubtotal },
-					{ label: '{{ "products.col.itemSalesNet"|t("best-sellers") }}', value: totals.revenue }
-				]
-			);
+			const totalsItems = [
+				{ label: '{{ "products.col.unitsSold"|t("best-sellers") }}', value: totals.unitsSold },
+				{ label: '{{ "Item Subtotal"|t("commerce") }}', value: totals.itemSubtotal },
+				{ label: '{{ "products.col.itemSalesNet"|t("best-sellers") }}', value: totals.revenue }
+			];
+			if (isProfitView()) {
+				totalsItems.push(
+					{ label: '{{ "products.col.cost"|t("best-sellers") }}', value: totals.cost },
+					{ label: '{{ "products.col.grossProfit"|t("best-sellers") }}', value: totals.grossProfit },
+					{ label: '{{ "products.col.grossMargin"|t("best-sellers") }}', value: totals.grossMargin }
+				);
+			}
+			return BestSellersReports.buildTotalsBar('{{ "table.filteredResultsTotal"|t("best-sellers") }}', totalsItems);
 		},
 		getFilterParams: function () {
 			const params = {};
 			params.productsOrVariants = povInput.value;
+			if (isProfitView()) { params.reportMode = 'profit'; }
 			if (productTypeMulti) {
 				const productTypes = productTypeMulti.getSelected();
 				if (productTypes.length > 0) { params['productType[]'] = productTypes; }
 			}
+			fieldFilters.forEach(function (fieldFilter) {
+				const filterValues = fieldFilter.multi.getSelected();
+				if (filterValues.length > 0) { params['fieldFilter[' + fieldFilter.container.dataset.instance + '][]'] = filterValues; }
+			});
 			const searchValue = searchInput.value.trim();
 			if (searchValue) { params.search = searchValue; }
 			return params;
@@ -168,13 +269,24 @@ document.addEventListener('DOMContentLoaded', function () {
 		restoreFilterState: function (filters) {
 			if (filters.search) { searchInput.value = filters.search; }
 			if (filters.productsOrVariants) { setPovValue(filters.productsOrVariants); }
-			if (filters['productType[]'] && productTypeMulti) {
+			if (filters.reportMode && reportModeInput) { setReportMode(filters.reportMode); }
+			if (filters['productType[]'] && productTypeMulti && !hasUrlProductType) {
 				const typeValues = filters['productType[]'];
 				productTypeContainer.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
 					checkbox.checked = typeValues.indexOf(checkbox.value) !== -1;
 				});
 				productTypeMulti.refresh();
 			}
+			fieldFilters.forEach(function (fieldFilter) {
+				const filterValues = filters['fieldFilter[' + fieldFilter.container.dataset.instance + '][]'];
+				if (filterValues && !hasUrlProductType) {
+					fieldFilter.container.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+						checkbox.checked = filterValues.indexOf(checkbox.value) !== -1;
+					});
+					fieldFilter.multi.refresh();
+				}
+			});
+			updateFieldFilterVisibility();
 		}
 	});
 
@@ -188,6 +300,13 @@ document.addEventListener('DOMContentLoaded', function () {
 	povButtons.forEach(function (button) {
 		button.addEventListener('click', function () {
 			setPovValue(button.dataset.value);
+			reloadTable();
+		});
+	});
+
+	reportModeButtons.forEach(function (button) {
+		button.addEventListener('click', function () {
+			setReportMode(button.dataset.value);
 			reloadTable();
 		});
 	});

@@ -9,6 +9,11 @@
 	{ label: 'nav.bestSellers'|t('best-sellers'), url: cpUrl('best-sellers') },
 ] %}
 
+{% set tabs = {
+	general: { label: 'General'|t('app'), url: '#general' },
+	productTypes: { label: 'Product Types'|t('commerce'), url: '#product-types' },
+} %}
+
 {% set allOrderStatuses = craft.commerce.orderStatuses.allOrderStatuses %}
 {% set statusOptions = [] %}
 {% for status in allOrderStatuses %}
@@ -22,15 +27,63 @@
 	{{ actionInput('best-sellers/settings/save') }}
 	{{ redirectInput('best-sellers/settings') }}
 
-	{{ forms.checkboxGroupField({
-		first: true,
-		label: 'settings.defaultStatuses.label'|t('best-sellers'),
-		instructions: 'settings.defaultStatuses.instructions'|t('best-sellers'),
-		id: 'defaultOrderStatusHandles',
-		name: 'defaultOrderStatusHandles',
-		attribute: 'defaultOrderStatusHandles',
-		options: statusOptions,
-		values: settings.defaultOrderStatusHandles,
-		errors: settings.getErrors('defaultOrderStatusHandles'),
-	}) }}
+	<div id="general">
+		{{ forms.checkboxGroupField({
+			label: 'settings.defaultStatuses.label'|t('best-sellers'),
+			instructions: 'settings.defaultStatuses.instructions'|t('best-sellers'),
+			id: 'defaultOrderStatusHandles',
+			name: 'defaultOrderStatusHandles',
+			attribute: 'defaultOrderStatusHandles',
+			options: statusOptions,
+			values: settings.defaultOrderStatusHandles,
+			errors: settings.getErrors('defaultOrderStatusHandles'),
+		}) }}
+
+		{% if orderFieldOptions is not empty %}
+			{{ forms.checkboxGroupField({
+				label: 'settings.orderFields.label'|t('best-sellers'),
+				instructions: 'settings.orderFields.instructions'|t('best-sellers'),
+				id: 'orderFields',
+				name: 'orderFields',
+				options: orderFieldOptions,
+				values: settings.orderFields,
+			}) }}
+		{% endif %}
+
+		{{ forms.selectField({
+			label: 'settings.shippedOrderStatus.label'|t('best-sellers'),
+			instructions: 'settings.shippedOrderStatus.instructions'|t('best-sellers'),
+			id: 'shippedOrderStatusHandle',
+			name: 'shippedOrderStatusHandle',
+			options: [{ label: 'settings.field.none'|t('best-sellers'), value: '' }]|merge(statusOptions),
+			value: settings.shippedOrderStatusHandle ?? '',
+		}) }}
+	</div>
+
+	<div id="product-types" class="hidden">
+		{% for productType in productTypeFieldOptions %}
+			{% if not loop.first %}
+				<hr>
+			{% endif %}
+			<h2>{{ productType.name|t('site') }}</h2>
+
+			{{ forms.selectField({
+				label: 'settings.unitCostField.label'|t('best-sellers'),
+				id: 'unitCostFields-' ~ productType.uid,
+				name: 'unitCostFields[' ~ productType.uid ~ ']',
+				options: productType.unitCostOptions,
+				value: settings.unitCostFields[productType.uid] ?? '',
+			}) }}
+
+			{% if productType.filterOptions is not empty %}
+				{{ forms.checkboxGroupField({
+					label: 'settings.filterFields.label'|t('best-sellers'),
+					id: 'filterFields-' ~ productType.uid,
+					name: 'filterFields[' ~ productType.uid ~ ']',
+					options: productType.filterOptions,
+					values: settings.filterFields[productType.uid] ?? [],
+				}) }}
+			{% endif %}
+		{% endfor %}
+	</div>
 {% endblock %}

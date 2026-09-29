@@ -12,6 +12,23 @@ class Settings extends Model
 	public array $defaultOrderStatusHandles = [];
 
 	/**
+	 * @var array<string, string> Unit cost field instance UID by product type UID
+	 */
+	public array $unitCostFields = [];
+
+	/**
+	 * @var array<string, list<string>> Filter field instance UIDs by product type UID
+	 */
+	public array $filterFields = [];
+
+	/**
+	 * @var list<string> Order field layout element UIDs shown and filterable on the Orders report
+	 */
+	public array $orderFields = [];
+
+	public ?string $shippedOrderStatusHandle = null;
+
+	/**
 	 * @return array<int, mixed>
 	 */
 	protected function defineRules(): array
@@ -23,6 +40,8 @@ class Settings extends Model
 				'each',
 				'rule' => ['string'],
 			],
+			[['unitCostFields', 'filterFields', 'orderFields'], 'safe'],
+			[['shippedOrderStatusHandle'], 'string'],
 		];
 	}
 }

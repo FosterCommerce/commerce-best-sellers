@@ -3,8 +3,10 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\commerce\Plugin as Commerce;
 use craft\web\Controller;
 use fostercommerce\bestsellers\Plugin;
+use fostercommerce\bestsellers\services\VariantFields;
 use yii\base\Action;
 use yii\web\Response;
 
@@ -35,6 +37,8 @@ class SettingsController extends Controller
 			'selectedSubnavItem' => 'settings',
 			'plugin' => $plugin,
 			'settings' => $plugin->getSettings(),
+			'productTypeFieldOptions' => $this->getProductTypeFieldOptions(),
+			'orderFieldOptions' => $plugin->reportFields->getInstanceOptions($plugin->reportFields->getOrderLayout()),
 		]);
 	}
 
@@ -58,6 +62,14 @@ class SettingsController extends Controller
 
 		$settings = $plugin->getSettings();
 		$settings->defaultOrderStatusHandles = $defaultOrderStatusHandles;
+		$settings->unitCostFields = $this->resolveUnitCostFields();
+		$settings->filterFields = $this->resolveFilterFields();
+		$rawOrderFields = $this->request->getBodyParam('orderFields', []);
+		$settings->orderFields = is_array($rawOrderFields)
+			? array_values(array_filter($rawOrderFields, static fn (mixed $instanceUid): bool => is_string($instanceUid) && $instanceUid !== ''))
+			: [];
+		$shippedOrderStatusHandle = $this->request->getBodyParam('shippedOrderStatusHandle');
+		$settings->shippedOrderStatusHandle = is_string($shippedOrderStatusHandle) && $shippedOrderStatusHandle !== '' ? $shippedOrderStatusHandle : null;
 
 		if (! $settings->validate()) {
 			Craft::$app->getSession()->setError(Craft::t('commerce', 'Couldn’t save settings.'));
@@ -72,5 +84,72 @@ class SettingsController extends Controller
 		Craft::$app->getSession()->setNotice(Craft::t('commerce', 'Settings saved.'));
 
 		return $this->redirectToPostedUrl();
+	}
+
+	/**
+	 * @return list<array{uid: string, name: string, unitCostOptions: array<string, string>, filterOptions: array<string, string>}>
+	 */
+	private function getProductTypeFieldOptions(): array
+	{
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		$reportFields = Plugin::getInstance()->reportFields;
+
+		$productTypeFieldOptions = [];
+		foreach ($commerce->getProductTypes()->getAllProductTypes() as $productType) {
+			$productTypeFieldOptions[] = [
+				'uid' => (string) $productType->uid,
+				'name' => (string) $productType->name,
+				'unitCostOptions' => [
+					'' => Craft::t('best-sellers', 'settings.field.none'),
+					...$reportFields->getInstanceOptions($productType->getVariantFieldLayout(), VariantFields::UNIT_COST_FIELD_TYPES),
+				],
+				'filterOptions' => $reportFields->getInstanceOptions($productType->getVariantFieldLayout()),
+			];
+		}
+
+		return $productTypeFieldOptions;
+	}
+
+	/**
+	 * @return array<string, string>
+	 */
+	private function resolveUnitCostFields(): array
+	{
+		$rawUnitCostFields = $this->request->getBodyParam('unitCostFields', []);
+		if (! is_array($rawUnitCostFields)) {
+			return [];
+		}
+
+		$unitCostFields = [];
+		foreach ($rawUnitCostFields as $productTypeUid => $instanceUid) {
+			if (is_string($instanceUid) && $instanceUid !== '') {
+				$unitCostFields[(string) $productTypeUid] = $instanceUid;
+			}
+		}
+
+		return $unitCostFields;
+	}
+
+	/**
+	 * @return array<string, list<string>>
+	 */
+	private function resolveFilterFields(): array
+	{
+		$rawFilterFields = $this->request->getBodyParam('filterFields', []);
+		if (! is_array($rawFilterFields)) {
+			return [];
+		}
+
+		$filterFields = [];
+		foreach ($rawFilterFields as $productTypeUid => $instanceUids) {
+			if (! is_array($instanceUids)) {
+				continue;
+			}
+
+			$filterFields[(string) $productTypeUid] = array_values(array_filter($instanceUids, static fn (mixed $instanceUid): bool => is_string($instanceUid) && $instanceUid !== ''));
+		}
+
+		return array_filter($filterFields);
 	}
 }

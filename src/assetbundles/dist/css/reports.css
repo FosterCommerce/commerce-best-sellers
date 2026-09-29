@@ -148,7 +148,8 @@
 }
 
 /* In a filter bar the segmented control is a row item, not a chart header. */
-.bs-pov-toggle {
+.bs-pov-toggle,
+.bs-report-mode-toggle {
 	margin-bottom: 0;
 }
 

@@ -1,18 +1,27 @@
+![Best Sellers](resources/img/header.png)
+
 # Best Sellers
 
-Sales **reporting** for Craft Commerce.
+Essential **sales insights** and top-performing product data for Craft Commerce stores.
 
 ## Overview
 
-- Shows what sold, by product or by variant, with units and item sales net of coupons, and can drill from a product into the orders that contain it.
-- Lets you build best-seller listings and buy-again pages in Twig, from units sold and a customer's purchase history.
-- Reports revenue, orders, average order value, and repeat rate over any date range, against the period before it, the same period last year, and a 12-month average.
-- Lists every completed order with filters for status, payment, shipping method, and discount, and downloads invoices or packing slips for a batch of them in one go.
-- Reconciles money movement against your payment gateways: captured, refunded, and net, per transaction.
-- Reports who bought, how often, and how much, and maps where their orders shipped, down to the city.
-- Finds abandoned carts and gives you a link that puts a customer back into theirs.
+- Read revenue, orders, average order value, and repeat rate for any date range, with a written summary comparing it to the previous period, the same period last year, and a 12-month average.
+- Filter orders, payment transactions, product sales, and customers by date, order status, and shipping location, and export each report to CSV.
+- See where your orders ship, by country, state, and city, with orders, revenue, and customers for each.
+- Report cost, gross profit, and gross margin from a unit cost you record on each variant.
+- Filter the Products and Orders reports by your own custom fields, such as a supplier on your variants or a sales channel on your orders.
+- Build best-seller listings and buy-again pages in Twig, from units sold and a customer's purchase history.
+- Send a customer a link that restores their abandoned cart, and download invoices or packing slips for a batch of orders at once.
 
-Every report exports to CSV with the current filters applied.
+## Use Best Sellers when
+
+- You answer sales questions by exporting Commerce orders to a spreadsheet, or the export fails on the date ranges you need.
+- You need gross profit and margin by product or supplier, and your variants can hold a unit cost.
+- You filter sales by fields on your variants or orders, such as a supplier or a sales channel.
+- Your product listings need a "most popular" sort, or customer accounts need a buy-again page.
+- You follow up on abandoned carts and need a link that restores the customer's cart.
+- You print invoices or packing slips for many orders at a time.
 
 ## Requirements
 
@@ -27,51 +36,55 @@ composer require fostercommerce/commerce-best-sellers
 ./craft plugin/install best-sellers
 ```
 
-Then backfill your existing orders, which a fresh install does not have:
+For the full guide, see [installation](./docs/installation.md).
+
+## Reports
+
+Seven pages under **Best Sellers** in the control panel, for users with the `best-sellers:viewReports` permission. The [dashboard](./docs/user-guide/dashboard.md) summarizes a date range in KPI cards and a written summary. [Orders](./docs/user-guide/orders.md), [Transactions](./docs/user-guide/transactions.md), [Products](./docs/user-guide/products.md), and [Customers](./docs/user-guide/customers.md) are filterable tables that export to CSV. [Locations](./docs/user-guide/locations.md) maps orders by country and state, with city breakdowns, and [Operations](./docs/user-guide/operations.md) lists store configuration, emails, coupon usage, and backfill logs.
+
+A date range, an order status filter, and a shipping locations filter apply across the reports and stay set between pages. The Products and Orders reports can also filter by your own custom fields, such as a supplier or a sales channel. See [filters and report pages](./docs/user-guide/filters-and-report-pages.md).
+
+The Orders report can show your order fields as columns, add a Date Shipped column, and download invoices or packing slips for the orders you select. The download needs Commerce's `commerce-manageOrders` permission.
+
+## Unit costs and profit
+
+The plugin records what each item cost you, from a Money field on your variants that you choose per product type. The Products report shows cost, gross profit, and gross margin for any date range, and the dashboard adds gross profit and margin cards. **Fill Unit Costs** adds costs to orders placed before you chose a unit cost field.
+
+See [unit costs and profit](./docs/user-guide/unit-costs-and-profit.md).
+
+## Templating
+
+Build best-seller listings and buy-again pages in Twig. Product and variant queries gain a `bestSellers()` method that attaches units sold and item sales to each element, so you can sort a listing by what sold. Twig methods return a product's or variant's totals, and a customer's previous purchases.
+
+See [templating](./docs/dev-guide/templating.md).
+
+## Cart restore
+
+A link that restores an abandoned cart to a customer's session and sends them to your cart page. Copy it from the dashboard's **Highest-Value Abandoned Carts** widget. A registered customer's cart restores only for that customer, while logged in.
+
+See [cart restore](./docs/user-guide/cart-restore.md).
+
+## Backfill and console commands
+
+The plugin records orders as they complete. To add the orders already in your store, run a backfill after installing:
 
 ```sh
 ./craft best-sellers/backfill
 ./craft best-sellers/backfill/daily-stats
 ```
 
-See [`docs/installation.md`](./docs/installation.md) for the full guide.
+Other commands fill in unit costs, rebuild the daily stats, and clear the sales data or daily stats. The same operations are at **Utilities -> Best Sellers**, for users with the `best-sellers:backfill` permission.
 
-## Templating
+See [data and backfill](./docs/user-guide/data-and-backfill.md) and [console commands](./docs/reference/console-commands.md).
 
-Twig methods for units sold and item sales per product or variant, for a customer's previous purchases, and for building a "buy again" page. Craft's product and variant element queries also gain a `bestSellers()` method that attaches sales figures to the elements they return, so you can rank a product listing by what sold.
+## Documentation
 
-See [`docs/dev-guide/templating.md`](./docs/dev-guide/templating.md).
-
-## Reports
-
-Seven pages under a **Best Sellers** section in the control panel: a dashboard, orders, transactions, products, customers, locations, and an operations page covering store configuration. A date range, an order status filter, and a shipping location filter sit above all of them and follow you from page to page.
-
-See the [user guide](./docs/index.md).
-
-## Cart restore
-
-A front-end route that restores an abandoned cart to a customer's session and sends them to your cart page. Carts belonging to registered customers can only be restored by the account holder.
-
-See [`docs/user-guide/cart-restore.md`](./docs/user-guide/cart-restore.md).
-
-## Console commands
-
-Commands for backfilling orders, rebuilding the daily stats table, and clearing either of them, all also available from **Utilities -> Best Sellers**.
-
-See [`docs/reference/console-commands.md`](./docs/reference/console-commands.md).
-
-## Permissions
-
-- `best-sellers:viewReports`: see the Best Sellers section and every report in it.
-- `best-sellers:backfill`: run backfills and rebuilds from the control panel.
-- `best-sellers:manageSettings`: see and save the plugin's settings.
-
-See [`docs/reference/permissions.md`](./docs/reference/permissions.md).
+Full documentation is at [fostercommerce.com](https://www.fostercommerce.com/craft-cms-plugins/best-sellers).
 
 ## License
 
 Proprietary.
 
-## Credits
+---
 
-Brought to you by [Foster Commerce](https://fostercommerce.com).
+<a href="https://www.fostercommerce.com" target="_blank"><img src="./resources/img/foster-commerce.svg" alt="Foster Commerce" width="160" height="40"></a>

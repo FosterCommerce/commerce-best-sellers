@@ -3,13 +3,16 @@
 namespace fostercommerce\bestsellers\services;
 
 use craft\commerce\db\Table as CommerceTable;
+use craft\commerce\elements\Variant;
 use craft\db\Query;
 use craft\helpers\DateTimeHelper;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\MoneyMath;
+use fostercommerce\bestsellers\models\FieldFilter;
 use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\models\ProductSummary;
 use fostercommerce\bestsellers\models\ReportScope;
+use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use yii\base\Component;
 use yii\db\Expression;
@@ -22,9 +25,10 @@ class ProductStats extends Component
 	 * Get top products by revenue or units.
 	 *
 	 * @param list<string> $productTypeHandles Empty means all product types.
+	 * @param list<FieldFilter> $fieldFilters
 	 * @return list<ProductRow>
 	 */
-	public function getTopProducts(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, array $productTypeHandles = []): array
+	public function getTopProducts(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, array $productTypeHandles = [], array $fieldFilters = [], bool $unitCostOnly = false): array
 	{
 		$query = (new Query())
 			->select([
@@ -60,11 +64,7 @@ class ProductStats extends Component
 
 		$this->applyOrdersJoinAndFilters($query, $scope);
 
-		if ($productTypeHandles !== []) {
-			$query->andWhere([
-				'[[productTypes.handle]]' => $productTypeHandles,
-			]);
-		}
+		$this->applyProductFilters($query, $productTypeHandles, $fieldFilters, $unitCostOnly);
 
 		$orderColumn = match ($sortBy) {
 			'units' => 'unitsSold',
@@ -75,7 +75,7 @@ class ProductStats extends Component
 			$orderColumn => SORT_DESC,
 		])->limit($limit);
 
-		/** @var list<array{productId: int|string, productTitle: string, unitsSold: int|string, orderCount: int|string, itemSubtotal: float|string, revenue: float|string, avgPrice: float|string, productType: string, fromBundle: int|string, hasUnpaidOrder: int|string}> $rows */
+		/** @var list<array{productId: int|string, productTitle: string, unitsSold: int|string, orderCount: int|string, itemSubtotal: float|string, revenue: float|string, avgPrice: float|string, cost?: float|string, productType: string, fromBundle: int|string, hasUnpaidOrder: int|string}> $rows */
 		$rows = $query->all();
 
 		return array_map(fn (array $row): ProductRow => new ProductRow([
@@ -86,6 +86,7 @@ class ProductStats extends Component
 			'itemSubtotal' => (float) $row['itemSubtotal'],
 			'revenue' => (float) $row['revenue'],
 			'avgPrice' => (float) $row['avgPrice'],
+			...(isset($row['cost']) ? $this->getCostFigures($row['cost'], $row['revenue']) : []),
 			'productType' => $row['productType'],
 			'fromBundle' => (bool) $row['fromBundle'],
 			'hasUnpaidOrder' => (bool) $row['hasUnpaidOrder'],
@@ -96,9 +97,10 @@ class ProductStats extends Component
 	 * Get top variants by revenue or units.
 	 *
 	 * @param list<string> $productTypeHandles Empty means all product types.
+	 * @param list<FieldFilter> $fieldFilters
 	 * @return list<ProductRow>
 	 */
-	public function getTopVariants(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, array $productTypeHandles = []): array
+	public function getTopVariants(ReportScope $scope, string $sortBy = 'revenue', int $limit = 50, array $productTypeHandles = [], array $fieldFilters = [], bool $unitCostOnly = false): array
 	{
 		$query = (new Query())
 			->select([
@@ -134,11 +136,7 @@ class ProductStats extends Component
 
 		$this->applyOrdersJoinAndFilters($query, $scope);
 
-		if ($productTypeHandles !== []) {
-			$query->andWhere([
-				'[[productTypes.handle]]' => $productTypeHandles,
-			]);
-		}
+		$this->applyProductFilters($query, $productTypeHandles, $fieldFilters, $unitCostOnly);
 
 		$orderColumn = match ($sortBy) {
 			'units' => 'unitsSold',
@@ -149,7 +147,7 @@ class ProductStats extends Component
 			$orderColumn => SORT_DESC,
 		])->limit($limit);
 
-		/** @var list<array{productId: int|string, variantId: int|string, variantTitle: string, variantSku: string, productTitle: string, unitsSold: int|string, orderCount: int|string, itemSubtotal: float|string, revenue: float|string, avgPrice: float|string, productType: string, fromBundle: int|string, hasUnpaidOrder: int|string}> $rows */
+		/** @var list<array{productId: int|string, variantId: int|string, variantTitle: string, variantSku: string, productTitle: string, unitsSold: int|string, orderCount: int|string, itemSubtotal: float|string, revenue: float|string, avgPrice: float|string, cost?: float|string, productType: string, fromBundle: int|string, hasUnpaidOrder: int|string}> $rows */
 		$rows = $query->all();
 
 		return array_map(fn (array $row): ProductRow => new ProductRow([
@@ -160,6 +158,7 @@ class ProductStats extends Component
 			'itemSubtotal' => (float) $row['itemSubtotal'],
 			'revenue' => (float) $row['revenue'],
 			'avgPrice' => (float) $row['avgPrice'],
+			...(isset($row['cost']) ? $this->getCostFigures($row['cost'], $row['revenue']) : []),
 			'productType' => $row['productType'],
 			'variantId' => (int) $row['variantId'],
 			'variantTitle' => $row['variantTitle'],
@@ -167,6 +166,23 @@ class ProductStats extends Component
 			'fromBundle' => (bool) $row['fromBundle'],
 			'hasUnpaidOrder' => (bool) $row['hasUnpaidOrder'],
 		]), $rows);
+	}
+
+	/**
+	 * @return array{cost: float, grossProfit: float, grossMargin: float|null}
+	 */
+	public function getCostFigures(float|string $cost, float|string $revenue): array
+	{
+		$costMoney = MoneyMath::toMoney($cost);
+		$revenueMoney = MoneyMath::toMoney($revenue);
+		$grossProfitMoney = $revenueMoney->subtract($costMoney);
+
+		return [
+			'cost' => MoneyMath::toFloat($costMoney),
+			'grossProfit' => MoneyMath::toFloat($grossProfitMoney),
+			// Skip the margin when discounts bring revenue to zero
+			'grossMargin' => $revenueMoney->isZero() ? null : (float) $grossProfitMoney->ratioOf($revenueMoney),
+		];
 	}
 
 	/**
@@ -451,6 +467,35 @@ class ProductStats extends Component
 	}
 
 	/**
+	 * Get cost, gross profit and gross margin across line items with a recorded unit cost.
+	 *
+	 * @return array{cost: float, grossProfit: float, grossMargin: float|null}
+	 */
+	public function getProfitSummary(ReportScope $scope): array
+	{
+		$query = (new Query())
+			->select([
+				'revenue' => 'COALESCE(SUM([[variantSales.lineItemTotal]] + [[variantSales.lineDiscount]]), 0)',
+				'cost' => 'COALESCE(SUM([[variantSales.qty]] * [[variantSales.unitCost]]), 0)',
+			])
+			->from([
+				'variantSales' => Table::VARIANT_SALES,
+			])
+			->where($scope->dateRange->dateCondition('[[variantSales.dateOrdered]]'))
+			->andWhere([
+				'not', [
+					'[[variantSales.unitCost]]' => null,
+				],
+			]);
+		$this->applyOrdersJoinAndFilters($query, $scope);
+
+		/** @var array{revenue: float|string, cost: float|string} $totals */
+		$totals = $query->one();
+
+		return $this->getCostFigures($totals['cost'], $totals['revenue']);
+	}
+
+	/**
 	 * Revenue by product type.
 	 *
 	 * @return array<int, array{productType: string, revenue: float, unitsSold: int}>
@@ -525,5 +570,66 @@ class ProductStats extends Component
 		}
 
 		$this->applyShippingLocations($query, $scope);
+	}
+
+	/**
+	 * @param Query<array-key, mixed> $query
+	 * @param list<string> $productTypeHandles
+	 * @param list<FieldFilter> $fieldFilters
+	 */
+	private function applyProductFilters(Query $query, array $productTypeHandles, array $fieldFilters, bool $unitCostOnly): void
+	{
+		if ($productTypeHandles !== []) {
+			$query->andWhere([
+				'[[productTypes.handle]]' => $productTypeHandles,
+			]);
+		}
+
+		foreach ($fieldFilters as $fieldFilter) {
+			$this->applyFieldFilter($query, $fieldFilter);
+		}
+
+		// Keep only costed line items, since SUM skips NULL costs and would understate cost against revenue
+		if ($unitCostOnly) {
+			$query
+				->addSelect([
+					'cost' => 'SUM([[variantSales.qty]] * [[variantSales.unitCost]])',
+				])
+				->andWhere([
+					'not', [
+						'[[variantSales.unitCost]]' => null,
+					],
+				]);
+		}
+	}
+
+	/**
+	 * Keep rows whose variant currently has one of the selected field values.
+	 *
+	 * @param Query<array-key, mixed> $query
+	 */
+	private function applyFieldFilter(Query $query, FieldFilter $fieldFilter): void
+	{
+		/** @var Plugin $plugin */
+		$plugin = Plugin::getInstance();
+		$fieldValue = $plugin->reportFields->getElementQueryParam($fieldFilter->field, $fieldFilter->values);
+		if ($fieldValue === null) {
+			return;
+		}
+
+		$variantQuery = Variant::find()
+			->typeId($fieldFilter->productTypeId)
+			->site('*')
+			->unique()
+			->status(null)
+			->select(['elements.id']);
+		$fieldHandle = $fieldFilter->field->handle;
+		$variantQuery->{$fieldHandle}($fieldValue);
+
+		$query->andWhere([
+			'in',
+			'[[variantSales.variantId]]',
+			$variantQuery,
+		]);
 	}
 }

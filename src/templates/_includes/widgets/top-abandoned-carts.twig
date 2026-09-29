@@ -40,7 +40,7 @@
 						<td style="padding: 0.5rem; text-align: right; white-space: nowrap;">
 							<a href="{{ cpUrl('commerce/orders/' ~ cart.id) }}" class="go" style="font-size: 0.8rem;">{{ 'View'|t('app') }}</a>
 							{% if cart.email %}
-								<a href="#" class="bs-copy-link" data-url="{{ actionUrl('best-sellers/cart/restore', {number: cart.number}) }}" style="font-size: 0.8rem; margin-left: 0.5rem;" title="{{ 'widgets.abandonedCarts.action.shareTitle'|t('best-sellers') }}">{{ 'widgets.abandonedCarts.action.share'|t('best-sellers') }}</a>
+								<a href="#" class="bs-copy-link" data-url="{{ siteUrl(craft.app.config.general.actionTrigger ~ '/best-sellers/cart/restore', {number: cart.number}, null, cart.orderSiteId) }}" style="font-size: 0.8rem; margin-left: 0.5rem;" title="{{ 'widgets.abandonedCarts.action.shareTitle'|t('best-sellers') }}">{{ 'widgets.abandonedCarts.action.share'|t('best-sellers') }}</a>
 							{% endif %}
 						</td>
 					</tr>

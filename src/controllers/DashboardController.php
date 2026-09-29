@@ -6,8 +6,10 @@ use Craft;
 use craft\commerce\elements\Product;
 use craft\commerce\Plugin as Commerce;
 use craft\helpers\DateTimeHelper;
+use craft\helpers\UrlHelper;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\helpers\KpiCards;
+use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\records\VariantSale;
 use yii\web\Response;
@@ -123,6 +125,10 @@ class DashboardController extends BaseReportController
 			],
 		];
 
+		if ($plugin->variantFields->hasUnitCostField()) {
+			$productCards = [...$productCards, ...$this->buildProfitCards($scope, $prevScope)];
+		}
+
 		// Summaries
 		$summaryResult = $plugin->summaryEngine->generate($scope);
 
@@ -194,5 +200,47 @@ class DashboardController extends BaseReportController
 			// Summaries
 			'summaries' => $summaryResult,
 		]);
+	}
+
+	/**
+	 * @return list<array<string, mixed>>
+	 */
+	private function buildProfitCards(ReportScope $scope, ReportScope $prevScope): array
+	{
+		$productStats = Plugin::getInstance()->productStats;
+		$profit = $productStats->getProfitSummary($scope);
+		$prevProfit = $productStats->getProfitSummary($prevScope);
+		$profitViewUrl = UrlHelper::cpUrl('best-sellers/products', [
+			'preset' => $scope->preset,
+			'from' => $scope->from,
+			'to' => $scope->to,
+			// Clear the Products page's saved product type, which these cards do not filter by
+			'productType' => '',
+			'reportMode' => 'profit',
+		]);
+		$unitCostNote = Craft::t('best-sellers', 'kpi.unitCostItemsOnly');
+
+		return [
+			[
+				'label' => Craft::t('best-sellers', 'products.col.grossProfit'),
+				'value' => $profit['grossProfit'],
+				'change' => $this->percentChange($profit['grossProfit'], $prevProfit['grossProfit']),
+				'format' => 'currency',
+				'description' => $unitCostNote,
+				'url' => $profitViewUrl,
+			],
+			[
+				'label' => Craft::t('best-sellers', 'products.col.grossMargin'),
+				'value' => $profit['grossMargin'] === null ? '-' : $profit['grossMargin'] * 100,
+				// Show the margin change in percentage points
+				'change' => $profit['grossMargin'] === null || $prevProfit['grossMargin'] === null
+					? null
+					: round(($profit['grossMargin'] - $prevProfit['grossMargin']) * 100, 1),
+				'changeFormat' => 'points',
+				'format' => $profit['grossMargin'] === null ? 'text' : 'percent',
+				'description' => $unitCostNote,
+				'url' => $profitViewUrl,
+			],
+		];
 	}
 }

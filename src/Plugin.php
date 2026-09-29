@@ -36,8 +36,10 @@ use fostercommerce\bestsellers\services\DateRange;
 use fostercommerce\bestsellers\services\LocationStats;
 use fostercommerce\bestsellers\services\OperationsStats;
 use fostercommerce\bestsellers\services\ProductStats;
+use fostercommerce\bestsellers\services\ReportFields;
 use fostercommerce\bestsellers\services\Sales;
 use fostercommerce\bestsellers\services\SummaryEngine;
+use fostercommerce\bestsellers\services\VariantFields;
 use fostercommerce\bestsellers\utilities\BackfillUtility;
 use fostercommerce\bestsellers\variables\BestSellersVariable;
 use yii\base\Event;
@@ -57,6 +59,8 @@ use yii\base\Event;
  * @property-read CartAbandonment $cartAbandonment
  * @property-read SummaryEngine $summaryEngine
  * @property-read BackfillLogs $backfillLogs
+ * @property-read VariantFields $variantFields
+ * @property-read ReportFields $reportFields
  */
 class Plugin extends BasePlugin
 {
@@ -66,7 +70,7 @@ class Plugin extends BasePlugin
 
 	public const PERMISSION_MANAGE_SETTINGS = 'best-sellers:manageSettings';
 
-	public string $schemaVersion = '1.7.0';
+	public string $schemaVersion = '1.8.0';
 
 	public bool $hasCpSettings = false;
 
@@ -89,6 +93,8 @@ class Plugin extends BasePlugin
 				'cartAbandonment' => CartAbandonment::class,
 				'summaryEngine' => SummaryEngine::class,
 				'backfillLogs' => BackfillLogs::class,
+				'variantFields' => VariantFields::class,
+				'reportFields' => ReportFields::class,
 			],
 		];
 	}
@@ -349,13 +355,18 @@ class Plugin extends BasePlugin
 		// Sales::expandBundleLineItem reads this snapshot on every (re)sync so
 		// catalog drift between order completion and a later AFTER_SAVE rebuild
 		// cannot shift historical allocations. String instanceof keeps the
-		// listener a no-op when webdna/commerce-bundles is not installed.
+		// bundle branch a no-op when webdna/commerce-bundles is not installed.
 		Event::on(
 			LineItems::class,
 			LineItems::EVENT_POPULATE_LINE_ITEM,
-			static function (LineItemEvent $event): void {
+			function (LineItemEvent $event): void {
 				$lineItem = $event->lineItem;
 				$purchasable = $lineItem->getPurchasable();
+
+				if ($purchasable instanceof Variant) {
+					$this->sales->captureUnitCosts($lineItem, [$purchasable]);
+					return;
+				}
 
 				if (! $purchasable instanceof PurchasableInterface || ! is_a($purchasable, 'webdna\\commerce\\bundles\\elements\\Bundle')) {
 					return;
@@ -372,9 +383,11 @@ class Plugin extends BasePlugin
 				$childPurchasables = $purchasable->{$getChildrenMethod}();
 
 				$childPrices = [];
+				$childVariants = [];
 				foreach ($childPurchasables as $childPurchasable) {
 					if ($childPurchasable instanceof Variant) {
 						$childPrices[$childPurchasable->id] = (float) $childPurchasable->price;
+						$childVariants[] = $childPurchasable;
 					}
 				}
 
@@ -385,6 +398,8 @@ class Plugin extends BasePlugin
 				$options = $lineItem->getOptions();
 				$options[Sales::OPTIONS_KEY_BUNDLE_CHILD_PRICES] = $childPrices;
 				$lineItem->setOptions($options);
+
+				$this->sales->captureUnitCosts($lineItem, $childVariants);
 			}
 		);
 	}

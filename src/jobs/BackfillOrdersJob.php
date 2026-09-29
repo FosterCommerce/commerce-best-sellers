@@ -5,7 +5,7 @@ namespace fostercommerce\bestsellers\jobs;
 use Craft;
 use craft\commerce\elements\Order;
 use craft\queue\BaseJob;
-use DateTime;
+use fostercommerce\bestsellers\helpers\Query;
 use fostercommerce\bestsellers\Plugin;
 use Throwable;
 
@@ -35,27 +35,31 @@ class BackfillOrdersJob extends BaseJob
 			->limit($this->limit)
 			->isCompleted(true);
 
-		if ($this->startDate && $this->endDate) {
-			$ordersQuery->andWhere(['between', 'dateOrdered', $this->startDate, $this->endDate]);
-		} else {
-			$ordersQuery->andWhere(['<', 'dateOrdered', (new DateTime())->format('Y-m-d H:i:s')]);
-		}
+		$ordersQuery->andWhere(Query::dateOrderedCondition($this->startDate, $this->endDate));
 
 		$orders = $ordersQuery->all();
 		$total = count($orders);
 
-		$plugin = Plugin::getInstance();
-
 		foreach ($orders as $i => $order) {
 			try {
-				$plugin->sales->logOrderSales($order, $this->force);
-			} catch (Throwable $e) {
-				Craft::warning("Failed to process order #{$order->id}: {$e->getMessage()}", 'best-sellers');
-				$plugin->backfillLogs->log('backfill', (string) $order->id, $e->getMessage());
+				$this->processOrder($order);
+			} catch (Throwable $throwable) {
+				$this->logFailure($order, $throwable);
 			}
 
 			$this->setProgress($queue, ($i + 1) / $total);
 		}
+	}
+
+	protected function processOrder(Order $order): void
+	{
+		Plugin::getInstance()->sales->logOrderSales($order, $this->force);
+	}
+
+	protected function logFailure(Order $order, Throwable $throwable): void
+	{
+		Craft::warning("Failed to process order #{$order->id}: {$throwable->getMessage()}", 'best-sellers');
+		Plugin::getInstance()->backfillLogs->log('backfill', (string) $order->id, $throwable->getMessage());
 	}
 
 	protected function defaultDescription(): string

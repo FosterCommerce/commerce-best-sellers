@@ -6,11 +6,14 @@ use Craft;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Order;
 use craft\db\Query;
+use craft\helpers\DateTimeHelper;
 use craft\helpers\Queue as QueueHelper;
 use DateTime;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\NotTrashed;
+use fostercommerce\bestsellers\helpers\Query as QueryHelper;
 use fostercommerce\bestsellers\jobs\BackfillOrdersJob;
+use fostercommerce\bestsellers\jobs\FillUnitCostsJob;
 use fostercommerce\bestsellers\jobs\RebuildDailyStatsJob;
 use fostercommerce\bestsellers\Plugin;
 use yii\console\Controller;
@@ -27,12 +30,21 @@ class BackfillController extends Controller
 
 	public ?string $date = null;
 
+	/**
+	 * @var string|null Comma-separated product type handles; leave the option out to fill every product type with a unit cost field
+	 */
+	public ?string $productTypes = null;
+
 	public function options($actionID): array
 	{
 		$options = parent::options($actionID);
-		if ($actionID === 'index' || $actionID === 'refresh-orders') {
+		if ($actionID === 'index' || $actionID === 'refresh-orders' || $actionID === 'fill-unit-costs') {
 			$options[] = 'startDate';
 			$options[] = 'endDate';
+		}
+
+		if ($actionID === 'fill-unit-costs') {
+			$options[] = 'productTypes';
 		}
 
 		if ($actionID === 'daily-stats' || $actionID === 'refresh-daily-stats') {
@@ -54,6 +66,39 @@ class BackfillController extends Controller
 	}
 
 	/**
+	 * Fill line items without a recorded unit cost from each variant's current cost.
+	 *
+	 * Run with: ./craft best-sellers/backfill/fill-unit-costs
+	 *           ./craft best-sellers/backfill/fill-unit-costs --start-date=2025-01-01 --end-date=2025-12-31
+	 *           ./craft best-sellers/backfill/fill-unit-costs --product-types=catalog,apparel
+	 */
+	public function actionFillUnitCosts(int $batchSize = 25): int
+	{
+		$unitCostProductTypes = Plugin::getInstance()->variantFields->getUnitCostProductTypes();
+		if ($unitCostProductTypes === []) {
+			$this->stderr("No unit cost field is set in Best Sellers settings.\n");
+			return ExitCode::CONFIG;
+		}
+
+		$productTypeHandles = $this->productTypes === null ? [] : array_map('trim', explode(',', $this->productTypes));
+		$productTypeIds = [];
+		foreach ($unitCostProductTypes as $unitCostProductType) {
+			if ($productTypeHandles === [] || in_array($unitCostProductType->handle, $productTypeHandles, true)) {
+				$productTypeIds[] = (int) $unitCostProductType->id;
+			}
+		}
+
+		if ($productTypeIds === []) {
+			$this->stderr("None of those product types has a unit cost field.\n");
+			return ExitCode::USAGE;
+		}
+
+		return $this->_queueOrders($batchSize, FillUnitCostsJob::class, [
+			'productTypeIds' => $productTypeIds,
+		]);
+	}
+
+	/**
 	 * Clear and reprocess the variant sales table.
 	 *
 	 * Run with: ./craft best-sellers/backfill/refresh-orders
@@ -63,9 +108,7 @@ class BackfillController extends Controller
 	{
 		$deleteQuery = Craft::$app->db->createCommand();
 		if ($this->startDate && $this->endDate) {
-			$deleteQuery->delete(Table::VARIANT_SALES, [
-				'between', 'dateOrdered', $this->startDate, $this->endDate . ' 23:59:59',
-			]);
+			$deleteQuery->delete(Table::VARIANT_SALES, QueryHelper::dateOrderedCondition($this->startDate, $this->endDate));
 			$this->stdout("Cleared variant sales for {$this->startDate} to {$this->endDate}.\n");
 		} else {
 			$deleteQuery->truncateTable(Table::VARIANT_SALES);
@@ -172,25 +215,27 @@ class BackfillController extends Controller
 		return ExitCode::OK;
 	}
 
-	private function _queueOrders(int $batchSize): int
+	/**
+	 * @param class-string<BackfillOrdersJob> $jobClass
+	 * @param array<string, mixed> $jobConfig
+	 */
+	private function _queueOrders(int $batchSize, string $jobClass = BackfillOrdersJob::class, array $jobConfig = []): int
 	{
-		// Already-processed orders are short-circuited inside Sales::logOrderSales,
-		// so the offset/limit pagination is stable across job runs.
+		// Keep this query to completion and date so its offset/limit batches match the job's id-ordered query
 		$query = Order::find()
 			->isCompleted(true);
 
-		if ($this->startDate && $this->endDate) {
-			$query->andWhere(['between', 'dateOrdered', $this->startDate, $this->endDate]);
-		}
+		$query->andWhere(QueryHelper::dateOrderedCondition($this->startDate, $this->endDate));
 
 		$totalOrders = $query->count();
 
 		for ($offset = 0; $offset < $totalOrders; $offset += $batchSize) {
-			Craft::$app->queue->push(new BackfillOrdersJob([
+			Craft::$app->queue->push(new $jobClass([
 				'offset' => $offset,
 				'limit' => $batchSize,
 				'startDate' => $this->startDate,
 				'endDate' => $this->endDate,
+				...$jobConfig,
 			]));
 			$this->stdout("Queued orders offset {$offset} to " . ($offset + $batchSize - 1) . "\n");
 		}
@@ -219,8 +264,12 @@ class BackfillController extends Controller
 			return ExitCode::OK;
 		}
 
-		$startDate = (new DateTime((string) $row['minDate']))->format('Y-m-d');
-		$endDate = (new DateTime((string) $row['maxDate']))->format('Y-m-d');
+		/** @var DateTime $earliestOrderDate */
+		$earliestOrderDate = DateTimeHelper::toDateTime($row['minDate']);
+		/** @var DateTime $latestOrderDate */
+		$latestOrderDate = DateTimeHelper::toDateTime($row['maxDate']);
+		$startDate = $earliestOrderDate->format('Y-m-d');
+		$endDate = $latestOrderDate->format('Y-m-d');
 
 		QueueHelper::push(new RebuildDailyStatsJob([
 			'startDate' => $startDate,

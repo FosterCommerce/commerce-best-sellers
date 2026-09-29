@@ -4,6 +4,9 @@ namespace fostercommerce\bestsellers\utilities;
 
 use Craft;
 use craft\base\Utility;
+use craft\commerce\models\ProductType;
+use craft\helpers\Html;
+use fostercommerce\bestsellers\assetbundles\BackfillAsset;
 use fostercommerce\bestsellers\Plugin;
 
 class BackfillUtility extends Utility
@@ -30,6 +33,14 @@ class BackfillUtility extends Utility
 
 	public static function contentHtml(): string
 	{
-		return Craft::$app->view->renderTemplate('best-sellers/_utilities/backfill');
+		Craft::$app->view->registerAssetBundle(BackfillAsset::class);
+
+		return Craft::$app->view->renderTemplate('best-sellers/_utilities/backfill', [
+			'showUnitCostFill' => Plugin::getInstance()->variantFields->hasUnitCostField(),
+			'unitCostProductTypeOptions' => array_map(static fn (ProductType $productType): array => [
+				'label' => Html::encode((string) $productType->name),
+				'value' => $productType->id,
+			], Plugin::getInstance()->variantFields->getUnitCostProductTypes()),
+		]);
 	}
 }

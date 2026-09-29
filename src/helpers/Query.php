@@ -6,11 +6,30 @@ use craft\base\Element;
 use craft\db\Query as DbQuery;
 use craft\elements\db\ElementQuery;
 use craft\helpers\Db;
+use DateTime;
 use fostercommerce\bestsellers\behaviors\SaleQueryBehavior;
 use fostercommerce\bestsellers\db\Table;
 
 abstract class Query
 {
+	/**
+	 * Build a condition for orders placed within a site-timezone date range, or before now when either date is missing.
+	 *
+	 * @return array<array-key, mixed>
+	 */
+	public static function dateOrderedCondition(?string $startDate, ?string $endDate): array
+	{
+		if ($startDate === null || $startDate === '' || $endDate === null || $endDate === '') {
+			return ['<', 'dateOrdered', Db::prepareDateForDb(new DateTime())];
+		}
+
+		// Convert the site-timezone day boundaries to UTC, which is how order dates are stored
+		/** @var array<array-key, mixed> $condition */
+		$condition = Db::parseDateParam('dateOrdered', ['and', ">= {$startDate} 00:00:00", "<= {$endDate} 23:59:59"]);
+
+		return $condition;
+	}
+
 	/**
 	 * @template TKey of array-key
 	 * @template TElement of Element

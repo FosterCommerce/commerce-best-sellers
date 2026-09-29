@@ -30,6 +30,21 @@ The `refresh-` variants clear the table before rebuilding, leaving the reports e
 
 The same operations are at **Utilities -> Best Sellers**, which needs the `best-sellers:backfill` permission and adds an optional date range on the order backfill.
 
+A date range covers both dates in full, in the site's timezone. Give both dates or neither: with neither, the backfill covers every completed order.
+
+## Fill unit costs
+
+**Fill Unit Costs** at **Utilities -> Best Sellers** adds [unit costs](./unit-costs-and-profit.md) to orders placed before a product type had a unit cost field, from each variant's current unit cost. The section appears once at least one product type has a unit cost field.
+
+- **Product Types** lists the product types with a unit cost field. All are ticked by default.
+- **Start Date** and **End Date** limit the orders, as for the order backfill.
+
+The fill only adds a cost to a line with no recorded cost. It does not change a recorded cost, and it does not save the order, so the order and its line items keep their dates and totals. The plugin then rebuilds the variant sales rows of each order that gained a cost.
+
+A line can still end up without a cost: the variant's cost field is empty, the field's currency differs from the order's, or the variant or bundle has been deleted. Each of those lines is written to Craft's log as an error in the `best-sellers` category, with the order and line item. If the fill fails on an order, it logs the error there too, leaves that order unchanged, and moves on to the next.
+
+The fill runs through the queue. From the console, run `best-sellers/backfill/fill-unit-costs`. See [console commands](../reference/console-commands.md).
+
 ## When a backfill hits a problem
 
 An order that cannot be processed is written to the backfill log instead of failing the job. Entries are listed on the [Operations](./operations.md) page with the order reference and the message.

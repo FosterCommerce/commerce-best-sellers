@@ -12,11 +12,32 @@ The **Show products or variants** toggle switches the table between one row per 
 
 Product, SKU, Type, Units Sold, Item Subtotal, Item Sales (Net), and Avg Price. The product title links to its edit page, and Units Sold carries an "in N orders" count linking to those orders. Type reads "Unknown" when the product type has since been deleted.
 
+In the **Profit** view, Cost, Gross Profit, and Gross Margin columns follow Avg Price, and the table holds only line items with a recorded unit cost. See [unit costs and profit](./unit-costs-and-profit.md#the-profit-view).
+
 Two markers can appear on a row: a bundle marker, meaning some units were sold as part of a bundle, and a warning marker on the units count, meaning at least one contributing order is only partially paid.
 
 ## Filters
 
-Beyond the three global controls, this page adds a **product type** multi-select and a search box matching product title, variant title, SKU, and product type.
+Beyond the three global controls, this page adds a search box matching product title, variant title, SKU, and product type. A store with more than one product type also gets a **Product Type** multi-select.
+
+### Field filters
+
+Each product type can offer filters on its own variant fields, chosen at **Best Sellers -> Settings -> Product Types** under **Products report filters**. They support these field types:
+
+- Relation fields, such as Entries, Categories, or a custom element field
+- Dropdown
+- Radio Buttons
+- Checkboxes
+- Multi-select
+- Lightswitch
+
+A field filter appears when the store has only one product type, or when exactly one product type is selected in **Product Type**. Field filters clear when they are hidden, including when you select a second product type. Several field filters apply together: a variant has to match each one.
+
+A field filter matches on each variant's current value, not its value when the order was placed. If a variant moves to another value, its past sales move with it.
+
+Ticking several values in one filter matches any of them. Sales of a deleted variant do not match a field filter.
+
+A relation filter lists the elements that the product type's variants relate to through that field. A Lightswitch filter offers the field's on and off labels, or Enabled and Disabled when the field has none, and ticking both matches every variant.
 
 ## Drilling into orders
 

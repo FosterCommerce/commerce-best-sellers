@@ -8,7 +8,9 @@ If no order data has been recorded, the page shows a notice linking to the backf
 
 ## KPI cards
 
-Each card shows a value for the range, a percentage change against the previous period of the same length, and a sparkline of daily values. The change is blank when the previous period was zero.
+Each card shows a value for the range and a percentage change against the previous period of the same length. The change is blank when the previous period was zero. The Overview, Discounts, and Customers cards also show a sparkline of daily values.
+
+Once a product type has a unit cost field, the Product Performance section adds **Gross Profit** and **Gross Margin** cards. Gross Margin shows its change in percentage points. See [unit costs and profit](./unit-costs-and-profit.md#dashboard-cards).
 
 Most cards do not respond to the order status or shipping locations filter. See [what the filters do not reach](./filters-and-report-pages.md#what-the-filters-do-not-reach).
 

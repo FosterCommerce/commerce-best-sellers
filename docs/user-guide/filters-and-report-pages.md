@@ -45,7 +45,7 @@ Matching is on the order's shipping address.
 
 ### What the filters do not reach
 
-The dashboard's KPI cards, sparklines, and overview chart read a pre-aggregated daily table covering every completed order, so the order status and shipping locations filters do not apply to them. The dashboard's Avg Customer LTV, Unique Products Sold, and Product Revenue cards do apply both, as does every widget, table, and report page elsewhere.
+The dashboard's KPI cards, sparklines, and overview chart read a pre-aggregated daily table covering every completed order, so the order status and shipping locations filters do not apply to them. The dashboard's Avg Customer LTV, Unique Products Sold, Product Revenue, Gross Profit, and Gross Margin cards do apply both, as does every widget, table, and report page elsewhere.
 
 Abandoned cart figures ignore both filters too: an incomplete cart has no order status, and often no shipping address.
 

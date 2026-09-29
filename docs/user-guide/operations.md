@@ -24,4 +24,4 @@ Failures recorded while backfilling orders or rebuilding daily stats are listed 
 
 **Clear All** empties the table. Craft's garbage collection also prunes the table down to the most recent 500 entries.
 
-An empty list means no failures have been recorded. See [data and backfill](./data-and-backfill.md) for what to do about entries that are there.
+An empty list means no failures have been recorded. A unit cost fill logs to Craft's log instead. See [data and backfill](./data-and-backfill.md#fill-unit-costs). See [data and backfill](./data-and-backfill.md) for what to do about entries that are there.

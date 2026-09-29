@@ -51,6 +51,9 @@ return [
 	'reports.section.summariesThisPeriod' => 'Summaries This Period',
 
 	// KPI labels
+	'kpi.unitCostItemsOnly' => 'Items with a unit cost',
+	'kpi.changePoints' => '{value} pts',
+	'kpi.noChangePoints' => '0 pts',
 	'kpi.customers' => 'Customers',
 	'kpi.aov' => 'AOV',
 	'kpi.avgOrderValue' => 'Avg. Order Value',
@@ -145,6 +148,9 @@ return [
 	// Products report
 	'products.filter.showProductsOrVariants' => 'Show products or variants',
 	'products.filter.searchPlaceholder' => 'Search…',
+	'products.filter.showSalesOrProfit' => 'Show all sales or profit',
+	'products.filter.allSales' => 'All sales',
+	'products.filter.profit' => 'Profit',
 	'products.loading' => 'Fetching your data from the vault…',
 	'products.empty' => 'No product sales data for this period.',
 	'products.col.product' => 'Product',
@@ -152,10 +158,14 @@ return [
 	'products.col.unitsSold' => 'Units Sold',
 	'products.col.itemSalesNet' => 'Item Sales (Net)',
 	'products.col.avgPrice' => 'Avg Price',
+	'products.col.cost' => 'Cost',
+	'products.col.grossProfit' => 'Gross Profit',
+	'products.col.grossMargin' => 'Gross Margin',
+	'products.col.grossMarginPercent' => 'Gross Margin (%)',
 	'products.col.linkAria' => 'Link',
 	'products.bundleMarker' => 'Sold as part of a bundle',
 	'products.unpaidMarker' => 'At least one contributing order is not fully paid',
-	'products.inOrders' => 'in {count} orders',
+	'products.inOrders' => 'in {count, plural, =1{# order} other{# orders}}',
 	'products.notes.itemSubtotal' => '{label} is quantity × sale price across the contributing line items. Sale-price promotions are already baked in; coupon and manual discounts are not subtracted here, so this column reconciles with the Orders report’s {ordersLabel} column when summed across the same orders.',
 	'products.notes.itemSalesNet' => '{label} is {subtotalLabel} minus any coupon or manual discounts attributed to the line.',
 	'products.notes.discountsNetted' => 'Coupon and manual discounts are netted out, including order-level discounts (Commerce always attaches Discount adjustments to specific line items, even when the rule is configured order-wide).',
@@ -164,6 +174,7 @@ return [
 	'products.notes.fullBalanceOwed' => 'Orders with a full balance owed (totalPaid ≤ 0 AND totalPrice > 0) are excluded. This drops orders that were authorized but never captured, were fully refunded, or had a failed payment; completion is not the same as money received. Partially paid orders are still counted, and a ⚠ next to a row’s units count means at least one of that row’s orders is currently partially paid. For actual money received, use the Orders report’s Total Paid column.',
 	'products.notes.bundles' => 'Bundle sales (subtotals and discounts both) are distributed proportionally across the constituent variants, not the bundle itself.',
 	'products.notes.resync' => 'Sales numbers re-sync automatically when an order is saved (initial completion, admin edits, status changes, etc.). The ⚠ partial-payment marker is live and reflects current payment state.',
+	'products.notes.cost' => 'Profit includes only line items with a unit cost recorded on the order. Gross Profit is Item Sales (Net) minus Cost, and Gross Margin is Gross Profit divided by Item Sales (Net).',
 	'products.notes.avgPrice' => '{label} averages the line-item list price (pre-promotion), so it does not divide cleanly into {revLabel}.',
 
 	// Product orders drill-down
@@ -227,12 +238,19 @@ return [
 	'backfill.start' => 'Start Backfill',
 	'backfill.clearAndReprocess' => 'Clear and Reprocess',
 	'backfill.clearOrderData' => 'Clear Order Data',
+	'backfill.fillUnitCostsTitle' => 'Fill Unit Costs',
+	'backfill.fillUnitCostsIntro' => 'Fill line items without a recorded unit cost from each variant’s current cost. Recorded costs are not changed, and orders are not resaved.',
+	'backfill.fillUnitCostsDateRangeHint' => 'Leave both dates empty to fill all completed orders.',
+	'backfill.fillUnitCosts' => 'Fill Unit Costs',
 	'backfill.rebuildTitle' => 'Rebuild Daily Stats',
 	'backfill.rebuildIntro' => 'Rebuild the pre-aggregated daily statistics table from commerce order data. This is useful after a backfill or if stats appear out of sync.',
 	'backfill.rebuild' => 'Rebuild Daily Stats',
 	'backfill.clearAndRebuild' => 'Clear and Rebuild',
 	'backfill.clearDailyStats' => 'Clear Daily Stats',
 	'backfill.notice.queued' => 'Backfill queued for {count} orders.',
+	'backfill.error.noProductTypes' => 'Select at least one product type to fill unit costs for.',
+	'backfill.error.noUnitCostField' => 'Set a unit cost field in Best Sellers settings before filling unit costs.',
+	'backfill.notice.fillUnitCostsQueued' => 'Unit cost fill queued for {count} orders.',
 	'backfill.notice.noCompletedOrders' => 'No completed orders found.',
 	'backfill.notice.dailyStatsRebuildQueued' => 'Daily stats rebuild queued.',
 	'backfill.notice.variantSalesCleared' => 'Variant sales cleared.',
@@ -242,6 +260,9 @@ return [
 	// Settings page
 	'settings.defaultStatuses.label' => 'Default order statuses',
 	'settings.defaultStatuses.instructions' => 'Statuses pre-selected in the global order status filter when first opening a report. Users can override the selection per session.',
+	'settings.unitCostField.label' => 'Unit cost field',
+	'settings.field.none' => 'None',
+	'settings.filterFields.label' => 'Products report filters',
 
 	// Shared table affordances
 	'table.aboutTheseNumbers' => 'About these numbers',
@@ -399,6 +420,7 @@ return [
 	// Jobs
 	'jobs.rebuildDailyStats' => 'Rebuilding daily stats',
 	'jobs.backfillOrders' => 'Backfilling orders starting at offset {offset}',
+	'jobs.fillUnitCosts' => 'Filling unit costs starting at offset {offset}',
 
 	// CSV export columns: Customers
 	'export.customers.col.numOrders' => '# Orders',

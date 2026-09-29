@@ -5,14 +5,19 @@ namespace fostercommerce\bestsellers\controllers;
 use Craft;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Product;
+use craft\commerce\models\ProductType;
+use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use craft\helpers\UrlHelper;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
 use fostercommerce\bestsellers\db\Table;
+use fostercommerce\bestsellers\helpers\MoneyMath;
 use fostercommerce\bestsellers\helpers\VariantTitleHelper;
+use fostercommerce\bestsellers\models\FieldFilter;
 use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\Plugin;
+use Money\Money;
 use yii\web\BadRequestHttpException;
 use yii\web\Response;
 
@@ -33,6 +38,7 @@ class ProductsController extends BaseReportController
 		$productsOrVariants = $request->getQueryParam('productsOrVariants', 'products');
 		/** @var string $sortBy */
 		$sortBy = $request->getQueryParam('sortBy', 'revenue');
+		$showProfitToggle = Plugin::getInstance()->variantFields->hasUnitCostField();
 
 		return $this->renderTemplate('best-sellers/_products', [
 			'title' => Craft::t('commerce', 'Products'),
@@ -44,6 +50,12 @@ class ProductsController extends BaseReportController
 			'productsOrVariants' => $productsOrVariants,
 			'sortBy' => $sortBy,
 			'selectedProductTypes' => $this->resolveProductTypeHandles(),
+			'showProfitToggle' => $showProfitToggle,
+			'reportMode' => $showProfitToggle && $request->getQueryParam('reportMode') === 'profit' ? 'profit' : 'sales',
+			'fieldFilterGroups' => $this->getFieldFilterGroups(),
+			'onlyProductTypeHandle' => $this->getOnlyProductType()?->handle,
+			'activeProductTypeHandle' => $this->getActiveProductType()?->handle,
+			'selectedFilterValues' => $this->resolveFilterValues(),
 		]);
 	}
 
@@ -76,14 +88,15 @@ class ProductsController extends BaseReportController
 		/** @var string $rawSortDir */
 		$rawSortDir = $request->getQueryParam('sortDir', 'desc');
 		$sortDir = trim($rawSortDir);
+		$isProfitView = $this->isProfitView();
 
 		$plugin = Plugin::getInstance();
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
-			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productTypeHandles);
+			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productTypeHandles, $this->resolveFieldFilters(), $isProfitView);
 		} else {
-			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productTypeHandles);
+			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productTypeHandles, $this->resolveFieldFilters(), $isProfitView);
 		}
 
 		/** @var list<ProductRow> $allItems */
@@ -93,14 +106,20 @@ class ProductsController extends BaseReportController
 		];
 		$effectiveSort = $sortKeyMap[$sort] ?? $sort;
 
-		if ($effectiveSort !== '' && $allItems !== [] && isset($allItems[0]->toArray()[$effectiveSort])) {
+		// Use array_key_exists, since isset rejects a column that is null on the first row
+		if ($effectiveSort !== '' && $allItems !== [] && array_key_exists($effectiveSort, $allItems[0]->toArray())) {
 			usort($allItems, function (ProductRow $itemA, ProductRow $itemB) use ($effectiveSort, $sortDir): int {
 				$arrA = $itemA->toArray();
 				$arrB = $itemB->toArray();
 				/** @var string|int|float|null $valueA */
-				$valueA = $arrA[$effectiveSort] ?? 0;
+				$valueA = $arrA[$effectiveSort];
 				/** @var string|int|float|null $valueB */
-				$valueB = $arrB[$effectiveSort] ?? 0;
+				$valueB = $arrB[$effectiveSort];
+				// Keep rows without a value last in either direction
+				if ($valueA === null || $valueB === null) {
+					return ($valueA === null) <=> ($valueB === null);
+				}
+
 				if (is_numeric($valueA) && is_numeric($valueB)) {
 					$comparison = (float) $valueA <=> (float) $valueB;
 				} else {
@@ -156,6 +175,9 @@ class ProductsController extends BaseReportController
 				'itemSubtotal' => $this->formatCurrency((float) $pageItem->itemSubtotal),
 				'revenue' => $this->formatCurrency((float) $pageItem->revenue),
 				'avgPrice' => $this->formatCurrency((float) $pageItem->avgPrice),
+				'cost' => $this->formatOptionalCurrency($pageItem->cost),
+				'grossProfit' => $this->formatOptionalCurrency($pageItem->grossProfit),
+				'grossMargin' => $this->formatOptionalPercent($pageItem->grossMargin),
 				'ordersUrl' => $ordersUrl,
 				'fromBundle' => $pageItem->fromBundle,
 				'hasUnpaidOrder' => $pageItem->hasUnpaidOrder,
@@ -179,6 +201,13 @@ class ProductsController extends BaseReportController
 			'itemSubtotal' => $this->formatCurrency($totalItemSubtotal),
 			'revenue' => $this->formatCurrency($totalRevenue),
 		];
+
+		if ($isProfitView) {
+			$costTotals = $this->getCostTotals($allItems);
+			$totals['cost'] = $this->formatCurrency($costTotals['cost']);
+			$totals['grossProfit'] = $this->formatCurrency($costTotals['grossProfit']);
+			$totals['grossMargin'] = $this->formatOptionalPercent($costTotals['grossMargin']);
+		}
 
 		return $this->asJson([
 			'items' => $rows,
@@ -207,14 +236,15 @@ class ProductsController extends BaseReportController
 		/** @var string $rawSearch */
 		$rawSearch = $request->getQueryParam('search', '');
 		$search = trim($rawSearch);
+		$isProfitView = $this->isProfitView();
 
 		$plugin = Plugin::getInstance();
 		$productStats = $plugin->productStats;
 
 		if ($productsOrVariants === 'variants') {
-			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productTypeHandles);
+			$allItems = $productStats->getTopVariants($dateRange, $sortBy, 10000, $productTypeHandles, $this->resolveFieldFilters(), $isProfitView);
 		} else {
-			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productTypeHandles);
+			$allItems = $productStats->getTopProducts($dateRange, $sortBy, 10000, $productTypeHandles, $this->resolveFieldFilters(), $isProfitView);
 		}
 
 		/** @var list<ProductRow> $allItems */
@@ -248,7 +278,7 @@ class ProductsController extends BaseReportController
 			$totalItemSubtotal += $itemSubtotal;
 			$totalRevenue += $revenue;
 
-			$csvRows[] = [
+			$csvRow = [
 				'product' => $displayTitle,
 				'sku' => $allItem->variantSku ?? '',
 				'type' => $allItem->productType,
@@ -258,9 +288,16 @@ class ProductsController extends BaseReportController
 				'revenue' => $revenue,
 				'avgPrice' => (float) $allItem->avgPrice,
 			];
+			if ($isProfitView) {
+				$csvRow['cost'] = $allItem->cost;
+				$csvRow['grossProfit'] = $allItem->grossProfit;
+				$csvRow['grossMargin'] = $allItem->grossMargin === null ? '' : round($allItem->grossMargin * 100, 1);
+			}
+
+			$csvRows[] = $csvRow;
 		}
 
-		$csvRows[] = [
+		$totalsRow = [
 			'product' => 'TOTAL',
 			'sku' => '',
 			'type' => '',
@@ -270,8 +307,16 @@ class ProductsController extends BaseReportController
 			'revenue' => $totalRevenue,
 			'avgPrice' => '',
 		];
+		if ($isProfitView) {
+			$costTotals = $this->getCostTotals($allItems);
+			$totalsRow['cost'] = $costTotals['cost'];
+			$totalsRow['grossProfit'] = $costTotals['grossProfit'];
+			$totalsRow['grossMargin'] = $costTotals['grossMargin'] === null ? '' : round($costTotals['grossMargin'] * 100, 1);
+		}
 
-		return $this->asCsv($csvRows, [
+		$csvRows[] = $totalsRow;
+
+		$headers = [
 			Craft::t('best-sellers', 'products.col.product'),
 			Craft::t('commerce', 'SKU'),
 			Craft::t('app', 'Type'),
@@ -280,7 +325,14 @@ class ProductsController extends BaseReportController
 			Craft::t('commerce', 'Item Subtotal'),
 			Craft::t('best-sellers', 'products.col.itemSalesNet'),
 			Craft::t('best-sellers', 'products.col.avgPrice'),
-		], 'products');
+		];
+		if ($isProfitView) {
+			$headers[] = Craft::t('best-sellers', 'products.col.cost');
+			$headers[] = Craft::t('best-sellers', 'products.col.grossProfit');
+			$headers[] = Craft::t('best-sellers', 'products.col.grossMarginPercent');
+		}
+
+		return $this->asCsv($csvRows, $headers, 'products');
 	}
 
 	/**
@@ -488,5 +540,152 @@ class ProductsController extends BaseReportController
 		}
 
 		return $handles;
+	}
+
+	/**
+	 * Get the filters for every product type, grouped by product type handle.
+	 *
+	 * @return list<array{productTypeHandle: string, filters: list<array{instanceUid: string, label: string, options: array<int|string, string>}>}>
+	 */
+	private function getFieldFilterGroups(): array
+	{
+		$plugin = Plugin::getInstance();
+		$fieldFilterGroups = [];
+		foreach ($this->getCommerce()->getProductTypes()->getAllProductTypes() as $productType) {
+			$filters = [];
+			foreach ($plugin->variantFields->getFilterFields($productType) as $instanceUid => $field) {
+				$filters[] = [
+					'instanceUid' => $instanceUid,
+					'label' => Craft::t('site', (string) $field->name),
+					'options' => $plugin->productStats->getFilterFieldOptions($field, $productType),
+				];
+			}
+
+			if ($filters !== []) {
+				$fieldFilterGroups[] = [
+					'productTypeHandle' => (string) $productType->handle,
+					'filters' => $filters,
+				];
+			}
+		}
+
+		return $fieldFilterGroups;
+	}
+
+	/**
+	 * Field filters apply only when the report covers a single product type.
+	 */
+	private function getActiveProductType(): ?ProductType
+	{
+		$onlyProductType = $this->getOnlyProductType();
+		if ($onlyProductType instanceof ProductType) {
+			return $onlyProductType;
+		}
+
+		$productTypeHandles = $this->resolveProductTypeHandles();
+
+		return count($productTypeHandles) === 1
+			? $this->getCommerce()->getProductTypes()->getProductTypeByHandle($productTypeHandles[0])
+			: null;
+	}
+
+	private function getOnlyProductType(): ?ProductType
+	{
+		$productTypes = $this->getCommerce()->getProductTypes()->getAllProductTypes();
+
+		return count($productTypes) === 1 ? reset($productTypes) : null;
+	}
+
+	/**
+	 * @return list<FieldFilter>
+	 */
+	private function resolveFieldFilters(): array
+	{
+		$activeProductType = $this->getActiveProductType();
+		if (! $activeProductType instanceof ProductType) {
+			return [];
+		}
+
+		$filterValues = $this->resolveFilterValues();
+		$fieldFilters = [];
+		foreach (Plugin::getInstance()->variantFields->getFilterFields($activeProductType) as $instanceUid => $field) {
+			if (($filterValues[$instanceUid] ?? []) !== []) {
+				$fieldFilters[] = new FieldFilter([
+					'productTypeId' => (int) $activeProductType->id,
+					'field' => $field,
+					'values' => $filterValues[$instanceUid],
+				]);
+			}
+		}
+
+		return $fieldFilters;
+	}
+
+	/**
+	 * @return array<string, list<string>>
+	 */
+	private function resolveFilterValues(): array
+	{
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+		$rawFieldFilters = $request->getQueryParam('fieldFilter', []);
+		if (! is_array($rawFieldFilters)) {
+			return [];
+		}
+
+		$filterValues = [];
+		foreach ($rawFieldFilters as $instanceUid => $rawValues) {
+			if (! is_array($rawValues)) {
+				continue;
+			}
+
+			foreach ($rawValues as $rawValue) {
+				if (is_scalar($rawValue) && (string) $rawValue !== '') {
+					$filterValues[(string) $instanceUid][] = (string) $rawValue;
+				}
+			}
+		}
+
+		return $filterValues;
+	}
+
+	private function getCommerce(): Commerce
+	{
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+
+		return $commerce;
+	}
+
+	private function isProfitView(): bool
+	{
+		return Plugin::getInstance()->variantFields->hasUnitCostField() && $this->request->getQueryParam('reportMode') === 'profit';
+	}
+
+	/**
+	 * @param list<ProductRow> $productRows
+	 * @return array{cost: float, grossProfit: float, grossMargin: float|null}
+	 */
+	private function getCostTotals(array $productRows): array
+	{
+		$currency = MoneyMath::currency();
+		$totalCost = new Money(0, $currency);
+		$totalRevenue = new Money(0, $currency);
+		foreach ($productRows as $productRow) {
+			$totalCost = $totalCost->add(MoneyMath::toMoney((float) $productRow->cost, $currency));
+			$totalRevenue = $totalRevenue->add(MoneyMath::toMoney($productRow->revenue, $currency));
+		}
+
+		return Plugin::getInstance()->productStats->getCostFigures(MoneyMath::toDecimal($totalCost), MoneyMath::toDecimal($totalRevenue));
+	}
+
+	private function formatOptionalCurrency(?float $amount): string
+	{
+		return $amount === null ? '-' : $this->formatCurrency($amount);
+	}
+
+	private function formatOptionalPercent(?float $ratio): string
+	{
+		return $ratio === null ? '-' : Craft::$app->getFormatter()->asPercent($ratio, 1);
 	}
 }

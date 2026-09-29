@@ -48,6 +48,8 @@ Change the range back to **Past 30 Days**. Every report page shares this control
 
 At **Best Sellers -> Settings**, pick the order statuses reports should start on for a user's first visit in a session. A store that treats only shipped orders as real revenue sets those here.
 
+To report gross profit, add a Money field to your variants, then choose it for each product type on the **Product Types** tab. See [unit costs and profit](./user-guide/unit-costs-and-profit.md).
+
 Then grant the permissions your team needs, under a user group's **Best Sellers** heading:
 
 - `best-sellers:viewReports` for anyone who needs the reports.

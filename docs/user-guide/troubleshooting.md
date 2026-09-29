@@ -31,6 +31,14 @@ Check, in order:
 - On the Products page, it does not have a full balance owed.
 - The [Operations](./operations.md) page has no backfill log entry for it.
 
+## A product is missing from the Profit view
+
+The Profit view counts only line items with a recorded unit cost. A line has none when its order predates the unit cost field, the variant's cost field was empty, or the field's currency differs from the order's. For older orders, run [Fill Unit Costs](./data-and-backfill.md#fill-unit-costs), then check Craft's log in the `best-sellers` category for lines it could not fill.
+
+## The field filters do not appear
+
+Field filters show when the store has one product type, or when exactly one is selected in **Product Type**. See [field filters](./products.md#field-filters).
+
 ## A day looks wrong on the chart
 
 Rebuild that day, or the whole range:

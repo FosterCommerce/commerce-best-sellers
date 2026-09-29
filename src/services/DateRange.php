@@ -5,13 +5,13 @@ namespace fostercommerce\bestsellers\services;
 use Craft;
 use craft\commerce\Plugin as Commerce;
 use craft\web\Request;
-use craft\web\Session;
 use DateTime;
 use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\Plugin;
 use yii\base\Component;
 use yii\web\Request as YiiWebRequest;
+use yii\web\Session;
 
 class DateRange extends Component
 {

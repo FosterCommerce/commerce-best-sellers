@@ -13,6 +13,7 @@ Sales reporting for Craft Commerce: revenue, orders, transactions, products, cus
 - [Filters and report pages](./user-guide/filters-and-report-pages.md), the controls above every report and the behaviour every table shares
 - [Dashboard](./user-guide/dashboard.md), what each KPI card measures
 - [Products](./user-guide/products.md), what sold, and how the figures are calculated
+- [Unit costs and profit](./user-guide/unit-costs-and-profit.md), recording what items cost and reporting gross profit and margin
 - [Data and backfill](./user-guide/data-and-backfill.md), how sales data is recorded and rebuilt
 - [Troubleshooting](./user-guide/troubleshooting.md), when a number looks wrong
 

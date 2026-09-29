@@ -4,7 +4,7 @@ Sales **reporting** for Craft Commerce.
 
 ## Overview
 
-- Shows what sold, by product or by variant, with units and item sales net of coupons, and can drill from a product into the orders that contain it.
+- Shows what sold, by product or by variant, with units, item sales net of coupons, and gross profit from each variant's unit cost, and can drill from a product into the orders that contain it.
 - Lets you build best-seller listings and buy-again pages in Twig, from units sold and a customer's purchase history.
 - Reports revenue, orders, average order value, and repeat rate over any date range, against the period before it, the same period last year, and a 12-month average.
 - Lists every completed order with filters for status, payment, shipping method, and discount, and downloads invoices or packing slips for a batch of them in one go.
@@ -44,9 +44,15 @@ See [`docs/dev-guide/templating.md`](./docs/dev-guide/templating.md).
 
 ## Reports
 
-Seven pages under a **Best Sellers** section in the control panel: a dashboard, orders, transactions, products, customers, locations, and an operations page covering store configuration. A date range, an order status filter, and a shipping location filter sit above all of them and follow you from page to page.
+Seven pages under a **Best Sellers** section in the control panel: a dashboard, orders, transactions, products, customers, locations, and an operations page covering store configuration. A date range, an order status filter, and a shipping location filter sit above all of them and follow you from page to page. The Products report can also filter by your own variant fields, such as a supplier, chosen per product type.
 
 See the [user guide](./docs/index.md).
+
+## Unit costs and profit
+
+Records what each item cost you, from a Money field on your variants that you choose per product type. The Products report shows cost, gross profit, and gross margin for any date range, and the dashboard adds gross profit and margin cards. A backfill adds costs to orders placed before you set a unit cost field.
+
+See [unit costs and profit](./docs/user-guide/unit-costs-and-profit.md).
 
 ## Cart restore
 
@@ -56,7 +62,7 @@ See [`docs/user-guide/cart-restore.md`](./docs/user-guide/cart-restore.md).
 
 ## Console commands
 
-Commands for backfilling orders, rebuilding the daily stats table, and clearing either of them, all also available from **Utilities -> Best Sellers**.
+Commands for backfilling orders, filling in unit costs, rebuilding the daily stats table, and clearing either table, all also available from **Utilities -> Best Sellers**.
 
 See [`docs/reference/console-commands.md`](./docs/reference/console-commands.md).
 

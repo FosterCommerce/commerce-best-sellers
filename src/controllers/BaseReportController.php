@@ -51,7 +51,8 @@ abstract class BaseReportController extends Controller
 			return null;
 		}
 
-		return round((($current - $previous) / $previous) * 100, 1);
+		// Divide by the magnitude so a rise from a negative value, such as a loss, reads as a rise
+		return round((($current - $previous) / abs($previous)) * 100, 1);
 	}
 
 	/**

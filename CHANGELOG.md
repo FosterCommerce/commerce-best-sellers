@@ -1,5 +1,24 @@
 # Release Notes for Best Sellers
 
+## Unreleased
+
+### Added
+- Added a “Unit cost field” setting for each product type, for recording each line item's unit cost.
+- Added a “Profit” view to the Products report, with Cost, Gross Profit, and Gross Margin columns.
+- Added Gross Profit and Gross Margin cards to the dashboard.
+- Added Products report filters on variant fields, chosen per product type.
+- Added the ability to fill in unit costs on existing orders, and the `best-sellers/backfill/fill-unit-costs` command.
+- Added the `unitCost` column to `best_sellers_variant_sales`.
+
+### Changed
+- Plugin settings are now split into “General” and “Product Types” tabs.
+- The Product Type filter is now first on the Products report.
+
+### Fixed
+- Fixed a bug where a backfill date range skipped orders placed on its end date.
+- Fixed a bug where backfill date ranges compared dates in UTC instead of the site's timezone.
+- Fixed a bug where the Products report read “1 in 1 orders”.
+
 ## 1.3.0 - 2026-05-20
 
 ### Added

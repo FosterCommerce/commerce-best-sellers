@@ -6,7 +6,7 @@ None of them is project config. Uninstalling drops all three; Commerce's own dat
 
 ## best_sellers_variant_sales
 
-One row per variant per completed order. A bundle line item produces one row per constituent variant rather than one for the bundle. Written when an order is saved, and by the backfill.
+One row per variant per completed order. A bundle line item produces one row per constituent variant rather than one for the bundle. Written when an order is saved, and by the backfill and the unit cost fill.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -21,6 +21,7 @@ One row per variant per completed order. A bundle line item produces one row per
 | `lineItemPrice` | decimal(14,4) | Per-unit price paid. For a bundle child, its allocated share divided by quantity. |
 | `lineItemTotal` | decimal(14,4) | The line subtotal: quantity times sale price. Sale-price promotions are priced in. Summed as Item Subtotal in the reports. |
 | `catalogPrice` | decimal(14,4) | The list price before promotions, frozen at the time of sale. Averaged as Avg Price in the reports. |
+| `unitCost` | decimal(14,4) | The variant's unit cost recorded on the line item, per unit. Null when the line has no recorded cost. See [unit costs and profit](../user-guide/unit-costs-and-profit.md). |
 | `discount` | decimal(14,4) | The promotional (sale-price) amount on the line, stored positive. Default: `0`. |
 | `lineDiscount` | decimal(14,4) | Discount adjustments attributed to the line: coupons, manual discounts, and order-level discounts Commerce attached here. Negative, so `lineItemTotal + lineDiscount` is Item Sales (Net). Default: `0`. |
 | `sourceBundleId` | integer | The bundle this row was expanded from, or null. Drives the bundle marker on product rows. Indexed. |
@@ -55,7 +56,7 @@ One row per calendar day, in the Craft app timezone. Rebuilt as an idempotent up
 
 ## best_sellers_backfill_logs
 
-Failures recorded during a backfill or a daily stats rebuild, so one bad order does not fail the job. Listed on the [Operations](../user-guide/operations.md) page. Craft's garbage collection prunes the table to the most recent 500 rows.
+Failures recorded during a backfill or a daily stats rebuild, so one bad order does not fail the job. Not written by a unit cost fill. Listed on the [Operations](../user-guide/operations.md) page. Craft's garbage collection prunes the table to the most recent 500 rows.
 
 | Column | Type | Notes |
 | --- | --- | --- |

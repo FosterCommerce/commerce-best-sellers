@@ -45,6 +45,21 @@ class ProductRow extends Model
 	public float $avgPrice = 0;
 
 	/**
+	 * @var float|null Cost of the line items, set only in the Profit view
+	 */
+	public ?float $cost = null;
+
+	/**
+	 * @var float|null Item Sales (Net) minus cost
+	 */
+	public ?float $grossProfit = null;
+
+	/**
+	 * @var float|null Gross profit as a ratio of Item Sales (Net), e.g. 0.42 for 42%
+	 */
+	public ?float $grossMargin = null;
+
+	/**
 	 * @var string Product type name
 	 */
 	public string $productType = '';

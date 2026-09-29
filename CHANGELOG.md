@@ -1,6 +1,6 @@
 # Release Notes for Best Sellers
 
-## 1.4.0 - Unreleased
+## 1.4.0 - 2026-09-29
 
 > [!NOTE]
 > Updating queues a rebuild of the sales data for every completed order, to record each line's catalog price. Keep a queue worker running until the rebuild finishes.

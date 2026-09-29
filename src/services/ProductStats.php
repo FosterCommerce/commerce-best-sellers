@@ -2,17 +2,9 @@
 
 namespace fostercommerce\bestsellers\services;
 
-use Craft;
-use craft\base\ElementInterface;
-use craft\base\FieldInterface;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\Variant;
-use craft\commerce\models\ProductType;
 use craft\db\Query;
-use craft\db\Table as CraftTable;
-use craft\fields\BaseOptionsField;
-use craft\fields\BaseRelationField;
-use craft\fields\Lightswitch;
 use craft\helpers\DateTimeHelper;
 use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\MoneyMath;
@@ -20,6 +12,7 @@ use fostercommerce\bestsellers\models\FieldFilter;
 use fostercommerce\bestsellers\models\ProductRow;
 use fostercommerce\bestsellers\models\ProductSummary;
 use fostercommerce\bestsellers\models\ReportScope;
+use fostercommerce\bestsellers\Plugin;
 use fostercommerce\bestsellers\traits\OrderQueryConditions;
 use yii\base\Component;
 use yii\db\Expression;
@@ -173,39 +166,6 @@ class ProductStats extends Component
 			'fromBundle' => (bool) $row['fromBundle'],
 			'hasUnpaidOrder' => (bool) $row['hasUnpaidOrder'],
 		]), $rows);
-	}
-
-	/**
-	 * Get the filter field's options, as label by value.
-	 *
-	 * @return array<int|string, string>
-	 */
-	public function getFilterFieldOptions(FieldInterface $field, ProductType $productType): array
-	{
-		if ($field instanceof Lightswitch) {
-			return [
-				'1' => ($field->onLabel ?? '') !== '' ? Craft::t('site', (string) $field->onLabel) : Craft::t('app', 'Enabled'),
-				'0' => ($field->offLabel ?? '') !== '' ? Craft::t('site', (string) $field->offLabel) : Craft::t('app', 'Disabled'),
-			];
-		}
-
-		if ($field instanceof BaseOptionsField) {
-			$options = [];
-			foreach ($field->options as $option) {
-				// Skip optgroup headings, which have no value
-				if (isset($option['value']) && $option['value'] !== '') {
-					$options[(string) $option['value']] = Craft::t('site', (string) $option['label']);
-				}
-			}
-
-			return $options;
-		}
-
-		if ($field instanceof BaseRelationField) {
-			return $this->getRelationFieldOptions($field, $productType);
-		}
-
-		return [];
 	}
 
 	/**
@@ -571,61 +531,6 @@ class ProductStats extends Component
 	}
 
 	/**
-	 * Get the elements the product type's canonical, non-trashed variants relate to through the field, as label by element ID.
-	 *
-	 * @return array<int, string>
-	 */
-	private function getRelationFieldOptions(BaseRelationField $field, ProductType $productType): array
-	{
-		/** @var list<int|string> $targetIds */
-		$targetIds = (new Query())
-			->select('[[relations.targetId]]')
-			->distinct()
-			->from([
-				'relations' => CraftTable::RELATIONS,
-			])
-			->innerJoin([
-				'sources' => CraftTable::ELEMENTS,
-			], '[[sources.id]] = [[relations.sourceId]]')
-			->innerJoin([
-				'variants' => CommerceTable::VARIANTS,
-			], '[[variants.id]] = [[relations.sourceId]]')
-			->innerJoin([
-				'products' => CommerceTable::PRODUCTS,
-			], '[[products.id]] = [[variants.primaryOwnerId]]')
-			->where([
-				'[[relations.fieldId]]' => $field->id,
-				'[[products.typeId]]' => $productType->id,
-				'[[sources.draftId]]' => null,
-				'[[sources.revisionId]]' => null,
-				'[[sources.dateDeleted]]' => null,
-			])
-			->column();
-
-		if ($targetIds === []) {
-			return [];
-		}
-
-		/** @var list<ElementInterface> $targets */
-		$targets = $field::elementType()::find()
-			->id($targetIds)
-			->site('*')
-			->unique()
-			->preferSites([Craft::$app->getSites()->getCurrentSite()->id])
-			->status(null)
-			->all();
-
-		$options = [];
-		foreach ($targets as $target) {
-			$options[(int) $target->id] = $target->getUiLabel();
-		}
-
-		asort($options);
-
-		return $options;
-	}
-
-	/**
 	 * Join commerce_orders and apply standard filters that the Products report
 	 * needs on every aggregate: status filter (when active) and exclusion of
 	 * orders with a full balance owed.
@@ -705,18 +610,17 @@ class ProductStats extends Component
 	 */
 	private function applyFieldFilter(Query $query, FieldFilter $fieldFilter): void
 	{
-		$fieldValue = $fieldFilter->values;
-		if ($fieldFilter->field instanceof Lightswitch) {
-			// Both states selected matches every variant
-			if (count(array_unique($fieldValue)) > 1) {
-				return;
-			}
-
-			$fieldValue = $fieldValue[0] === '1';
+		/** @var Plugin $plugin */
+		$plugin = Plugin::getInstance();
+		$fieldValue = $plugin->reportFields->getElementQueryParam($fieldFilter->field, $fieldFilter->values);
+		if ($fieldValue === null) {
+			return;
 		}
 
 		$variantQuery = Variant::find()
 			->typeId($fieldFilter->productTypeId)
+			->site('*')
+			->unique()
 			->status(null)
 			->select(['elements.id']);
 		$fieldHandle = $fieldFilter->field->handle;

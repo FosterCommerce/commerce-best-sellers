@@ -3,6 +3,7 @@
 namespace fostercommerce\bestsellers\controllers;
 
 use Craft;
+use craft\base\FieldInterface;
 use craft\commerce\db\Table as CommerceTable;
 use craft\commerce\elements\actions\DownloadOrderPdfAction;
 use craft\commerce\elements\db\OrderQuery;
@@ -12,6 +13,11 @@ use craft\commerce\elements\Variant;
 use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
 use craft\db\Table as CraftTable;
+use craft\fields\BaseRelationField;
+use craft\helpers\App;
+use craft\helpers\DateTimeHelper;
+use craft\helpers\Db;
+use craft\helpers\Html;
 use craft\helpers\MoneyHelper;
 use craft\web\Request;
 use fostercommerce\bestsellers\assetbundles\ReportsAsset;
@@ -19,6 +25,7 @@ use fostercommerce\bestsellers\db\Table;
 use fostercommerce\bestsellers\helpers\VariantTitleHelper;
 use fostercommerce\bestsellers\models\DateRangeResult;
 use fostercommerce\bestsellers\Plugin;
+use Generator;
 use Illuminate\Support\Collection;
 use Money\Money;
 use Throwable;
@@ -30,6 +37,8 @@ use yii\web\ServerErrorHttpException;
 class OrdersController extends BaseReportController
 {
 	private const PER_PAGE = 100;
+
+	private const EXPORT_BATCH_SIZE = 500;
 
 	private const SESSION_KEY_PAYMENT_STATUSES = 'bestSellers.scope.paymentStatuses';
 
@@ -65,6 +74,11 @@ class OrdersController extends BaseReportController
 	 * @var list<string>|null
 	 */
 	private ?array $resolvedPaymentStatuses = null;
+
+	/**
+	 * @var list<int>|null
+	 */
+	private ?array $shippedStatusIds = null;
 
 	public function actionIndex(): Response
 	{
@@ -122,6 +136,9 @@ class OrdersController extends BaseReportController
 			'purchasableFilterLabel' => $purchasableFilterLabel,
 			'selectedPaymentStatuses' => $this->resolvePaymentStatusSelection(),
 			'enabledPdfs' => $enabledPdfs,
+			'orderFieldFilters' => $this->getOrderFieldFilters(),
+			'selectedOrderFieldValues' => $this->resolveFieldFilterValues('orderField'),
+			'showDateShipped' => $this->getShippedStatusIds() !== [],
 		]);
 	}
 
@@ -212,12 +229,21 @@ class OrdersController extends BaseReportController
 		// Aggregate totals across all filtered results (before pagination)
 		$totals = $this->buildFilteredTotals(clone $ordersQuery);
 
+		$orderFields = Plugin::getInstance()->reportFields->getOrderFields();
 		$orders = $ordersQuery
 			->offset($offset)
 			->limit(self::PER_PAGE)
 			->all();
 
-		$rows = $this->buildOrderRows($orders);
+		$rows = $this->buildOrderRows($orders, $orderFields);
+		foreach ($rows as &$row) {
+			/** @var array<string, string> $fieldValues */
+			$fieldValues = $row['fields'];
+			// Encode field values, since the table builds rows with innerHTML
+			$row['fields'] = array_map(Html::encode(...), $fieldValues);
+		}
+
+		unset($row);
 
 		return $this->asJson([
 			'orders' => $rows,
@@ -234,13 +260,46 @@ class OrdersController extends BaseReportController
 	 */
 	public function actionExportCsv(): Response
 	{
+		// Lift the memory and time limits for date ranges with tens of thousands of orders
+		App::maxPowerCaptain();
+
 		$dateRange = $this->resolveScope();
 		$ordersQuery = $this->buildFilteredOrdersQuery($dateRange->dateRange);
+		$orderFields = Plugin::getInstance()->reportFields->getOrderFields();
+		$showDateShipped = $this->getShippedStatusIds() !== [];
 
-		$orders = $ordersQuery->all();
-		$rows = $this->buildOrderRows($orders);
+		$headers = [
+			Craft::t('best-sellers', 'sales.col.orderNumber'),
+			Craft::t('commerce', 'Date Ordered'),
+			Craft::t('app', 'Status'),
+			Craft::t('app', 'Email'),
+			Craft::t('commerce', 'Item Subtotal'),
+			Craft::t('commerce', 'Tax'),
+			Craft::t('commerce', 'Discount'),
+			Craft::t('commerce', 'Shipping'),
+			Craft::t('commerce', 'Total Paid'),
+			Craft::t('best-sellers', 'kpi.itemsSold'),
+			Craft::t('best-sellers', 'sales.filter.paymentStatus'),
+		];
+		if ($showDateShipped) {
+			$headers[] = Craft::t('best-sellers', 'sales.col.dateShipped');
+		}
 
-		$csvRows = [];
+		foreach ($orderFields as $orderField) {
+			$headers[] = Craft::t('site', (string) $orderField->name);
+		}
+
+		return $this->asCsv($this->generateCsvRows($ordersQuery, $orderFields, $showDateShipped), $headers, 'orders');
+	}
+
+	/**
+	 * Yield one CSV row per order, loading orders in batches, then the totals row.
+	 *
+	 * @param array<string, FieldInterface> $orderFields
+	 * @return Generator<int, array<string, mixed>>
+	 */
+	private function generateCsvRows(OrderQuery $ordersQuery, array $orderFields, bool $showDateShipped): Generator
+	{
 		$currency = $this->getStoreCurrency();
 		$totalMerchandise = new Money(0, $currency);
 		$totalTax = new Money(0, $currency);
@@ -249,31 +308,47 @@ class OrdersController extends BaseReportController
 		$totalPaid = new Money(0, $currency);
 		$totalItemsSold = 0;
 
-		foreach ($orders as $index => $order) {
-			$totalMerchandise = $totalMerchandise->add($this->toMoney($order->itemSubtotal));
-			$totalTax = $totalTax->add($this->toMoney($order->totalTax));
-			$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount));
-			$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost));
-			$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid));
-			$itemsSold = $rows[$index]['itemsSold'] ?? 0;
-			$totalItemsSold += $itemsSold;
+		foreach (Db::batch($ordersQuery, self::EXPORT_BATCH_SIZE) as $batchQueryResult) {
+			/** @var list<Order> $batchQueryResult */
+			$rows = $this->buildOrderRows($batchQueryResult, $orderFields);
 
-			$csvRows[] = [
-				'reference' => $order->reference,
-				'dateOrdered' => $rows[$index]['dateOrdered'] ?? '',
-				'status' => $rows[$index]['statusName'] ?? '',
-				'email' => $order->email ?? '',
-				'merchandiseTotal' => MoneyHelper::toDecimal($this->toMoney($order->itemSubtotal)),
-				'tax' => MoneyHelper::toDecimal($this->toMoney($order->totalTax)),
-				'discount' => MoneyHelper::toDecimal($this->toMoney($order->totalDiscount)),
-				'shipping' => MoneyHelper::toDecimal($this->toMoney($order->totalShippingCost)),
-				'totalPaid' => MoneyHelper::toDecimal($this->toMoney($order->totalPaid)),
-				'itemsSold' => $itemsSold,
-				'paymentStatus' => $order->paidStatus,
-			];
+			foreach ($batchQueryResult as $index => $order) {
+				$totalMerchandise = $totalMerchandise->add($this->toMoney($order->itemSubtotal));
+				$totalTax = $totalTax->add($this->toMoney($order->totalTax));
+				$totalDiscount = $totalDiscount->add($this->toMoney($order->totalDiscount));
+				$totalShipping = $totalShipping->add($this->toMoney($order->totalShippingCost));
+				$totalPaid = $totalPaid->add($this->toMoney($order->totalPaid));
+				/** @var array{itemsSold: int, dateOrdered: string, statusName: string|null, fields: array<string, string>, dateShipped: string} $row */
+				$row = $rows[$index];
+				$itemsSold = $row['itemsSold'];
+				$totalItemsSold += $itemsSold;
+
+				$csvRow = [
+					'reference' => $order->reference,
+					'dateOrdered' => $row['dateOrdered'],
+					'status' => $row['statusName'],
+					'email' => $order->email ?? '',
+					'merchandiseTotal' => MoneyHelper::toDecimal($this->toMoney($order->itemSubtotal)),
+					'tax' => MoneyHelper::toDecimal($this->toMoney($order->totalTax)),
+					'discount' => MoneyHelper::toDecimal($this->toMoney($order->totalDiscount)),
+					'shipping' => MoneyHelper::toDecimal($this->toMoney($order->totalShippingCost)),
+					'totalPaid' => MoneyHelper::toDecimal($this->toMoney($order->totalPaid)),
+					'itemsSold' => $itemsSold,
+					'paymentStatus' => $order->paidStatus,
+				];
+				if ($showDateShipped) {
+					$csvRow['dateShipped'] = $row['dateShipped'];
+				}
+
+				foreach ($row['fields'] as $instanceUid => $fieldValue) {
+					$csvRow['field:' . $instanceUid] = $fieldValue;
+				}
+
+				yield $csvRow;
+			}
 		}
 
-		$csvRows[] = [
+		$totalsRow = [
 			'reference' => 'TOTAL',
 			'dateOrdered' => '',
 			'status' => '',
@@ -286,20 +361,15 @@ class OrdersController extends BaseReportController
 			'itemsSold' => $totalItemsSold,
 			'paymentStatus' => '',
 		];
+		if ($showDateShipped) {
+			$totalsRow['dateShipped'] = '';
+		}
 
-		return $this->asCsv($csvRows, [
-			Craft::t('best-sellers', 'sales.col.orderNumber'),
-			Craft::t('commerce', 'Date Ordered'),
-			Craft::t('app', 'Status'),
-			Craft::t('app', 'Email'),
-			Craft::t('commerce', 'Item Subtotal'),
-			Craft::t('commerce', 'Tax'),
-			Craft::t('commerce', 'Discount'),
-			Craft::t('commerce', 'Shipping'),
-			Craft::t('commerce', 'Total Paid'),
-			Craft::t('best-sellers', 'kpi.itemsSold'),
-			Craft::t('best-sellers', 'sales.filter.paymentStatus'),
-		], 'orders');
+		foreach (array_keys($orderFields) as $instanceUid) {
+			$totalsRow['field:' . $instanceUid] = '';
+		}
+
+		yield $totalsRow;
 	}
 
 	/**
@@ -375,19 +445,129 @@ class OrdersController extends BaseReportController
 			->orderBy($this->resolveOrderSort($sort, $sortDir));
 
 		$this->applyOrderFilters($ordersQuery);
+		$this->applyOrderFieldFilters($ordersQuery);
+
+		// Eager-load each field the way Craft's element indexes do, so disabled or other-site relations still show
+		foreach (Plugin::getInstance()->reportFields->getOrderFields() as $orderField) {
+			$orderField->modifyElementIndexQuery($ordersQuery);
+		}
 
 		return $ordersQuery;
 	}
 
+	private function applyOrderFieldFilters(OrderQuery $ordersQuery): void
+	{
+		$reportFields = Plugin::getInstance()->reportFields;
+		$filterValues = $this->resolveFieldFilterValues('orderField');
+		foreach ($reportFields->getOrderFields() as $instanceUid => $orderField) {
+			if (($filterValues[$instanceUid] ?? []) === []) {
+				continue;
+			}
+
+			$fieldValue = $reportFields->getElementQueryParam($orderField, $filterValues[$instanceUid]);
+			if ($fieldValue !== null) {
+				$fieldHandle = $orderField->handle;
+				$ordersQuery->{$fieldHandle}($fieldValue);
+			}
+		}
+	}
+
+	/**
+	 * @return list<array{instanceUid: string, label: string, options: array<int|string, string>}>
+	 */
+	private function getOrderFieldFilters(): array
+	{
+		$reportFields = Plugin::getInstance()->reportFields;
+		$orderFieldFilters = [];
+		foreach ($reportFields->getOrderFields() as $instanceUid => $orderField) {
+			$orderFieldFilters[] = [
+				'instanceUid' => $instanceUid,
+				'label' => Craft::t('site', (string) $orderField->name),
+				'options' => $reportFields->getOptions($orderField, Order::find()->isCompleted(true)),
+			];
+		}
+
+		return $orderFieldFilters;
+	}
+
+	/**
+	 * Get the IDs of the configured shipped status, one per store that has it.
+	 *
+	 * @return list<int>
+	 */
+	private function getShippedStatusIds(): array
+	{
+		if ($this->shippedStatusIds !== null) {
+			return $this->shippedStatusIds;
+		}
+
+		$shippedOrderStatusHandle = Plugin::getInstance()->getSettings()->shippedOrderStatusHandle;
+		$this->shippedStatusIds = [];
+		if ($shippedOrderStatusHandle === null) {
+			return $this->shippedStatusIds;
+		}
+
+		/** @var Commerce $commerce */
+		$commerce = Commerce::getInstance();
+		foreach ($commerce->getStores()->getAllStores() as $allStore) {
+			$shippedStatus = $commerce->getOrderStatuses()->getOrderStatusByHandle($shippedOrderStatusHandle, $allStore->id);
+			if ($shippedStatus !== null) {
+				$this->shippedStatusIds[] = (int) $shippedStatus->id;
+			}
+		}
+
+		return $this->shippedStatusIds;
+	}
+
+	/**
+	 * Get when each order last entered the shipped status, formatted like the order date.
+	 *
+	 * @param list<int> $orderIds
+	 * @return array<int, string>
+	 */
+	private function getShippedDates(array $orderIds): array
+	{
+		$shippedStatusIds = $this->getShippedStatusIds();
+		if ($orderIds === [] || $shippedStatusIds === []) {
+			return [];
+		}
+
+		/** @var list<array{orderId: int|string, dateShipped: string}> $rows */
+		$rows = (new Query())
+			->select([
+				'orderId' => '[[orderId]]',
+				'dateShipped' => 'MAX([[dateCreated]])',
+			])
+			->from(CommerceTable::ORDERHISTORIES)
+			->where([
+				'[[orderId]]' => $orderIds,
+				'[[newStatusId]]' => $shippedStatusIds,
+			])
+			->groupBy('[[orderId]]')
+			->all();
+
+		$shippedDates = [];
+		foreach ($rows as $row) {
+			$dateShipped = DateTimeHelper::toDateTime($row['dateShipped']);
+			$shippedDates[(int) $row['orderId']] = $dateShipped ? $dateShipped->format('m/d/Y g:ia') : '';
+		}
+
+		return $shippedDates;
+	}
+
 	/**
 	 * @param array<Order> $orders
+	 * @param array<string, FieldInterface> $orderFields
 	 * @return list<array<string, mixed>>
 	 */
-	private function buildOrderRows(array $orders): array
+	private function buildOrderRows(array $orders, array $orderFields): array
 	{
+		$reportFields = Plugin::getInstance()->reportFields;
+		$orderIds = array_values(array_map(static fn (Order $order): int => (int) $order->id, $orders));
+		$shippedDates = $this->getShippedDates($orderIds);
+
 		$orderItemCounts = [];
 		if ($orders !== []) {
-			$orderIds = array_map(fn ($order): ?int => $order->id, $orders);
 			// Raw Query because we need a simple aggregate from commerce_lineitems,
 			// not Order elements. Faster than loading line item elements.
 			$itemCounts = (new Query())
@@ -426,8 +606,8 @@ class OrdersController extends BaseReportController
 				'paidStatus' => $order->paidStatus,
 				'paidStatusHtml' => $order->paidStatusHtml,
 				'email' => $order->email ?? '',
-				'billingName' => $order->billingAddress ? $order->billingAddress->fullName : '',
-				'shippingName' => $order->shippingAddress ? $order->shippingAddress->fullName : '',
+				'fields' => array_map(static fn (FieldInterface $orderField): string => $reportFields->getDisplayValue($order, $orderField), $orderFields),
+				'dateShipped' => $shippedDates[$order->id] ?? '',
 			];
 		}
 
@@ -723,10 +903,19 @@ class OrdersController extends BaseReportController
 	}
 
 	/**
-	 * @return array<string, int>
+	 * @return array<string, int>|list<Expression>
 	 */
 	private function resolveOrderSort(string $sort, string $sortDir): array
 	{
+		$computedSort = $this->getComputedSortSql($sort);
+		if ($computedSort !== null) {
+			$sqlDirection = strtolower($sortDir) === 'asc' ? 'ASC' : 'DESC';
+
+			return [
+				new Expression("({$computedSort}) {$sqlDirection}"),
+			];
+		}
+
 		$allowedColumns = [
 			'reference', 'dateOrdered', 'orderStatusId', 'itemSubtotal',
 			'totalTax', 'totalDiscount', 'totalShippingCost', 'totalPaid', 'totalPrice',
@@ -749,5 +938,45 @@ class OrdersController extends BaseReportController
 		return [
 			'dateOrdered' => SORT_DESC,
 		];
+	}
+
+	/**
+	 * Get the SQL to sort by a column that is not an order attribute, or null for an attribute column.
+	 */
+	private function getComputedSortSql(string $sort): ?string
+	{
+		if ($sort === 'itemsSold') {
+			return 'SELECT COALESCE(SUM([[sortLineItems.qty]]), 0) FROM ' . CommerceTable::LINEITEMS . ' [[sortLineItems]] WHERE [[sortLineItems.orderId]] = [[commerce_orders.id]]';
+		}
+
+		if ($sort === 'dateShipped') {
+			$shippedStatusIds = $this->getShippedStatusIds();
+			if ($shippedStatusIds === []) {
+				return null;
+			}
+
+			return 'SELECT MAX([[sortHistories.dateCreated]]) FROM ' . CommerceTable::ORDERHISTORIES . ' [[sortHistories]] WHERE [[sortHistories.orderId]] = [[commerce_orders.id]] AND [[sortHistories.newStatusId]] IN (' . implode(', ', $shippedStatusIds) . ')';
+		}
+
+		if (! str_starts_with($sort, 'field:')) {
+			return null;
+		}
+
+		$orderField = Plugin::getInstance()->reportFields->getOrderFields()[substr($sort, 6)] ?? null;
+		if ($orderField === null) {
+			return null;
+		}
+
+		// Relation values are stored in the relations table, so sort by the first related title instead
+		if ($orderField instanceof BaseRelationField) {
+			return 'SELECT MIN([[sortTargets.title]]) FROM ' . CraftTable::RELATIONS . ' [[sortRelations]]'
+				. ' INNER JOIN ' . CraftTable::ELEMENTS_SITES . ' [[sortTargets]] ON [[sortTargets.elementId]] = [[sortRelations.targetId]]'
+				. ' WHERE [[sortRelations.fieldId]] = ' . (int) $orderField->id
+				. ' AND [[sortRelations.sourceId]] = [[commerce_orders.id]]';
+		}
+
+		$orderBy = $orderField->getSortOption()['orderBy'];
+
+		return is_string($orderBy) ? $orderBy : null;
 	}
 }

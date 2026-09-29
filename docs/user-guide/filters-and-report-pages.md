@@ -58,6 +58,21 @@ Every report table works the same way:
 - **Export CSV** downloads the same full filtered set, with a totals row appended, named `<site-handle>-<report>-<date>.csv`. Currency columns export as plain decimals with no symbol.
 - Column headers sort.
 
+## Custom field filters
+
+The Products and Orders reports can filter by your own custom fields, chosen at **Best Sellers -> Settings**. Both support these field types:
+
+- Relation fields, such as Entries, Categories, or a custom element field
+- Dropdown
+- Radio Buttons
+- Checkboxes
+- Multi-select
+- Lightswitch
+
+Each filter is labeled with the field's name and matches each element's current value. Ticking several values in one filter matches any of them, and several filters apply together. A Lightswitch filter offers the field's on and off labels, or Enabled and Disabled when the field has none, and ticking both applies no condition.
+
+For each report's own rules, see [products](./products.md#field-filters) and [orders](./orders.md#order-fields).
+
 ## Filter chips
 
 Some pages carry a chip ("Filtered to: …") for a filter that arrived from a link, such as a Products row linking to the orders containing it. Chips have their own **Clear filter** action, separate from the three global controls, which clear by unticking.

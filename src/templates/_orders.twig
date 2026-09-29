@@ -48,6 +48,17 @@
 					{% endif %}
 				</div>
 			</div>
+			{% for orderFieldFilter in orderFieldFilters %}
+				{% set selectedValues = selectedOrderFieldValues[orderFieldFilter.instanceUid] ?? [] %}
+				<div class="bs-multiselect bs-order-field-filter" data-instance="{{ orderFieldFilter.instanceUid }}">
+					<button type="button" class="bs-multiselect__btn" data-label="{{ orderFieldFilter.label }}">{{ orderFieldFilter.label }}</button>
+					<div class="bs-multiselect__dropdown">
+						{% for optionValue, optionLabel in orderFieldFilter.options %}
+							<label><input type="checkbox" value="{{ optionValue }}"{% if optionValue ~ '' in selectedValues %} checked{% endif %}> {{ optionLabel }}</label>
+						{% endfor %}
+					</div>
+				</div>
+			{% endfor %}
 			<div class="bs-filter-bar__item">
 				<input type="text" id="orders-search" class="text fullwidth" placeholder="{{ 'sales.filter.searchPlaceholder'|t('best-sellers') }}" autocomplete="off">
 			</div>
@@ -126,8 +137,14 @@
 							<th class="bs-data-table--right" data-sort="totalDiscount">{{ 'Discount'|t('commerce') }}</th>
 							<th class="bs-data-table--right" data-sort="totalShippingCost">{{ 'Shipping'|t('commerce') }}</th>
 							<th class="bs-data-table--right" data-sort="totalPaid">{{ 'Total Paid'|t('commerce') }}</th>
-							<th class="bs-data-table--right">{{ 'kpi.itemsSold'|t('best-sellers') }}</th>
+							<th class="bs-data-table--right" data-sort="itemsSold">{{ 'kpi.itemsSold'|t('best-sellers') }}</th>
 							<th data-sort="paidStatus">{{ 'sales.col.payment'|t('best-sellers') }}</th>
+							{% if showDateShipped %}
+								<th data-sort="dateShipped">{{ 'sales.col.dateShipped'|t('best-sellers') }}</th>
+							{% endif %}
+							{% for orderFieldFilter in orderFieldFilters %}
+								<th data-sort="field:{{ orderFieldFilter.instanceUid }}">{{ orderFieldFilter.label }}</th>
+							{% endfor %}
 						</tr>
 					</thead>
 					<tbody id="orders-tbody"></tbody>
@@ -174,6 +191,17 @@ document.addEventListener('DOMContentLoaded', function () {
 		onChange: function () { table.reload(); }
 	});
 
+	const showDateShipped = {{ showDateShipped ? 'true' : 'false' }};
+	const orderFieldFilters = Array.from(document.querySelectorAll('.bs-order-field-filter')).map(function (container) {
+		return {
+			container: container,
+			multi: BestSellersReports.createMultiSelect({
+				container: container,
+				onChange: function () { table.reload(); }
+			})
+		};
+	});
+
 	{% if bulkPdfEnabled %}
 		const selectRowAriaLabel = Craft.t('best-sellers', 'orders.bulk.selectRowAria');
 		const bulkDownloadLabel = Craft.t('best-sellers', 'orders.bulk.downloadPdf');
@@ -206,7 +234,9 @@ document.addEventListener('DOMContentLoaded', function () {
 				'<td class="bs-data-table--right">' + order.totalShippingCost + '</td>' +
 				'<td class="bs-data-table--right">' + order.totalPaid + '</td>' +
 				'<td class="bs-data-table--right">' + order.itemsSold + '</td>' +
-				'<td>' + order.paidStatusHtml + '</td>';
+				'<td>' + order.paidStatusHtml + '</td>' +
+				(showDateShipped ? '<td>' + order.dateShipped + '</td>' : '') +
+				Object.values(order.fields).map(function (fieldValue) { return '<td>' + fieldValue + '</td>'; }).join('');
 			return row;
 		},
 		buildTotalsBar: function (totals) {
@@ -239,6 +269,10 @@ document.addEventListener('DOMContentLoaded', function () {
 				const shippingMethods = shippingMethodMulti.getSelected();
 				if (shippingMethods.length > 0) { params['shippingMethod'] = shippingMethods[0]; }
 			}
+			orderFieldFilters.forEach(function (orderFieldFilter) {
+				const filterValues = orderFieldFilter.multi.getSelected();
+				if (filterValues.length > 0) { params['orderField[' + orderFieldFilter.container.dataset.instance + '][]'] = filterValues; }
+			});
 			if (discountStatusMulti) {
 				const discountSelections = discountStatusMulti.getSelected();
 				discountSelections.forEach(function (val) {
@@ -273,6 +307,15 @@ document.addEventListener('DOMContentLoaded', function () {
 					shippingMethodMulti.refresh();
 				}
 			}
+			orderFieldFilters.forEach(function (orderFieldFilter) {
+				const filterValues = filters['orderField[' + orderFieldFilter.container.dataset.instance + '][]'];
+				if (filterValues) {
+					orderFieldFilter.container.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+						checkbox.checked = filterValues.indexOf(checkbox.value) !== -1;
+					});
+					orderFieldFilter.multi.refresh();
+				}
+			});
 			if ((filters.discountStatus || filters.discountId) && discountStatusMulti) {
 				const discountContainer = document.getElementById('discount-status-multiselect');
 				if (discountContainer) {

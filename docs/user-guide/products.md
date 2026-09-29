@@ -22,22 +22,13 @@ Beyond the three global controls, this page adds a search box matching product t
 
 ### Field filters
 
-Each product type can offer filters on its own variant fields, chosen at **Best Sellers -> Settings -> Product Types** under **Products report filters**. They support these field types:
+Each product type can offer filters on its own variant fields, chosen at **Best Sellers -> Settings -> Product Types** under **Products report filters**. For the supported field types and how filters combine, see [custom field filters](./filters-and-report-pages.md#custom-field-filters).
 
-- Relation fields, such as Entries, Categories, or a custom element field
-- Dropdown
-- Radio Buttons
-- Checkboxes
-- Multi-select
-- Lightswitch
-
-A field filter appears when the store has only one product type, or when exactly one product type is selected in **Product Type**. Field filters clear when they are hidden, including when you select a second product type. Several field filters apply together: a variant has to match each one.
+A field filter appears when the store has only one product type, or when exactly one product type is selected in **Product Type**. Field filters clear when they are hidden, including when you select a second product type.
 
 A field filter matches on each variant's current value, not its value when the order was placed. If a variant moves to another value, its past sales move with it.
 
-Ticking several values in one filter matches any of them. Sales of a deleted variant do not match a field filter.
-
-A relation filter lists the elements that the product type's variants relate to through that field. A Lightswitch filter offers the field's on and off labels, or Enabled and Disabled when the field has none, and ticking both matches every variant.
+Sales of a deleted variant do not match a field filter. A relation filter lists the elements that the product type's variants relate to through that field.
 
 ## Drilling into orders
 

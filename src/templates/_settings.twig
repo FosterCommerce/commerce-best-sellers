@@ -38,6 +38,26 @@
 			values: settings.defaultOrderStatusHandles,
 			errors: settings.getErrors('defaultOrderStatusHandles'),
 		}) }}
+
+		{% if orderFieldOptions is not empty %}
+			{{ forms.checkboxGroupField({
+				label: 'settings.orderFields.label'|t('best-sellers'),
+				instructions: 'settings.orderFields.instructions'|t('best-sellers'),
+				id: 'orderFields',
+				name: 'orderFields',
+				options: orderFieldOptions,
+				values: settings.orderFields,
+			}) }}
+		{% endif %}
+
+		{{ forms.selectField({
+			label: 'settings.shippedOrderStatus.label'|t('best-sellers'),
+			instructions: 'settings.shippedOrderStatus.instructions'|t('best-sellers'),
+			id: 'shippedOrderStatusHandle',
+			name: 'shippedOrderStatusHandle',
+			options: [{ label: 'settings.field.none'|t('best-sellers'), value: '' }]|merge(statusOptions),
+			value: settings.shippedOrderStatusHandle ?? '',
+		}) }}
 	</div>
 
 	<div id="product-types" class="hidden">

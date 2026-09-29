@@ -5,6 +5,7 @@ namespace fostercommerce\bestsellers\controllers;
 use Craft;
 use craft\commerce\elements\Order;
 use craft\commerce\elements\Product;
+use craft\commerce\elements\Variant;
 use craft\commerce\models\ProductType;
 use craft\commerce\Plugin as Commerce;
 use craft\db\Query;
@@ -55,7 +56,7 @@ class ProductsController extends BaseReportController
 			'fieldFilterGroups' => $this->getFieldFilterGroups(),
 			'onlyProductTypeHandle' => $this->getOnlyProductType()?->handle,
 			'activeProductTypeHandle' => $this->getActiveProductType()?->handle,
-			'selectedFilterValues' => $this->resolveFilterValues(),
+			'selectedFilterValues' => $this->resolveFieldFilterValues('fieldFilter'),
 		]);
 	}
 
@@ -557,7 +558,7 @@ class ProductsController extends BaseReportController
 				$filters[] = [
 					'instanceUid' => $instanceUid,
 					'label' => Craft::t('site', (string) $field->name),
-					'options' => $plugin->productStats->getFilterFieldOptions($field, $productType),
+					'options' => $plugin->reportFields->getOptions($field, Variant::find()->typeId($productType->id)->site('*')->unique()->status(null)),
 				];
 			}
 
@@ -606,7 +607,7 @@ class ProductsController extends BaseReportController
 			return [];
 		}
 
-		$filterValues = $this->resolveFilterValues();
+		$filterValues = $this->resolveFieldFilterValues('fieldFilter');
 		$fieldFilters = [];
 		foreach (Plugin::getInstance()->variantFields->getFilterFields($activeProductType) as $instanceUid => $field) {
 			if (($filterValues[$instanceUid] ?? []) !== []) {
@@ -619,34 +620,6 @@ class ProductsController extends BaseReportController
 		}
 
 		return $fieldFilters;
-	}
-
-	/**
-	 * @return array<string, list<string>>
-	 */
-	private function resolveFilterValues(): array
-	{
-		/** @var Request $request */
-		$request = Craft::$app->getRequest();
-		$rawFieldFilters = $request->getQueryParam('fieldFilter', []);
-		if (! is_array($rawFieldFilters)) {
-			return [];
-		}
-
-		$filterValues = [];
-		foreach ($rawFieldFilters as $instanceUid => $rawValues) {
-			if (! is_array($rawValues)) {
-				continue;
-			}
-
-			foreach ($rawValues as $rawValue) {
-				if (is_scalar($rawValue) && (string) $rawValue !== '') {
-					$filterValues[(string) $instanceUid][] = (string) $rawValue;
-				}
-			}
-		}
-
-		return $filterValues;
 	}
 
 	private function getCommerce(): Commerce

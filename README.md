@@ -44,7 +44,7 @@ See [`docs/dev-guide/templating.md`](./docs/dev-guide/templating.md).
 
 ## Reports
 
-Seven pages under a **Best Sellers** section in the control panel: a dashboard, orders, transactions, products, customers, locations, and an operations page covering store configuration. A date range, an order status filter, and a shipping location filter sit above all of them and follow you from page to page. The Products report can also filter by your own variant fields, such as a supplier, chosen per product type.
+Seven pages under a **Best Sellers** section in the control panel: a dashboard, orders, transactions, products, customers, locations, and an operations page covering store configuration. A date range, an order status filter, and a shipping location filter sit above all of them and follow you from page to page. The Products report can also filter by your own variant fields, such as a supplier, chosen per product type. The Orders report can add your order fields as columns and filters, and a date shipped.
 
 See the [user guide](./docs/index.md).
 

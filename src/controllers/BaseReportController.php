@@ -6,6 +6,7 @@ use Craft;
 use craft\commerce\Plugin as Commerce;
 use craft\helpers\MoneyHelper;
 use craft\web\Controller;
+use craft\web\Request;
 use fostercommerce\bestsellers\models\ReportScope;
 use fostercommerce\bestsellers\Plugin;
 use Money\Currencies\ISOCurrencies;
@@ -124,12 +125,42 @@ abstract class BaseReportController extends Controller
 	}
 
 	/**
-	 * Return a CSV response from an array of rows.
+	 * Read field filter selections from a `<param>[<instanceUid>][]` query parameter.
 	 *
-	 * @param list<array<string, mixed>> $rows
+	 * @return array<string, list<string>>
+	 */
+	protected function resolveFieldFilterValues(string $param): array
+	{
+		/** @var Request $request */
+		$request = Craft::$app->getRequest();
+		$rawFieldFilters = $request->getQueryParam($param, []);
+		if (! is_array($rawFieldFilters)) {
+			return [];
+		}
+
+		$filterValues = [];
+		foreach ($rawFieldFilters as $instanceUid => $rawValues) {
+			if (! is_array($rawValues)) {
+				continue;
+			}
+
+			foreach ($rawValues as $rawValue) {
+				if (is_scalar($rawValue) && (string) $rawValue !== '') {
+					$filterValues[(string) $instanceUid][] = (string) $rawValue;
+				}
+			}
+		}
+
+		return $filterValues;
+	}
+
+	/**
+	 * Return a CSV response, written to a temp stream instead of a string.
+	 *
+	 * @param iterable<array<string, mixed>> $rows
 	 * @param list<string> $headers
 	 */
-	protected function asCsv(array $rows, array $headers, string $reportType): Response
+	protected function asCsv(iterable $rows, array $headers, string $reportType): Response
 	{
 		$siteHandle = Craft::$app->getSites()->getCurrentSite()->handle;
 		$timestamp = date('Y-m-d-Hi');
@@ -148,14 +179,10 @@ abstract class BaseReportController extends Controller
 			fputcsv($output, $values);
 		}
 
-		rewind($output);
-		$csv = (string) stream_get_contents($output);
-		fclose($output);
-
 		/** @var Response $response */
 		$response = Craft::$app->getResponse();
 
-		return $response->sendContentAsFile($csv, $filename, [
+		return $response->sendStreamAsFile($output, $filename, [
 			'mimeType' => 'text/csv',
 		]);
 	}

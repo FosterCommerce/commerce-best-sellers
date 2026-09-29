@@ -97,6 +97,7 @@ return [
 	'sales.filter.fullPrice' => 'Full Price',
 	'sales.filter.searchPlaceholder' => 'Search orders…',
 	'sales.col.orderNumber' => 'Order #',
+	'sales.col.dateShipped' => 'Date Shipped',
 	'sales.col.payment' => 'Payment',
 	'sales.loading' => 'Rummaging through the order archives…',
 	'sales.empty' => 'No orders found matching your filters.',
@@ -263,6 +264,10 @@ return [
 	'settings.unitCostField.label' => 'Unit cost field',
 	'settings.field.none' => 'None',
 	'settings.filterFields.label' => 'Products report filters',
+	'settings.orderFields.label' => 'Orders report fields',
+	'settings.orderFields.instructions' => 'Order fields shown as columns and filters on the Orders report.',
+	'settings.shippedOrderStatus.label' => 'Shipped status',
+	'settings.shippedOrderStatus.instructions' => 'The Orders report’s Date Shipped column shows the last time an order entered this status.',
 
 	// Shared table affordances
 	'table.aboutTheseNumbers' => 'About these numbers',

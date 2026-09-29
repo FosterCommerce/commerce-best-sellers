@@ -22,6 +22,13 @@ class Settings extends Model
 	public array $filterFields = [];
 
 	/**
+	 * @var list<string> Order field layout element UIDs shown and filterable on the Orders report
+	 */
+	public array $orderFields = [];
+
+	public ?string $shippedOrderStatusHandle = null;
+
+	/**
 	 * @return array<int, mixed>
 	 */
 	protected function defineRules(): array
@@ -33,7 +40,8 @@ class Settings extends Model
 				'each',
 				'rule' => ['string'],
 			],
-			[['unitCostFields', 'filterFields'], 'safe'],
+			[['unitCostFields', 'filterFields', 'orderFields'], 'safe'],
+			[['shippedOrderStatusHandle'], 'string'],
 		];
 	}
 }

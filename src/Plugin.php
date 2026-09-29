@@ -36,6 +36,7 @@ use fostercommerce\bestsellers\services\DateRange;
 use fostercommerce\bestsellers\services\LocationStats;
 use fostercommerce\bestsellers\services\OperationsStats;
 use fostercommerce\bestsellers\services\ProductStats;
+use fostercommerce\bestsellers\services\ReportFields;
 use fostercommerce\bestsellers\services\Sales;
 use fostercommerce\bestsellers\services\SummaryEngine;
 use fostercommerce\bestsellers\services\VariantFields;
@@ -59,6 +60,7 @@ use yii\base\Event;
  * @property-read SummaryEngine $summaryEngine
  * @property-read BackfillLogs $backfillLogs
  * @property-read VariantFields $variantFields
+ * @property-read ReportFields $reportFields
  */
 class Plugin extends BasePlugin
 {
@@ -92,6 +94,7 @@ class Plugin extends BasePlugin
 				'summaryEngine' => SummaryEngine::class,
 				'backfillLogs' => BackfillLogs::class,
 				'variantFields' => VariantFields::class,
+				'reportFields' => ReportFields::class,
 			],
 		];
 	}

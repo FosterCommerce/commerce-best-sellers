@@ -28,6 +28,7 @@ Check, in order:
 - Its status is in the current order status filter.
 - Its shipping address matches the shipping locations filter, if one is set.
 - On the Orders page, its paid status is in the payment status selection. Fully refunded orders are Unpaid, which the default selection excludes.
+- On the Orders page, it matches every order field filter that is set.
 - On the Products page, it does not have a full balance owed.
 - The [Operations](./operations.md) page has no backfill log entry for it.
 
@@ -35,7 +36,7 @@ Check, in order:
 
 The Profit view counts only line items with a recorded unit cost. A line has none when its order predates the unit cost field, the variant's cost field was empty, or the field's currency differs from the order's. For older orders, run [Fill Unit Costs](./data-and-backfill.md#fill-unit-costs), then check Craft's log in the `best-sellers` category for lines it could not fill.
 
-## The field filters do not appear
+## The Products report field filters do not appear
 
 Field filters show when the store has one product type, or when exactly one is selected in **Product Type**. See [field filters](./products.md#field-filters).
 

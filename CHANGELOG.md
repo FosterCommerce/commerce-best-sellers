@@ -9,10 +9,14 @@
 - Added Products report filters on variant fields, chosen per product type.
 - Added the ability to fill in unit costs on existing orders, and the `best-sellers/backfill/fill-unit-costs` command.
 - Added the `unitCost` column to `best_sellers_variant_sales`.
+- Added order field columns and filters to the Orders report, chosen in an “Orders report fields” setting.
+- Added a Date Shipped column to the Orders report, from a “Shipped status” setting.
 
 ### Changed
 - Plugin settings are now split into “General” and “Product Types” tabs.
 - The Product Type filter is now first on the Products report.
+- The Orders report's Items Sold column now sorts.
+- Improved the performance of the Orders report's CSV export for large date ranges.
 
 ### Fixed
 - Fixed a bug where a backfill date range skipped orders placed on its end date.

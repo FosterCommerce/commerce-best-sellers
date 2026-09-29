@@ -38,6 +38,7 @@ class SettingsController extends Controller
 			'plugin' => $plugin,
 			'settings' => $plugin->getSettings(),
 			'productTypeFieldOptions' => $this->getProductTypeFieldOptions(),
+			'orderFieldOptions' => $plugin->reportFields->getInstanceOptions($plugin->reportFields->getOrderLayout()),
 		]);
 	}
 
@@ -63,6 +64,12 @@ class SettingsController extends Controller
 		$settings->defaultOrderStatusHandles = $defaultOrderStatusHandles;
 		$settings->unitCostFields = $this->resolveUnitCostFields();
 		$settings->filterFields = $this->resolveFilterFields();
+		$rawOrderFields = $this->request->getBodyParam('orderFields', []);
+		$settings->orderFields = is_array($rawOrderFields)
+			? array_values(array_filter($rawOrderFields, static fn (mixed $instanceUid): bool => is_string($instanceUid) && $instanceUid !== ''))
+			: [];
+		$shippedOrderStatusHandle = $this->request->getBodyParam('shippedOrderStatusHandle');
+		$settings->shippedOrderStatusHandle = is_string($shippedOrderStatusHandle) && $shippedOrderStatusHandle !== '' ? $shippedOrderStatusHandle : null;
 
 		if (! $settings->validate()) {
 			Craft::$app->getSession()->setError(Craft::t('commerce', 'Couldn’t save settings.'));
@@ -86,7 +93,7 @@ class SettingsController extends Controller
 	{
 		/** @var Commerce $commerce */
 		$commerce = Commerce::getInstance();
-		$variantFields = Plugin::getInstance()->variantFields;
+		$reportFields = Plugin::getInstance()->reportFields;
 
 		$productTypeFieldOptions = [];
 		foreach ($commerce->getProductTypes()->getAllProductTypes() as $productType) {
@@ -95,9 +102,9 @@ class SettingsController extends Controller
 				'name' => (string) $productType->name,
 				'unitCostOptions' => [
 					'' => Craft::t('best-sellers', 'settings.field.none'),
-					...$variantFields->getInstanceOptions($productType, VariantFields::UNIT_COST_FIELD_TYPES),
+					...$reportFields->getInstanceOptions($productType->getVariantFieldLayout(), VariantFields::UNIT_COST_FIELD_TYPES),
 				],
-				'filterOptions' => $variantFields->getInstanceOptions($productType, VariantFields::FILTER_FIELD_TYPES),
+				'filterOptions' => $reportFields->getInstanceOptions($productType->getVariantFieldLayout()),
 			];
 		}
 

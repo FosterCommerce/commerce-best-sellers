@@ -30,6 +30,8 @@ A fresh install reports zero for every past period until you backfill your exist
 **General** tab:
 
 - **Default order statuses**: statuses pre-selected in the global order status filter on a user's first visit in a session. No default, which resolves to all statuses. A user's own selection is stored in their session and takes precedence until it ends.
+- **Orders report fields**: the order fields shown as columns and filters on the Orders report. Lists only fields of the [supported types](./user-guide/filters-and-report-pages.md#custom-field-filters), and does not appear when the order field layout has none. None by default. See [orders](./user-guide/orders.md#order-fields).
+- **Shipped status**: the order status that means an order has shipped. Adds a Date Shipped column to the Orders report. Default: None. See [orders](./user-guide/orders.md#date-shipped).
 
 **Product Types** tab, one section per product type:
 

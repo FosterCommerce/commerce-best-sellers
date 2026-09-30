@@ -1,5 +1,10 @@
 # Release Notes for Best Sellers
 
+## Unreleased
+
+### Changed
+- The Orders report's Date Ordered and Date Shipped columns no longer pad the month and day with a leading zero.
+
 ## 1.4.0 - 2026-09-29
 
 > [!NOTE]

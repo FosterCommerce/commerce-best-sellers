@@ -550,7 +550,7 @@ class OrdersController extends BaseReportController
 		$shippedDates = [];
 		foreach ($rows as $row) {
 			$dateShipped = DateTimeHelper::toDateTime($row['dateShipped']);
-			$shippedDates[(int) $row['orderId']] = $dateShipped ? $dateShipped->format('m/d/Y g:ia') : '';
+			$shippedDates[(int) $row['orderId']] = $dateShipped ? $dateShipped->format('n/j/Y g:ia') : '';
 		}
 
 		return $shippedDates;
@@ -594,7 +594,7 @@ class OrdersController extends BaseReportController
 				'id' => $order->id,
 				'reference' => $order->reference,
 				'cpEditUrl' => $order->cpEditUrl,
-				'dateOrdered' => $order->dateOrdered ? $order->dateOrdered->format('m/d/Y g:ia') : '',
+				'dateOrdered' => $order->dateOrdered ? $order->dateOrdered->format('n/j/Y g:ia') : '',
 				'statusColor' => $order->orderStatus->color,
 				'statusName' => $order->orderStatus->name,
 				'statusHandle' => $order->orderStatus->handle,

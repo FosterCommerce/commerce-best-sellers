@@ -6,7 +6,7 @@ Carts and soft-deleted orders never appear. Pagination, totals, and CSV export b
 
 ## Columns
 
-Order #, Date Ordered, Status, Item Subtotal, Tax, Discount, Shipping, Total Paid, Items Sold, and Payment, then Date Shipped and your order fields when they are set. Three are not self-evident:
+Order #, Date Ordered, Status, Item Subtotal, Tax, Discount, Shipping, Total Paid, Items Sold, and Payment, then Date Shipped and your order fields when they are set. The CSV also has an Email column, after Status. Three are not self-evident:
 
 - **Item Subtotal**: quantity times sale price across every line item. Sale-price promotions are priced in; coupon and manual discounts are not subtracted here.
 - **Discount**: every Discount adjustment on the order, line-level and order-level. Does not include sale-price promotions.

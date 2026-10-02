@@ -32,7 +32,7 @@ Check, in order:
 
 ## A product is missing from the Profit view
 
-The Profit view counts only line items with a recorded unit cost. A line has no recorded cost when its order predates the unit cost field, the variant's cost field was empty, or the field's currency differs from the order's. For older orders, run [Fill Unit Costs](./data-and-backfill.md#fill-unit-costs). For lines it could not fill, see [fill unit costs](./data-and-backfill.md#fill-unit-costs).
+The Profit view counts only line items with a recorded unit cost. A line has no recorded cost when its order predates the unit cost field, the variant's cost field was empty, or the field's currency differs from the order's. For older orders, and for lines a fill could not cost, see [fill unit costs](./data-and-backfill.md#fill-unit-costs).
 
 ## The Products report field filters do not appear
 
@@ -63,4 +63,4 @@ Both load at most 10,000 rows, then search, sort, and paginate them in memory. O
 
 ## A cart restore link does not work
 
-See [cart restore](./cart-restore.md#when-a-link-stops-working). The common causes are a completed cart, a purged cart, a registered customer's cart opened while logged out, or a customer's cart opened by a different logged-in user.
+A completed or purged cart stops the link working. See [when a link stops working](./cart-restore.md#when-a-link-stops-working). A registered customer's cart needs that customer logged in, and a visitor logged in as someone else has to log out first. See [who can restore a cart](./cart-restore.md#who-can-restore-a-cart).

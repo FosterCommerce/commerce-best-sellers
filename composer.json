@@ -7,7 +7,7 @@
     "email": "support@fostercommerce.com",
     "issues": "https://github.com/fostercommerce/commerce-best-sellers/issues?state=open",
     "source": "https://github.com/fostercommerce/commerce-best-sellers",
-    "docs": "https://www.fostercommerce.com/craft-cms-plugins/best-sellers",
+    "docs": "https://www.fostercommerce.com/craft-cms-plugins/best-sellers/docs",
     "rss": "https://github.com/fostercommerce/commerce-best-sellers/releases.atom"
   },
   "require": {
@@ -32,7 +32,7 @@
     "handle": "best-sellers",
     "name": "Best Sellers",
     "developer": "Foster Commerce",
-    "documentationUrl": "https://www.fostercommerce.com/craft-cms-plugins/best-sellers"
+    "documentationUrl": "https://www.fostercommerce.com/craft-cms-plugins/best-sellers/docs"
   },
   "config": {
     "sort-packages": true,

@@ -2,7 +2,7 @@
 
 Reading sales data from Twig and PHP, for best-seller listings and buy-again pages.
 
-The units and item sales methods read the plugin's own tables, so they only cover orders it has recorded. On a fresh install, run the backfill first. See [data and backfill](../user-guide/data-and-backfill.md). The previous-purchase methods query Commerce directly and need no backfill.
+The units and item sales methods read the plugin's sales data and cover only the orders the plugin has recorded. On a fresh install, run the backfill first. See [data and backfill](../user-guide/data-and-backfill.md). The previous-purchase methods query Commerce directly and need no backfill.
 
 ## Dates
 
@@ -11,7 +11,7 @@ Every method that takes dates accepts a `YYYY-MM-DD` string or any string PHP's 
 - A `YYYY-MM-DD` start date begins at midnight, and a `YYYY-MM-DD` end date includes that whole day. The control panel reports read dates the same way.
 - Other strings are exact moments. `'30 days ago'` starts at the current time of day, 30 days back.
 
-From PHP, `bestSellers()` also takes a `DateTime`. Both dates are optional. Neither means all time, and a start date alone runs until now.
+Pass `null` as the start date for all time. The end date is optional, and a start date alone runs until now. From PHP, `bestSellers()` also takes a `DateTime`.
 
 ## Best-seller listings
 
@@ -82,8 +82,8 @@ Both previous-purchase methods need a logged-in user, so wrap them in `{% if cur
 | `previousPurchaseByUser(purchasableId, user)` | The user's most recent completed `Order` containing it, or `null`. |
 | `previouslyPurchasedProducts(user)` | A `VariantQuery` of every variant the user has bought, most recent first, or `null`. |
 
-`previouslyPurchasedProducts()` returns a query rather than results, so it takes `.limit()` and `{% paginate %}`.
+`previouslyPurchasedProducts()` returns a query rather than results, and takes `.limit()` and `{% paginate %}`.
 
 ## Bundles
 
-Where the webdna Commerce Bundles plugin is installed, a bundle sale is recorded against its child variants. A bundle's own ID returns no sales from any of these methods. Its children return their units and their share of the revenue. See [products](../user-guide/products.md#bundles).
+Where the webdna Commerce Bundles plugin is installed, a bundle sale is recorded against its child variants. These methods do not return sales for a bundle's own ID. Its children return their units and their share of the revenue. See [products](../user-guide/products.md#bundles).

@@ -22,7 +22,7 @@ The plugin records orders placed after it is installed, into its own sales data 
 
 The first command queues your completed orders. The second builds the daily stats that the dashboard's KPI cards and charts read.
 
-Each command prints how much it queued.
+The first command prints the number of orders it queued, and the second the date range.
 
 ## 3. Run the queue
 
@@ -31,8 +31,6 @@ Each command prints how much it queued.
 ```
 
 Leave it running until the queue is empty. On a store with tens of thousands of orders, this step takes longest.
-
-Craft also runs pending jobs during control panel requests, so the backfill advances while you use the control panel, but more slowly than with a worker.
 
 ## 4. Read the dashboard
 

@@ -6,7 +6,7 @@ How sales data gets into the plugin, and how to rebuild it.
 
 The plugin keeps its own copies of order data rather than querying Commerce live on every page.
 
-**Sales data** holds one row per variant per completed order: quantity, line totals, the discount attributed to the line, and the product and variant titles and SKU as they were at the time of sale. The [Products](./products.md) report, the [Locations](./locations.md) **Top products** table, the dashboard's product widgets, and the Twig methods read this table.
+**Sales data** holds one row per variant per completed order: quantity, line totals, the discount attributed to the line, and the product and variant titles and SKU as they were at the time of sale. The [Products](./products.md) report, the [Locations](./locations.md) **Top products** table, the dashboard's product widgets, and the Twig units and item sales methods read this table.
 
 **Daily stats** holds one row per calendar day: that day's orders, revenue, discounts, shipping, tax, items sold, customer counts, AOV, and average items per order. The dashboard's KPI cards, sparklines, and overview chart read this table.
 
@@ -22,7 +22,7 @@ Rows keep the product title and SKU from the time of sale. Renaming a product do
 
 ## Backfilling
 
-A fresh install has neither table populated, so the Products report and the dashboard's KPI cards read zero for every past period, and the Twig methods return zero. A backfill records your existing completed orders. Run it after installing, and after clearing either table.
+A fresh install has neither table populated, so the Products report and the dashboard's KPI cards read zero for every past period, and the Twig units and item sales methods return zero. A backfill records your existing completed orders. Run it after installing, and after clearing either table.
 
 The backfill skips orders it has already recorded, so running it twice does not double-count. The daily stats rebuild reads Commerce's orders, not the sales data, so the two backfills are independent.
 

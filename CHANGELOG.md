@@ -1,9 +1,15 @@
 # Release Notes for Best Sellers
 
-## Unreleased
+## 1.4.1 - 2026-10-02
 
 ### Changed
 - The Orders report's Date Ordered and Date Shipped columns no longer pad the month and day with a leading zero.
+
+### Fixed
+- Fixed a bug where a shopper logged in to another account couldn't continue from a cart restore link.
+- Fixed a bug where a cart restore link opened on another site restored the cart on the wrong site.
+- Fixed a bug where a shopper who logged in from a cart restore link wasn't returned to the cart.
+- Fixed a bug where the cart restore page linked to the homepage when front-end login was disabled.
 
 ## 1.4.0 - 2026-09-29
 

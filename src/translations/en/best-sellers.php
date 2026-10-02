@@ -299,8 +299,8 @@ return [
 	'cart.error.numberRequired' => 'Cart number is required.',
 	'cart.error.notFound' => 'Cart not found.',
 	'cart.error.completed' => 'This order has already been completed.',
-	'cart.error.belongsToOther' => 'This cart belongs to another account. Please log in as the cart owner to continue.',
-	'cart.error.loginRequired' => 'This cart belongs to a user account. Please log in to continue.',
+	'cart.error.belongsToOther' => 'This cart belongs to another customer. Log out to continue with it.',
+	'cart.error.loginRequired' => 'This cart belongs to a user account. Log in to continue.',
 	'cart.restored' => 'Your cart has been restored.',
 
 	// Product orders controller error
@@ -538,6 +538,9 @@ return [
 	'cart.login.pageTitle' => 'Login Required',
 	'cart.login.heading' => 'Login Required',
 	'cart.login.button' => 'Log In to Continue',
+	'cart.login.logOutButton' => 'Log Out to Continue',
+	'cart.login.logOutPageTitle' => 'Logout Required',
+	'cart.login.logOutHeading' => 'Logout Required',
 	'cart.login.badge' => 'Secure cart restoration',
 
 	// Legacy dashboard template

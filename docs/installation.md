@@ -1,6 +1,6 @@
 # Installation
 
-Essential **sales insights** and top-performing product data for Craft Commerce stores.
+Essential sales insights and top-performing product data for Craft Commerce stores.
 
 For a guided first run, see [getting started](./getting-started.md).
 
@@ -36,7 +36,7 @@ Settings are at **Best Sellers -> Settings**, not **Settings -> Plugins**, and n
 **Product Types** tab, one section per product type:
 
 - **Unit cost field**: the Money field on the product type's variants that holds each variant's unit cost. Default: None. See [unit costs and profit](./user-guide/unit-costs-and-profit.md).
-- **Products report filters**: the variant fields offered as filters on the Products report for this product type. Default: None. See [products](./user-guide/products.md#field-filters).
+- **Products report filters**: the variant fields offered as filters on the Products report for this product type. Lists only fields of the [supported types](./user-guide/filters-and-report-pages.md#custom-field-filters), and does not appear when the product type's variant layout has no field of those types. Default: None. See [products](./user-guide/products.md#field-filters).
 
 Craft stores the settings in project config.
 

@@ -1,6 +1,6 @@
 # Best Sellers documentation
 
-Essential **sales insights** and top-performing product data for Craft Commerce stores.
+Essential sales insights and top-performing product data for Craft Commerce stores.
 
 ## Where to go
 
@@ -14,7 +14,7 @@ Essential **sales insights** and top-performing product data for Craft Commerce 
 - [Products](./user-guide/products.md), what sold, and how the figures are calculated
 - [Customers](./user-guide/customers.md), who bought, how often, and how much
 - [Locations](./user-guide/locations.md), where orders shipped, by country, state, and city
-- [Operations](./user-guide/operations.md), store configuration, emails, coupon usage, and backfill logs
+- [Operations](./user-guide/operations.md), email configuration, coupon usage, and backfill logs
 - [Filters and report pages](./user-guide/filters-and-report-pages.md), the date, status, location, and custom field filters, and the shared table features
 - [Unit costs and profit](./user-guide/unit-costs-and-profit.md), recording what items cost and reporting gross profit and margin
 - [Cart restore](./user-guide/cart-restore.md), sending a customer a link back to an abandoned cart

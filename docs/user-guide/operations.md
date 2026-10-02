@@ -1,6 +1,6 @@
 # Operations
 
-**Best Sellers -> Operations.** Store configuration, email notifications, coupon usage, and the plugin's own backfill logs.
+**Best Sellers -> Operations.** Email configuration, coupon usage, and the plugin's own backfill logs.
 
 The date range does not apply to this page. Each section shows all-time figures or the store's configuration.
 

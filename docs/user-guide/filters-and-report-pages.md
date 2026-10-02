@@ -55,7 +55,7 @@ The Orders, Transactions, Products, and Customers tables work the same way:
 
 - Pages hold 100 rows.
 - The totals row spans every row matching the filters, not the page on screen.
-- **Export CSV** downloads the same full filtered set, with a totals row appended, named `<site-handle>-<report>-<date>.csv`. Currency columns export as plain decimals with no symbol.
+- **Export CSV** downloads the same full filtered set, with a totals row appended, named `<site-handle>-<report>-<date>-<time>.csv`, such as `default-orders-2026-10-02-1430.csv`. Currency columns export as plain decimals with no symbol.
 - Column headers sort.
 
 ## Custom field filters
@@ -69,7 +69,7 @@ The Products and Orders reports can filter by your own custom fields, chosen at 
 - Multi-select
 - Lightswitch
 
-Each filter is labeled with the field's name and matches each element's current value. Ticking several values in one filter matches any of them, and several filters apply together. A Lightswitch filter offers the field's on and off labels, or Enabled and Disabled when the field has none, and ticking both is the same as ticking neither.
+Each filter is labeled with the field's name and matches each element's current value. Ticking several values in one filter matches any of them, and several filters apply together. A Lightswitch filter offers the field's on and off labels, or Enabled and Disabled when the field has no labels, and ticking both is the same as ticking neither.
 
 For each report's own rules, see [products](./products.md#field-filters) and [orders](./orders.md#order-fields).
 

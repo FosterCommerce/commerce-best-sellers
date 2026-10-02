@@ -41,4 +41,4 @@ An abandoned cart is an incomplete order that has at least one line item and has
 
 By default the widget counts only carts with a customer or an email address. **Include anonymous carts** counts every cart, in the rate, the value, and the age bars.
 
-**Highest-Value Abandoned Carts** lists the abandoned carts with the highest value, with a **Share** action that copies a restore link. See [cart restore](./cart-restore.md). The widget also reports the store's cart purge duration, after which a restore link stops working.
+**Highest-Value Abandoned Carts** lists the abandoned carts with the highest value, with a **Share** action that copies a restore link. See [cart restore](./cart-restore.md).

@@ -1,5 +1,10 @@
 # Release Notes for Best Sellers
 
+## 1.4.2 - 2026-10-02
+
+### Fixed
+- Fixed a bug where filling unit costs logged an error for each line item whose variant has no unit cost.
+
 ## 1.4.1 - 2026-10-02
 
 ### Changed

@@ -204,7 +204,6 @@ class Sales extends Component
 
 				$unitCosts[$variant->id] = $this->getVariantUnitCost($variant, $order->currency);
 				if ($unitCosts[$variant->id] === null) {
-					Craft::error("Unit cost fill left order #{$order->id} line item #{$lineItem->id} (variant #{$variant->id}) without a cost: the variant has no unit cost in the order's currency ({$order->currency}).", 'best-sellers');
 					continue;
 				}
 

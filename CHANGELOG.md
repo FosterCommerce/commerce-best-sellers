@@ -1,5 +1,10 @@
 # Release Notes for Best Sellers
 
+## 1.4.3 - 2026-11-12
+
+### Fixed
+- Settings are now visually read-only when `allowAdminChanges` is false
+
 ## 1.4.2 - 2026-10-02
 
 ### Fixed
